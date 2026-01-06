@@ -7,6 +7,7 @@ import { DatabaseModule } from './database/database.module';
 import { RedisModule } from './common/redis/redis.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { AuditModule } from './common/audit/audit.module';
+import { FinancialProvidersModule } from './financial-providers/financial-providers.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
@@ -23,6 +24,7 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
     RedisModule,
     PermissionsModule,
     AuditModule,
+    FinancialProvidersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

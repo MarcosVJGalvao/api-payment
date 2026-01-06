@@ -81,6 +81,7 @@ async function bootstrap() {
   swaggerService.generateDocument(app);
 
   SwaggerModule.setup('api', app, swaggerService.getSwaggerDocument(), {
+    jsonDocumentUrl: '/api/openapi.json',
     swaggerOptions: {
       persistAuthorization: true,
     },
