@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseInterceptors, ParseEnumPipe, HttpStatus } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { FinancialCredentialsService } from './services/financial-credentials.service';
 import { HiperbancoAuthService } from './hiperbanco/hiperbanco-auth.service';
@@ -13,8 +13,9 @@ import { ApiBankLogin } from './docs/api-bank-login.decorator';
 import { Audit } from '@/common/audit/decorators/audit.decorator';
 import { AuditAction } from '@/common/audit/enums/audit-action.enum';
 import { AuditInterceptor } from '@/common/audit/interceptors/audit.interceptor';
+import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
-@ApiTags('Financial Providers')
+@ApiTags('Provedores Financeiros')
 @Controller('providers')
 @UseInterceptors(AuditInterceptor)
 export class FinancialProvidersController {
@@ -33,7 +34,7 @@ export class FinancialProvidersController {
         ignoreFields: ['password'],
     })
     async configureProvider(
-        @Param('provider') provider: string,
+        @Param('provider', new ParseEnumPipe(FinancialProvider)) provider: FinancialProvider,
         @Body() dto: CreateProviderCredentialDto,
     ): Promise<ProviderCredential> {
         return this.credentialsService.saveCredentials(provider, dto);
@@ -41,7 +42,9 @@ export class FinancialProvidersController {
 
     @Get(':provider/config')
     @ApiGetProviderConfig()
-    async getConfig(@Param('provider') provider: string): Promise<ProviderCredential> {
+    async getConfig(
+        @Param('provider', new ParseEnumPipe(FinancialProvider)) provider: FinancialProvider,
+    ): Promise<ProviderCredential> {
         return this.credentialsService.getPublicCredentials(provider);
     }
 

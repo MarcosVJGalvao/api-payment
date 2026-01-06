@@ -1,4 +1,5 @@
 import { ProviderCredential } from '../../entities/provider-credential.entity';
+import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 /**
  * Cria um mock de ProviderCredential com valores padrão.
@@ -6,7 +7,7 @@ import { ProviderCredential } from '../../entities/provider-credential.entity';
 export const mockProviderCredential = (overrides?: Partial<ProviderCredential>): ProviderCredential => {
     const credential = new ProviderCredential();
     credential.id = '550e8400-e29b-41d4-a716-446655440000';
-    credential.provider_slug = 'hiperbanco';
+    credential.provider_slug = FinancialProvider.HIPERBANCO;
     credential.login = 'user@test.com';
     credential.password = 'encrypted-password';
     credential.client_id = 'internal-client-id-123';

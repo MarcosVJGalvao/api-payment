@@ -8,6 +8,7 @@ import { CustomHttpException } from '../../common/errors/exceptions/custom-http.
 import { ErrorCode } from '../../common/errors/enums/error-code.enum';
 import { AppLoggerService } from '../../common/logger/logger.service';
 import { v4 as uuidv4 } from 'uuid';
+import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 @Injectable()
 export class FinancialCredentialsService {
@@ -22,31 +23,31 @@ export class FinancialCredentialsService {
     /**
      * Salva ou atualiza as credenciais de um provedor financeiro.
      * A senha é criptografada antes de ser armazenada.
-     * @param providerSlug - Identificador do provedor (ex: 'hiperbanco')
+     * @param provider - Identificador do provedor (FinancialProvider)
      * @param dto - Dados de credencial (login, password)
      * @returns Credencial salva (senha oculta pelo @Exclude)
      */
     async saveCredentials(
-        providerSlug: string,
+        provider: FinancialProvider,
         dto: CreateProviderCredentialDto,
     ): Promise<ProviderCredential> {
-        this.logger.log(`Saving credentials for provider: ${providerSlug}`, this.context);
+        this.logger.log(`Saving credentials for provider: ${provider}`, this.context);
 
-        let credential = await this.repository.findOne({ where: { provider_slug: providerSlug } });
+        let credential = await this.repository.findOne({ where: { provider_slug: provider } });
 
         if (!credential) {
             credential = this.repository.create({
-                provider_slug: providerSlug,
+                provider_slug: provider,
                 client_id: uuidv4(),
             });
-            this.logger.log(`Creating new credential entry for ${providerSlug}`, this.context);
+            this.logger.log(`Creating new credential entry for ${provider}`, this.context);
         }
 
         credential.login = dto.login;
         credential.password = await CryptoHelper.encrypt(dto.password);
 
         const saved = await this.repository.save(credential);
-        this.logger.log(`Credentials saved for provider: ${providerSlug}`, this.context);
+        this.logger.log(`Credentials saved for provider: ${provider}`, this.context);
         return saved;
     }
 
@@ -57,12 +58,12 @@ export class FinancialCredentialsService {
      * @returns Credencial com senha descriptografada
      * @throws CustomHttpException se o provedor não existir
      */
-    async getDecryptedCredentials(providerSlug: string): Promise<ProviderCredential> {
-        const credential = await this.repository.findOne({ where: { provider_slug: providerSlug } });
+    async getDecryptedCredentials(provider: FinancialProvider): Promise<ProviderCredential> {
+        const credential = await this.repository.findOne({ where: { provider_slug: provider } });
         if (!credential) {
-            this.logger.warn(`Credentials not found for provider: ${providerSlug}`, this.context);
+            this.logger.warn(`Credentials not found for provider: ${provider}`, this.context);
             throw new CustomHttpException(
-                `Provider credentials not found: ${providerSlug}`,
+                `Provider credentials not found: ${provider}`,
                 HttpStatus.NOT_FOUND,
                 ErrorCode.PROVIDER_CREDENTIALS_NOT_FOUND,
             );
@@ -78,12 +79,12 @@ export class FinancialCredentialsService {
      * @returns Credencial sem senha (oculta pelo interceptor/serializer)
      * @throws CustomHttpException se o provedor não existir
      */
-    async getPublicCredentials(providerSlug: string): Promise<ProviderCredential> {
-        const credential = await this.repository.findOne({ where: { provider_slug: providerSlug } });
+    async getPublicCredentials(provider: FinancialProvider): Promise<ProviderCredential> {
+        const credential = await this.repository.findOne({ where: { provider_slug: provider } });
         if (!credential) {
-            this.logger.warn(`Credentials not found for provider: ${providerSlug}`, this.context);
+            this.logger.warn(`Credentials not found for provider: ${provider}`, this.context);
             throw new CustomHttpException(
-                `Provider credentials not found: ${providerSlug}`,
+                `Provider credentials not found: ${provider}`,
                 HttpStatus.NOT_FOUND,
                 ErrorCode.PROVIDER_CREDENTIALS_NOT_FOUND,
             );

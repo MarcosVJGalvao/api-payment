@@ -2,6 +2,8 @@ import { Test } from '@nestjs/testing';
 import { HiperbancoHttpService } from '../../hiperbanco/hiperbanco-http.service';
 import { HiperbancoAuthService } from '../../hiperbanco/hiperbanco-auth.service';
 import { FinancialCredentialsService } from '../../services/financial-credentials.service';
+import { ProviderSessionService } from '../../services/provider-session.service';
+import { ProviderJwtService } from '../../services/provider-jwt.service';
 import { AppLoggerService } from '@/common/logger/logger.service';
 
 /**
@@ -23,6 +25,20 @@ export const createHiperbancoAuthTestFactory = async () => {
         saveCredentials: jest.fn(),
     };
 
+    const sessionServiceMock = {
+        createSession: jest.fn().mockImplementation((data) => Promise.resolve({
+            sessionId: 'mock-session-id',
+            ...data,
+        })),
+        getSession: jest.fn(),
+        deleteSession: jest.fn(),
+    };
+
+    const jwtServiceMock = {
+        generateToken: jest.fn().mockReturnValue('mock-jwt-token'),
+        verifyToken: jest.fn(),
+    };
+
     const loggerMock = {
         log: jest.fn(),
         error: jest.fn(),
@@ -36,6 +52,8 @@ export const createHiperbancoAuthTestFactory = async () => {
             HiperbancoAuthService,
             { provide: HiperbancoHttpService, useValue: httpServiceMock },
             { provide: FinancialCredentialsService, useValue: credentialsServiceMock },
+            { provide: ProviderSessionService, useValue: sessionServiceMock },
+            { provide: ProviderJwtService, useValue: jwtServiceMock },
             { provide: AppLoggerService, useValue: loggerMock },
         ],
     }).compile();
@@ -44,6 +62,8 @@ export const createHiperbancoAuthTestFactory = async () => {
         service: module.get<HiperbancoAuthService>(HiperbancoAuthService),
         httpServiceMock,
         credentialsServiceMock,
+        sessionServiceMock,
+        jwtServiceMock,
         loggerMock,
     };
 };

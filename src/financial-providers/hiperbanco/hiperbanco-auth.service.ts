@@ -7,6 +7,7 @@ import { AppLoggerService } from '@/common/logger/logger.service';
 import { BackofficeLoginResponse, BankLoginResponse } from './interfaces/hiperbanco-responses.interface';
 import { BankLoginDto } from '../dto/bank-login.dto';
 import { BackofficeLoginDto } from '../dto/backoffice-login.dto';
+import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export interface AuthLoginResponse {
     access_token: string;
@@ -15,7 +16,7 @@ export interface AuthLoginResponse {
 
 @Injectable()
 export class HiperbancoAuthService {
-    private readonly PROVIDER_SLUG = 'hiperbanco';
+    private readonly PROVIDER_SLUG = FinancialProvider.HIPERBANCO;
     private readonly context = HiperbancoAuthService.name;
 
     constructor(
