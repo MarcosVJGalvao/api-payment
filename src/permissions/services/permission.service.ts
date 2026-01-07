@@ -274,7 +274,7 @@ export class PermissionService {
     throw new CustomHttpException(
       'Feature not available without User module',
       HttpStatus.NOT_IMPLEMENTED,
-      ErrorCode.INTERNAL_SERVER_ERROR
+      ErrorCode.FEATURE_NOT_IMPLEMENTED
     );
   }
 

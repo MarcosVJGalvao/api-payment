@@ -12,7 +12,7 @@ export class PermissionsGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private permissionService: PermissionService,
-  ) {}
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredPermissions = this.reflector.getAllAndOverride<string[]>(
@@ -31,7 +31,7 @@ export class PermissionsGuard implements CanActivate {
       throw new CustomHttpException(
         'User not authenticated.',
         HttpStatus.UNAUTHORIZED,
-        ErrorCode.UNAUTHORIZED,
+        ErrorCode.USER_NOT_AUTHENTICATED,
       );
     }
 
@@ -44,7 +44,7 @@ export class PermissionsGuard implements CanActivate {
       throw new CustomHttpException(
         'Permission denied.',
         HttpStatus.FORBIDDEN,
-        ErrorCode.PERMISSION_DENIED,
+        ErrorCode.ACCESS_DENIED,
       );
     }
 

@@ -27,7 +27,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     correlationId: string,
     type: string,
     status: HttpStatus,
-    errorCode: ErrorCode,
+    errorCode: ErrorCode | string,
     message: string | string[],
     request: Request,
     stack?: string,
@@ -66,7 +66,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const correlationId = String(request.correlationId || '');
 
     let status: HttpStatus;
-    let errorCode: ErrorCode;
+    let errorCode: ErrorCode | string;
     let message: string | string[];
 
     if (exception instanceof CustomHttpException) {

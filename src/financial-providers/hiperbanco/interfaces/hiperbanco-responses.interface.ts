@@ -3,6 +3,11 @@
  * Tipagem mínima - apenas campos essenciais são obrigatórios
  */
 
+export interface HiperbancoRequestOptions {
+    headers?: Record<string, string>;
+    params?: Record<string, any>;
+}
+
 export interface HiperbancoAccount {
     id: string;
     status: string;
@@ -23,4 +28,43 @@ export interface BankLoginResponse extends Record<string, unknown> {
 
 export interface BackofficeLoginResponse extends Record<string, unknown> {
     access_token: string;
+}
+
+export interface RegisterWebhookResponse {
+    id: string;
+    name: string;
+    context: string;
+    eventName: string;
+    uri: string;
+    publicKey: string;
+}
+
+export type UpdateWebhookResponse = RegisterWebhookResponse;
+
+export interface WebhookItem {
+    id: string;
+    name: string;
+    eventName: string;
+    context: string;
+    uri: string;
+    publicKey: string;
+    createdAt: string;
+    updatedAt?: string;
+    status: 'Enabled' | 'Disabled';
+}
+
+export interface WebhookListMeta {
+    page: number;
+    pageSize: number;
+    total: number;
+}
+
+export interface ListWebhooksResponse {
+    data: WebhookItem[];
+    meta: WebhookListMeta;
+}
+
+export interface HiperbancoErrorResponse {
+    message?: string;
+    errorCode?: string;
 }

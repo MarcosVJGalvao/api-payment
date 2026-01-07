@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { HiperbancoHttpService } from './hiperbanco-http.service';
 import { FinancialCredentialsService } from '../services/financial-credentials.service';
 import { ProviderSessionService } from '../services/provider-session.service';
@@ -7,6 +7,8 @@ import { AppLoggerService } from '@/common/logger/logger.service';
 import { BackofficeLoginResponse, BankLoginResponse } from './interfaces/hiperbanco-responses.interface';
 import { BankLoginDto } from '../dto/bank-login.dto';
 import { BackofficeLoginDto } from '../dto/backoffice-login.dto';
+import { FinancialProvider } from '@/common/enums/financial-provider.enum';
+import type { HiperbancoConfig } from './helpers/hiperbanco-config.helper';
 
 export interface AuthLoginResponse {
     access_token: string;
@@ -15,7 +17,7 @@ export interface AuthLoginResponse {
 
 @Injectable()
 export class HiperbancoAuthService {
-    private readonly PROVIDER_SLUG = 'hiperbanco';
+    private readonly PROVIDER_SLUG = FinancialProvider.HIPERBANCO;
     private readonly context = HiperbancoAuthService.name;
 
     constructor(
@@ -24,6 +26,7 @@ export class HiperbancoAuthService {
         private readonly sessionService: ProviderSessionService,
         private readonly jwtService: ProviderJwtService,
         private readonly logger: AppLoggerService,
+        @Inject('HIPERBANCO_CONFIG') private readonly config: HiperbancoConfig,
     ) { }
 
     async loginBackoffice(loginDto: BackofficeLoginDto): Promise<AuthLoginResponse> {
@@ -34,7 +37,7 @@ export class HiperbancoAuthService {
         const payload = {
             email: loginDto.email,
             password: loginDto.password,
-            client_id: this.http.getClientId(),
+            client_id: this.config.clientId,
         };
 
         const response = await this.http.post<BackofficeLoginResponse>('/Backoffice/Login', payload);
@@ -68,7 +71,7 @@ export class HiperbancoAuthService {
         const requestPayload = {
             document: loginDto.document,
             password: loginDto.password,
-            clientId: this.http.getClientId(),
+            clientId: this.config.clientId,
         };
 
         const response = await this.http.post<BankLoginResponse>('/Users/login/api-bank', requestPayload);

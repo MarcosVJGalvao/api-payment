@@ -1,10 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import * as common from 'oci-common';
 import * as secretsmanagement from 'oci-secrets';
 import * as path from 'path';
 import * as os from 'os';
 import { AppLoggerService } from '@/common/logger/logger.service';
 import type { VaultConfig, SecretCache } from './vault.config';
+import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
+import { ErrorCode } from '@/common/errors/enums/error-code.enum';
+import { handleGenericException } from '@/common/helpers/exception.helper';
 
 interface SecretBundleResponse {
   secretBundle?: {
@@ -26,6 +29,8 @@ export class VaultService {
     private readonly config: VaultConfig,
     private readonly logger?: AppLoggerService,
   ) { }
+
+
 
   private async initializeClient(): Promise<void> {
     if (this.secretsClient) {
@@ -84,13 +89,23 @@ export class VaultService {
       return cached.value;
     }
 
+
+
     try {
       if (!this.config.vaultOcid) {
-        throw new Error('Vault OCID is not available.');
+        throw new CustomHttpException(
+          'Vault OCID is not available.',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          ErrorCode.VAULT_CONFIGURATION_MISSING
+        );
       }
 
       if (!this.secretsClient) {
-        throw new Error('Secrets client is not initialized.');
+        throw new CustomHttpException(
+          'Secrets client is not initialized.',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          ErrorCode.VAULT_CONFIGURATION_MISSING
+        );
       }
 
       const response = await (this.secretsClient as unknown as {
@@ -109,7 +124,11 @@ export class VaultService {
         : secretBundle?.secretBundleContent;
 
       if (!secretContent?.content) {
-        throw new Error(`Secret '${secretName}' has no content`);
+        throw new CustomHttpException(
+          `Secret '${secretName}' has no content`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          ErrorCode.VAULT_SECRET_CONTENT_MISSING
+        );
       }
 
       const decodedValue = Buffer.from(secretContent.content, 'base64').toString('utf-8');
@@ -121,12 +140,13 @@ export class VaultService {
 
       return decodedValue;
     } catch (error) {
-      this.logger?.error(
-        `Failed to get secret '${secretName}'`,
-        error instanceof Error ? error.stack : String(error),
+      handleGenericException(
+        error,
         'VaultService',
+        `Failed to get secret '${secretName}'`,
+        `Failed to get secret '${secretName}'`,
+        this.logger,
       );
-      throw error;
     }
   }
 
@@ -141,12 +161,13 @@ export class VaultService {
           const value = await this.getSecret(name);
           return { name, value };
         } catch (error) {
-          this.logger?.error(
-            `Failed to get secret '${name}'`,
-            error instanceof Error ? error.stack : String(error),
+          handleGenericException(
+            error,
             'VaultService',
+            `Failed to get secret '${name}'`,
+            `Failed to get secret '${name}'`,
+            this.logger,
           );
-          throw error;
         }
       });
 

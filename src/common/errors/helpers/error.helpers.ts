@@ -9,18 +9,18 @@ import { toLowerCase, includesString } from './string.helpers';
 export function mapHttpStatusToErrorCode(status: HttpStatus): ErrorCode {
   switch (status) {
     case HttpStatus.BAD_REQUEST:
-      return ErrorCode.BAD_REQUEST;
+      return ErrorCode.INVALID_INPUT;
     case HttpStatus.UNAUTHORIZED:
       return ErrorCode.UNAUTHORIZED;
     case HttpStatus.FORBIDDEN:
-      return ErrorCode.FORBIDDEN;
+      return ErrorCode.ACCESS_DENIED;
     case HttpStatus.NOT_FOUND:
-      return ErrorCode.NOT_FOUND;
+      return ErrorCode.RESOURCE_NOT_FOUND;
     case HttpStatus.TOO_MANY_REQUESTS:
       return ErrorCode.TOO_MANY_REQUESTS;
     case HttpStatus.INTERNAL_SERVER_ERROR:
     default:
-      return ErrorCode.INTERNAL_SERVER_ERROR;
+      return ErrorCode.UNEXPECTED_ERROR;
   }
 }
 
@@ -80,7 +80,7 @@ export function processUnhandledError(error: Error): {
   }
 
   return {
-    errorCode: ErrorCode.INTERNAL_SERVER_ERROR,
+    errorCode: ErrorCode.UNEXPECTED_ERROR,
     message: 'Internal server error',
     status: HttpStatus.INTERNAL_SERVER_ERROR,
   };
