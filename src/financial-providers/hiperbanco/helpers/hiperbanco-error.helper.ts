@@ -30,11 +30,14 @@ export function handleHiperbancoError(
     let responseData: unknown = undefined;
     let stack: string | undefined = undefined;
 
+    let errorCode: string | undefined = undefined;
+
     if (isAxiosError(error)) {
         const axiosError = error as AxiosError;
         responseData = axiosError.response?.data;
         status = axiosError.response?.status || HttpStatus.INTERNAL_SERVER_ERROR;
         message = (responseData as any)?.message || axiosError.message;
+        errorCode = (responseData as any)?.errorCode;
         stack = axiosError.stack;
     } else if (error instanceof Error) {
         message = error.message;
@@ -47,6 +50,6 @@ export function handleHiperbancoError(
     throw new CustomHttpException(
         `Hiperbanco request failed: ${message}`,
         status,
-        ErrorCode.EXTERNAL_SERVICE_ERROR,
+        (errorCode as ErrorCode) || ErrorCode.EXTERNAL_SERVICE_ERROR,
     );
 }

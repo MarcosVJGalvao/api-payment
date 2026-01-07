@@ -5,6 +5,7 @@ import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 export interface LogicalError {
     message: string;
     status: number;
+    errorCode?: string;
 }
 
 /**
@@ -22,7 +23,7 @@ export class HiperbancoResponseHelper {
         // Regra específica para login de Backoffice
         if (path.includes('/Backoffice/Login')) {
             if (responseData && typeof responseData === 'object' && 'status' in responseData) {
-                const data = responseData as { status: unknown; data?: string; message?: string };
+                const data = responseData as { status: unknown; data?: string; message?: string; errorCode?: string };
                 const logicalStatus = Number(data.status);
 
                 if (!isNaN(logicalStatus) && logicalStatus >= 400) {
@@ -31,6 +32,7 @@ export class HiperbancoResponseHelper {
                     return {
                         message: String(message),
                         status: logicalStatus >= 100 && logicalStatus < 600 ? logicalStatus : HttpStatus.BAD_REQUEST,
+                        errorCode: data.errorCode,
                     };
                 }
             }

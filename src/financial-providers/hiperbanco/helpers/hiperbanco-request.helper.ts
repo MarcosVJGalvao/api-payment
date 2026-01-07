@@ -55,7 +55,7 @@ export async function executeHiperbancoRequest<T>(
             throw new CustomHttpException(
                 `Hiperbanco request failed: ${logicalError.message}`,
                 logicalError.status,
-                ErrorCode.EXTERNAL_SERVICE_ERROR
+                (logicalError.errorCode as ErrorCode) || ErrorCode.EXTERNAL_SERVICE_ERROR
             );
         }
 
