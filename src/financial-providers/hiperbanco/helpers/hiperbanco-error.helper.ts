@@ -50,6 +50,6 @@ export function handleHiperbancoError(
     throw new CustomHttpException(
         `Hiperbanco request failed: ${message}`,
         status,
-        (errorCode as ErrorCode) || ErrorCode.EXTERNAL_SERVICE_ERROR,
+        errorCode || ErrorCode.EXTERNAL_SERVICE_ERROR,
     );
 }
