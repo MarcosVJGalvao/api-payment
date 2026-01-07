@@ -51,7 +51,6 @@ async function bootstrap() {
   const logger = app.get(AppLoggerService);
   const configService = app.get(ConfigService);
 
-  app.useLogger(logger);
   app.enableCors();
 
   app.useGlobalPipes(
@@ -89,6 +88,8 @@ async function bootstrap() {
 
   const port = configService.get<number>('PORT', 3000);
   await app.listen(port);
+
+  app.useLogger(logger);
 
   console.log('\n✅  Application Successfully Started\n');
   console.log(`📍  Server:     http://localhost:${port}`);
