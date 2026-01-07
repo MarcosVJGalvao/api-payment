@@ -2,6 +2,8 @@ import { HttpStatus } from '@nestjs/common';
 import { AxiosError, isAxiosError } from 'axios';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
+import { HiperbancoErrorResponse } from '../interfaces/hiperbanco-responses.interface';
+import { isHiperbancoErrorResponse } from './hiperbanco-validators.helper';
 
 /**
  * Tratamento centralizado de erros de requisição para o Hiperbanco e outras integrações HTTP.
@@ -12,6 +14,7 @@ import { ErrorCode } from '@/common/errors/enums/error-code.enum';
  * @param logCallback Callback para realizar o log da transação com os dados processados do erro
  * @throws CustomHttpException
  */
+
 export function handleHiperbancoError(
     error: unknown,
     logCallback: (
@@ -36,8 +39,18 @@ export function handleHiperbancoError(
         const axiosError = error as AxiosError;
         responseData = axiosError.response?.data;
         status = axiosError.response?.status || HttpStatus.INTERNAL_SERVER_ERROR;
-        message = (responseData as any)?.message || axiosError.message;
-        errorCode = (responseData as any)?.errorCode;
+
+        message = axiosError.message;
+
+        if (isHiperbancoErrorResponse(responseData)) {
+            if (responseData.message) {
+                message = responseData.message;
+            }
+            if (responseData.errorCode) {
+                errorCode = responseData.errorCode;
+            }
+        }
+
         stack = axiosError.stack;
     } else if (error instanceof Error) {
         message = error.message;

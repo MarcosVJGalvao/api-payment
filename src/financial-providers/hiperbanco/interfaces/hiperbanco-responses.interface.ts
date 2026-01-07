@@ -63,3 +63,8 @@ export interface ListWebhooksResponse {
     data: WebhookItem[];
     meta: WebhookListMeta;
 }
+
+export interface HiperbancoErrorResponse {
+    message?: string;
+    errorCode?: string;
+}
