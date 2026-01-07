@@ -45,11 +45,19 @@ export class WebhookRepository {
         return this.repository.findOne({ where: { id } });
     }
 
+    async findByExternalId(externalId: string): Promise<Webhook | null> {
+        return this.repository.findOne({ where: { externalId } });
+    }
+
     async findByProvider(provider: FinancialProvider): Promise<Webhook[]> {
         return this.repository.find({ where: { providerSlug: provider } });
     }
 
     async softDelete(id: string): Promise<void> {
         await this.repository.softDelete(id);
+    }
+
+    async updateWebhookUri(externalId: string, uri: string): Promise<void> {
+        await this.repository.update({ externalId }, { uri });
     }
 }

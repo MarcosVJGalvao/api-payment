@@ -45,3 +45,12 @@ export const mockProviderSession = (): ProviderSession => ({
     createdAt: Date.now(),
     expiresAt: Date.now() + 30 * 60 * 1000,
 });
+
+export const mockUpdateWebhookDto = () => ({
+    uri: 'https://nova-url.com/webhook',
+});
+
+export const mockUpdateWebhookResponse = () => ({
+    ...mockRegisterWebhookResponse(),
+    uri: 'https://nova-url.com/webhook',
+});

@@ -9,12 +9,16 @@ export async function createWebhookServiceTestFactory() {
             Promise.resolve({ id: 'uuid', ...dto, providerSlug: provider, externalId: response.id }),
         ),
         findById: jest.fn(),
+        findByExternalId: jest.fn(),
         findByProvider: jest.fn(),
         softDelete: jest.fn(),
+        updateWebhookUri: jest.fn().mockResolvedValue(undefined),
     };
 
     const providerHelperMock = {
         register: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({

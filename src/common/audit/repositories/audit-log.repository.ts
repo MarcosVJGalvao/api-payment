@@ -18,7 +18,7 @@ export class AuditLogRepository {
   constructor(
     @InjectRepository(AuditLog)
     private readonly repository: Repository<AuditLog>,
-  ) {}
+  ) { }
 
   async create(data: {
     action: AuditAction;
@@ -45,7 +45,7 @@ export class AuditLogRepository {
       throw new CustomHttpException(
         `Failed to save audit log to database: ${error instanceof Error ? error.message : String(error)}. Data: action=${data.action}, entityType=${data.entityType}, status=${data.status}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
-        ErrorCode.INTERNAL_SERVER_ERROR,
+        ErrorCode.AUDIT_LOG_CREATION_FAILED,
       );
     }
   }

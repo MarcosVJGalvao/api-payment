@@ -12,6 +12,7 @@ import { ProviderAuthGuard } from './guards/provider-auth.guard';
 import { FinancialProvidersController } from './financial-providers.controller';
 import { LoggerModule } from '../common/logger/logger.module';
 import { RedisModule } from '../common/redis/redis.module';
+import { FinancialConfigModule } from './financial-config.module';
 
 @Module({
     imports: [
@@ -20,6 +21,7 @@ import { RedisModule } from '../common/redis/redis.module';
         JwtModule.register({}),
         LoggerModule,
         RedisModule,
+        FinancialConfigModule,
     ],
     controllers: [FinancialProvidersController],
     providers: [

@@ -1,4 +1,7 @@
 import { ConfigService } from '@nestjs/config';
+import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
+import { ErrorCode } from '@/common/errors/enums/error-code.enum';
+import { HttpStatus } from '@nestjs/common';
 
 /**
  * Obtém valores de configuração do banco de dados
@@ -17,7 +20,6 @@ export function getDatabaseConfig(
   const secretsSource = configService.get<string>('SECRETS_SOURCE', 'ENV') || process.env.SECRETS_SOURCE || 'ENV';
 
   if (secretsSource === 'VAULT') {
-    // Quando vem do Vault, ler APENAS de process.env (sem fallback para .env)
     const host = process.env.DB_HOST;
     const port = Number(process.env.DB_PORT);
     const username = process.env.DB_USERNAME;
@@ -32,23 +34,22 @@ export function getDatabaseConfig(
     if (!database) missingVars.push('DB_DATABASE');
 
     if (missingVars.length > 0) {
-      throw new Error(
+      throw new CustomHttpException(
         `Database configuration error: Secrets do Vault não foram carregados corretamente. ` +
         `Variáveis faltando: ${missingVars.join(', ')}. ` +
-        `Verifique os logs do [VaultLoader] para mais detalhes.`
+        `Verifique os logs do [VaultLoader] para mais detalhes.`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        ErrorCode.ENVIRONMENT_VARIABLE_MISSING
       );
     }
-
-    // TypeScript: após validação, sabemos que todos os valores estão definidos
-    return { 
-      host: host!, 
-      port: port!, 
-      username: username!, 
-      password: password!, 
-      database: database! 
+    return {
+      host: host!,
+      port: port!,
+      username: username!,
+      password: password!,
+      database: database!
     };
   } else {
-    // Quando vem do .env, ler do ConfigService
     const host = configService.get<string>('DB_HOST');
     const port = configService.get<number>('DB_PORT', 3306);
     const username = configService.get<string>('DB_USERNAME');
@@ -62,19 +63,19 @@ export function getDatabaseConfig(
     if (!database) missingVars.push('DB_DATABASE');
 
     if (missingVars.length > 0) {
-      throw new Error(
+      throw new CustomHttpException(
         `Database configuration error: Variáveis obrigatórias não encontradas: ${missingVars.join(', ')}. ` +
-        `Defina essas variáveis no arquivo .env.`
+        `Defina essas variáveis no arquivo .env.`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        ErrorCode.ENVIRONMENT_VARIABLE_MISSING
       );
     }
-
-    // TypeScript: após validação, sabemos que todos os valores estão definidos
-    return { 
-      host: host!, 
-      port, 
-      username: username!, 
-      password: password!, 
-      database: database! 
+    return {
+      host: host!,
+      port,
+      username: username!,
+      password: password!,
+      database: database!
     };
   }
 }
