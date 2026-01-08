@@ -199,11 +199,13 @@ export class CreateBoleto1767893771710 implements MigrationInterface {
                     {
                         name: 'created_at',
                         type: 'datetime',
+                        precision: 6,
                         default: 'CURRENT_TIMESTAMP(6)',
                     },
                     {
                         name: 'updated_at',
                         type: 'datetime',
+                        precision: 6,
                         default: 'CURRENT_TIMESTAMP(6)',
                         onUpdate: 'CURRENT_TIMESTAMP(6)',
                     },
