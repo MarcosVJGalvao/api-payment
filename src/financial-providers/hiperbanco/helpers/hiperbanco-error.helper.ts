@@ -38,9 +38,18 @@ export function handleHiperbancoError(
     if (isAxiosError(error)) {
         const axiosError = error as AxiosError;
         responseData = axiosError.response?.data;
-        status = axiosError.response?.status || HttpStatus.INTERNAL_SERVER_ERROR;
-
-        message = axiosError.message;
+        
+        // Se não houver response, é erro de rede/timeout - usar Bad Gateway
+        if (!axiosError.response) {
+            status = HttpStatus.BAD_GATEWAY;
+            message = axiosError.code === 'ECONNABORTED' || axiosError.message.includes('timeout')
+                ? 'Request timeout while communicating with external service'
+                : 'Failed to communicate with external service';
+            errorCode = ErrorCode.EXTERNAL_SERVICE_COMMUNICATION_ERROR;
+        } else {
+            status = axiosError.response.status;
+            message = axiosError.message;
+        }
 
         if (isHiperbancoErrorResponse(responseData)) {
             if (responseData.message) {

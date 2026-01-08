@@ -5,7 +5,7 @@
 
 export interface HiperbancoRequestOptions {
     headers?: Record<string, string>;
-    params?: Record<string, any>;
+    params?: Record<string, string | number | boolean>;
 }
 
 export interface HiperbancoAccount {
@@ -67,4 +67,21 @@ export interface ListWebhooksResponse {
 export interface HiperbancoErrorResponse {
     message?: string;
     errorCode?: string;
+}
+
+export interface BoletoEmissionResponse extends Record<string, unknown> {
+    id?: string;
+    authenticationCode?: string;
+    barcode?: string;
+    digitable?: string;
+    status?: string;
+}
+
+export interface BoletoWebhookPayload extends Record<string, unknown> {
+    id?: string;
+    externalId?: string;
+    status?: string;
+    authenticationCode?: string;
+    barcode?: string;
+    digitable?: string;
 }
