@@ -10,6 +10,7 @@ import { LoggerModule } from '../common/logger/logger.module';
 import { BoletoProviderHelper } from './helpers/boleto-provider.helper';
 import { HiperbancoBoletoHelper } from './helpers/hiperbanco/hiperbanco-boleto.helper';
 import { FinancialProviderPipe } from './pipes/financial-provider.pipe';
+import { ClientModule } from '../client/client.module';
 
 @Module({
     imports: [
@@ -18,6 +19,7 @@ import { FinancialProviderPipe } from './pipes/financial-provider.pipe';
         BaseQueryModule,
         AuditModule,
         LoggerModule,
+        ClientModule,
     ],
     controllers: [BoletoController],
     providers: [

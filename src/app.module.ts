@@ -10,6 +10,8 @@ import { AuditModule } from './common/audit/audit.module';
 import { FinancialProvidersModule } from './financial-providers/financial-providers.module';
 import { WebhookModule } from './webhook/webhook.module';
 import { BoletoModule } from './boleto/boleto.module';
+import { ClientModule } from './client/client.module';
+import { InternalUserModule } from './internal-user/internal-user.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
@@ -29,6 +31,8 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
     FinancialProvidersModule,
     WebhookModule,
     BoletoModule,
+    ClientModule,
+    InternalUserModule,
   ],
   controllers: [AppController],
   providers: [AppService],

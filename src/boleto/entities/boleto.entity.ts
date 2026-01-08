@@ -6,6 +6,8 @@ import {
     UpdateDateColumn,
     DeleteDateColumn,
     Index,
+    ManyToOne,
+    JoinColumn,
 } from 'typeorm';
 import { BoletoStatus } from '../enums/boleto-status.enum';
 import { BoletoType } from '../enums/boleto-type.enum';
@@ -13,6 +15,8 @@ import { InterestType } from '../enums/interest-type.enum';
 import { FineType } from '../enums/fine-type.enum';
 import { DiscountType } from '../enums/discount-type.enum';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
+import { Client } from '@/client/entities/client.entity';
+import { Account } from '@/account/entities/account.entity';
 
 @Entity('boleto')
 @Index(['externalId'])
@@ -256,6 +260,28 @@ export class Boleto {
         comment: 'Identificador do provedor financeiro',
     })
     providerSlug: FinancialProvider;
+
+    @Column({
+        type: 'uuid',
+        name: 'client_id',
+        comment: 'ID do cliente',
+    })
+    clientId: string;
+
+    @ManyToOne(() => Client)
+    @JoinColumn({ name: 'client_id' })
+    client: Client;
+
+    @Column({
+        type: 'uuid',
+        name: 'account_id',
+        comment: 'ID da conta que emitiu o boleto',
+    })
+    accountId: string;
+
+    @ManyToOne(() => Account)
+    @JoinColumn({ name: 'account_id' })
+    account: Account;
 
     @CreateDateColumn({
         name: 'created_at',

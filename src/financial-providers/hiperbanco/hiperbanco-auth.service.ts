@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, HttpStatus } from '@nestjs/common';
 import { HiperbancoHttpService } from './hiperbanco-http.service';
 import { FinancialCredentialsService } from '../services/financial-credentials.service';
 import { ProviderSessionService } from '../services/provider-session.service';
@@ -9,6 +9,12 @@ import { BankLoginDto } from '../dto/bank-login.dto';
 import { BackofficeLoginDto } from '../dto/backoffice-login.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import type { HiperbancoConfig } from './helpers/hiperbanco-config.helper';
+import { AccountService } from '@/account/account.service';
+import { OnboardingService } from '@/onboarding/onboarding.service';
+import { AccountStatus, AccountType } from '@/account/entities/account.entity';
+import { OnboardingTypeAccount } from '@/onboarding/enums/onboarding-type-account.enum';
+import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
+import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 
 export interface AuthLoginResponse {
     access_token: string;
@@ -26,6 +32,8 @@ export class HiperbancoAuthService {
         private readonly sessionService: ProviderSessionService,
         private readonly jwtService: ProviderJwtService,
         private readonly logger: AppLoggerService,
+        private readonly accountService: AccountService,
+        private readonly onboardingService: OnboardingService,
         @Inject('HIPERBANCO_CONFIG') private readonly config: HiperbancoConfig,
     ) { }
 
@@ -63,7 +71,7 @@ export class HiperbancoAuthService {
         };
     }
 
-    async loginApiBank(loginDto: BankLoginDto): Promise<AuthLoginResponse> {
+    async loginApiBank(loginDto: BankLoginDto, clientId: string): Promise<AuthLoginResponse> {
         this.logger.log(`Initiating API Bank login for document: ${loginDto.document.substring(0, 3)}***`, this.context);
 
         const credentials = await this.credentialsService.getPublicCredentials(this.PROVIDER_SLUG);
@@ -77,12 +85,58 @@ export class HiperbancoAuthService {
         const response = await this.http.post<BankLoginResponse>('/Users/login/api-bank', requestPayload);
         this.logger.log('API Bank login successful', this.context);
 
+        // Persistir Accounts
+        const accounts = response.userData?.accounts || [];
+        const savedAccounts = [];
+
+        for (const account of accounts) {
+            const savedAccount = await this.accountService.createOrUpdate(
+                account.id,
+                clientId,
+                {
+                    status: account.status as AccountStatus,
+                    branch: account.branch,
+                    number: account.number,
+                    type: account.type as AccountType,
+                },
+            );
+            savedAccounts.push(savedAccount);
+        }
+
+        // Determinar primeira conta (principal)
+        const primaryAccount = savedAccounts[0];
+        if (!primaryAccount) {
+            throw new CustomHttpException(
+                'No accounts found in response',
+                HttpStatus.BAD_REQUEST,
+                ErrorCode.ACCOUNT_NOT_FOUND,
+            );
+        }
+
+        // Persistir Onboarding
+        if (response.userData?.id) {
+            const typeAccount = response.userData.typeAccount === 'PJ' 
+                ? OnboardingTypeAccount.PJ 
+                : OnboardingTypeAccount.PF;
+
+            await this.onboardingService.createOrUpdate(
+                response.userData.id,
+                clientId,
+                primaryAccount.id,
+                {
+                    registerName: response.userData.registerName || '',
+                    documentNumber: response.userData.documentNumber || '',
+                    typeAccount,
+                },
+            );
+        }
+
         const session = await this.sessionService.createSession({
             providerSlug: this.PROVIDER_SLUG,
-            clientId: credentials.client_id,
+            clientId,
             hiperbancoToken: response.access_token,
             userId: response.userData?.id,
-            accountId: response.userData?.accounts?.[0]?.id,
+            accountId: primaryAccount.id,
             loginType: 'bank',
         });
 
@@ -90,6 +144,7 @@ export class HiperbancoAuthService {
             sessionId: session.sessionId,
             providerSlug: session.providerSlug,
             clientId: session.clientId,
+            accountId: session.accountId,
             loginType: session.loginType,
         });
 

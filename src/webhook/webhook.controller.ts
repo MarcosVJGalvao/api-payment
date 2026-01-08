@@ -13,16 +13,14 @@ import { AuditAction } from '@/common/audit/enums/audit-action.enum';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { ProviderAuthGuard } from '@/financial-providers/guards/provider-auth.guard';
 import { RequireLoginType } from '@/financial-providers/decorators/require-login-type.decorator';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
 import { FinancialProviderPipe } from './pipes/financial-provider.pipe';
-
-interface RequestWithSession extends Request {
-    providerSession: ProviderSession;
-}
+import { RequireClientPermission } from '@/common/decorators/require-client-permission.decorator';
+import type { RequestWithSession } from '@/financial-providers/hiperbanco/interfaces/request-with-session.interface';
 
 @ApiTags('Webhooks')
 @Controller('webhook')
 @ApiBearerAuth()
+@RequireClientPermission('integration:webhook')
 export class WebhookController {
     constructor(private readonly webhookService: WebhookService) { }
 
@@ -41,7 +39,7 @@ export class WebhookController {
         @Req() req: RequestWithSession,
         @Body() dto: RegisterWebhookDto,
     ) {
-        return this.webhookService.registerWebhook(provider, dto, req.providerSession);
+        return this.webhookService.registerWebhook(provider, dto, req.providerSession, req.clientId!);
     }
 
     @Get(':provider')
@@ -53,7 +51,7 @@ export class WebhookController {
         @Req() req: RequestWithSession,
         @Query() query: ListWebhooksQueryDto,
     ) {
-        return this.webhookService.listWebhooks(provider, query, req.providerSession);
+        return this.webhookService.listWebhooks(provider, query, req.providerSession, req.clientId!);
     }
 
     @Patch(':provider/:id')
@@ -73,7 +71,7 @@ export class WebhookController {
         @Req() req: RequestWithSession,
         @Body() dto: UpdateWebhookDto,
     ) {
-        return this.webhookService.updateWebhook(provider, webhookId, dto, req.providerSession);
+        return this.webhookService.updateWebhook(provider, webhookId, dto, req.providerSession, req.clientId!);
     }
 
     @Delete(':provider/:id')
@@ -92,6 +90,6 @@ export class WebhookController {
         @Param('id') webhookId: string,
         @Req() req: RequestWithSession,
     ) {
-        return this.webhookService.deleteWebhook(provider, webhookId, req.providerSession);
+        return this.webhookService.deleteWebhook(provider, webhookId, req.providerSession, req.clientId!);
     }
 }

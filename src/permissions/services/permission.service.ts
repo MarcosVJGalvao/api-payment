@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Permission } from '../entities/permission.entity';
 import { Role } from '../entities/role.entity';
+import { ClientRole } from '../entities/client-role.entity';
 import { RedisService } from '@/common/redis/redis.service';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
@@ -25,6 +26,8 @@ export class PermissionService {
     private permissionRepository: Repository<Permission>,
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
+    @InjectRepository(ClientRole)
+    private clientRoleRepository: Repository<ClientRole>,
     private redisService: RedisService,
     private configService: ConfigService,
     private baseQueryService: BaseQueryService,
@@ -146,7 +149,10 @@ export class PermissionService {
     createPermissionDto: CreatePermissionDto,
   ): Promise<Permission> {
     const existingPermission = await this.permissionRepository.findOne({
-      where: { name: createPermissionDto.name },
+      where: { 
+        name: createPermissionDto.name,
+        clientId: createPermissionDto.clientId || null,
+      },
     });
 
     if (existingPermission) {
@@ -289,5 +295,129 @@ export class PermissionService {
   async getUserDirectPermissions(userId: string): Promise<Permission[]> {
     // TODO: Implement when User module is available
     return [];
+  }
+
+  /**
+   * Busca todas as roles vinculadas a um client
+   * @param clientId - ID do cliente
+   * @returns Array de roles com suas permissões
+   */
+  async getClientRoles(clientId: string): Promise<Role[]> {
+    const clientRoles = await this.clientRoleRepository.find({
+      where: { clientId },
+      relations: ['role', 'role.rolePermissions', 'role.rolePermissions.permission'],
+    });
+
+    return clientRoles.map((cr) => cr.role);
+  }
+
+  /**
+   * Verifica se um client tem uma role específica
+   * @param clientId - ID do cliente
+   * @param roleName - Nome da role (ex: 'auth:bank')
+   * @returns true se o client tem a role
+   */
+  async clientHasRole(clientId: string, roleName: string): Promise<boolean> {
+    // Buscar role global primeiro (clientId = null)
+    let role = await this.roleRepository.findOne({
+      where: { name: roleName, clientId: null },
+    });
+
+    // Se não encontrar role global, buscar role específica do client
+    if (!role) {
+      role = await this.roleRepository.findOne({
+        where: { name: roleName, clientId },
+      });
+    }
+
+    if (!role) {
+      return false;
+    }
+
+    // Verificar se client tem acesso à role (via client_role)
+    const clientRole = await this.clientRoleRepository.findOne({
+      where: { clientId, roleId: role.id },
+    });
+
+    return !!clientRole;
+  }
+
+  /**
+   * Verifica se um client tem uma permissão específica através de suas roles
+   * @param clientId - ID do cliente
+   * @param permissionName - Nome da permissão (ex: 'financial:boleto')
+   * @returns true se o client tem a permissão
+   */
+  async clientHasPermission(clientId: string, permissionName: string): Promise<boolean> {
+    const clientRoles = await this.getClientRoles(clientId);
+
+    // Coletar todos os nomes de permissões das roles do client
+    const allPermissionNames = new Set<string>();
+
+    for (const role of clientRoles) {
+      if (role.rolePermissions) {
+        for (const rolePermission of role.rolePermissions) {
+          if (rolePermission.permission) {
+            allPermissionNames.add(rolePermission.permission.name);
+          }
+        }
+      }
+    }
+
+    // Verificar também permissões globais e específicas do client diretamente
+    const directPermissions = await this.permissionRepository.find({
+      where: [
+        { name: permissionName, clientId: null }, // Permissões globais
+        { name: permissionName, clientId }, // Permissões específicas do client
+      ],
+    });
+
+    for (const perm of directPermissions) {
+      allPermissionNames.add(perm.name);
+    }
+
+    if (allPermissionNames.size === 0) {
+      return false;
+    }
+
+    const permissionNames = Array.from(allPermissionNames);
+    return checkPermissionHierarchy(permissionNames, permissionName);
+  }
+
+  /**
+   * Vincula uma role a um client
+   * @param clientId - ID do cliente
+   * @param roleId - ID da role
+   */
+  async assignRoleToClient(clientId: string, roleId: string): Promise<void> {
+    const existingClientRole = await this.clientRoleRepository.findOne({
+      where: { clientId, roleId },
+    });
+
+    if (existingClientRole) {
+      return; // Já está vinculado
+    }
+
+    const clientRole = this.clientRoleRepository.create({
+      clientId,
+      roleId,
+    });
+
+    await this.clientRoleRepository.save(clientRole);
+  }
+
+  /**
+   * Remove vínculo de role de um client
+   * @param clientId - ID do cliente
+   * @param roleId - ID da role
+   */
+  async removeRoleFromClient(clientId: string, roleId: string): Promise<void> {
+    const clientRole = await this.clientRoleRepository.findOne({
+      where: { clientId, roleId },
+    });
+
+    if (clientRole) {
+      await this.clientRoleRepository.remove(clientRole);
+    }
   }
 }

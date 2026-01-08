@@ -19,6 +19,9 @@ export interface HiperbancoAccount {
 export interface BankLoginUserData extends Record<string, unknown> {
     id: string;
     accounts: HiperbancoAccount[];
+    registerName?: string;
+    documentNumber?: string;
+    typeAccount?: 'PF' | 'PJ';
 }
 
 export interface BankLoginResponse extends Record<string, unknown> {

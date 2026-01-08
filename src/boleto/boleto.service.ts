@@ -16,6 +16,7 @@ import { BoletoStatus } from './enums/boleto-status.enum';
 import { parseDateOnly } from '@/common/helpers/date.helpers';
 import { BoletoEmissionResponse, BoletoWebhookPayload } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { validateBoletoDates, parseBoletoStatus } from './helpers/boleto-validation.helper';
+import { FilterOperator } from '@/common/base-query/enums/filter-operator.enum';
 
 @Injectable()
 export class BoletoService {
@@ -80,6 +81,8 @@ export class BoletoService {
                 barcode: response.barcode,
                 digitable: response.digitable,
                 providerSlug: provider,
+                clientId: session.clientId,
+                accountId: session.accountId,
             });
 
             const savedBoleto = await this.repository.save(boleto);
@@ -110,10 +113,12 @@ export class BoletoService {
     /**
      * Busca um boleto por ID.
      * @param id - ID do boleto
+     * @param clientId - ID do cliente (para validação de isolamento)
+     * @param accountId - ID da conta (para validação de isolamento)
      * @returns Boleto encontrado
-     * @throws CustomHttpException se o boleto não for encontrado
+     * @throws CustomHttpException se o boleto não for encontrado ou não pertence à conta
      */
-    async findById(id: string): Promise<Boleto> {
+    async findById(id: string, clientId: string, accountId: string): Promise<Boleto> {
         this.logger.log(`Finding boleto by id: ${id}`, this.context);
 
         const boleto = await this.repository.findOne({ where: { id } });
@@ -123,6 +128,15 @@ export class BoletoService {
                 `Boleto not found: ${id}`,
                 HttpStatus.NOT_FOUND,
                 ErrorCode.BOLETO_NOT_FOUND,
+            );
+        }
+
+        // Validar isolamento: boleto deve pertencer ao clientId e accountId
+        if (boleto.clientId !== clientId || boleto.accountId !== accountId) {
+            throw new CustomHttpException(
+                'Boleto does not belong to this account',
+                HttpStatus.FORBIDDEN,
+                ErrorCode.ACCESS_DENIED,
             );
         }
 
@@ -155,13 +169,15 @@ export class BoletoService {
      * Atualiza um boleto.
      * @param id - ID do boleto
      * @param dto - Dados para atualização
+     * @param clientId - ID do cliente (para validação de isolamento)
+     * @param accountId - ID da conta (para validação de isolamento)
      * @returns Boleto atualizado
-     * @throws CustomHttpException se o boleto não for encontrado
+     * @throws CustomHttpException se o boleto não for encontrado ou não pertence à conta
      */
-    async updateBoleto(id: string, dto: UpdateBoletoDto): Promise<Boleto> {
+    async updateBoleto(id: string, dto: UpdateBoletoDto, clientId: string, accountId: string): Promise<Boleto> {
         this.logger.log(`Updating boleto: ${id}`, this.context);
 
-        const boleto = await this.findById(id);
+        const boleto = await this.findById(id, clientId, accountId);
 
         if (dto.status) {
             boleto.status = dto.status;
@@ -185,9 +201,11 @@ export class BoletoService {
     /**
      * Lista boletos com paginação, filtros e busca.
      * @param query - Parâmetros de query
+     * @param clientId - ID do cliente (para isolamento)
+     * @param accountId - ID da conta (para isolamento - cada conta só vê seus próprios boletos)
      * @returns Resultado paginado de boletos
      */
-    async listBoletos(query: QueryBoletoDto) {
+    async listBoletos(query: QueryBoletoDto, clientId: string, accountId: string) {
         this.logger.log('Listing boletos', this.context);
 
         const queryOptions = this.baseQueryService.buildQueryOptions(
@@ -202,6 +220,21 @@ export class BoletoService {
                     { field: 'type' },
                     { field: 'providerSlug' },
                 ],
+            },
+        );
+
+        // Adicionar filtros de isolamento manualmente (clientId e accountId são obrigatórios)
+        queryOptions.filters = queryOptions.filters || [];
+        queryOptions.filters.push(
+            {
+                field: 'clientId',
+                operator: FilterOperator.EQUALS,
+                value: clientId,
+            },
+            {
+                field: 'accountId',
+                operator: FilterOperator.EQUALS,
+                value: accountId,
             },
         );
 

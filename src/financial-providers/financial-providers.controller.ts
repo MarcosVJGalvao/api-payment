@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Param, Post, UseInterceptors, ParseEnumPipe, HttpStatus } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Post, UseInterceptors, ParseEnumPipe, HttpStatus, UseGuards, Req } from '@nestjs/common';
+import { ApiTags, ApiHeader } from '@nestjs/swagger';
 import { FinancialCredentialsService } from './services/financial-credentials.service';
 import { HiperbancoAuthService } from './hiperbanco/hiperbanco-auth.service';
 import { CreateProviderCredentialDto } from './dto/create-provider-credential.dto';
@@ -14,6 +14,9 @@ import { Audit } from '@/common/audit/decorators/audit.decorator';
 import { AuditAction } from '@/common/audit/enums/audit-action.enum';
 import { AuditInterceptor } from '@/common/audit/interceptors/audit.interceptor';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
+import { RequireClient } from '@/common/decorators/require-client.decorator';
+import { RequireClientPermission } from '@/common/decorators/require-client-permission.decorator';
+import type { RequestWithClient } from '@/common/guards/client.guard';
 
 @ApiTags('Provedores Financeiros')
 @Controller('providers')
@@ -55,8 +58,10 @@ export class FinancialProvidersController {
     }
 
     @Post('hiperbanco/auth/bank')
+    @RequireClient()
+    @RequireClientPermission('auth:bank')
     @ApiBankLogin()
-    async loginBank(@Body() dto: BankLoginDto) {
-        return this.hiperbancoAuth.loginApiBank(dto);
+    async loginBank(@Body() dto: BankLoginDto, @Req() req: RequestWithClient) {
+        return this.hiperbancoAuth.loginApiBank(dto, req.clientId!);
     }
 }

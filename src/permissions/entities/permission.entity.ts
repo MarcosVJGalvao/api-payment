@@ -4,16 +4,20 @@ import {
   DeleteDateColumn,
   Entity,
   Index,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   Unique,
   UpdateDateColumn,
+  JoinColumn,
 } from 'typeorm';
 import { RolePermission } from './role-permission.entity';
+import { Client } from '@/client/entities/client.entity';
 
 @Entity('permission')
-@Unique(['name'])
+@Unique(['name', 'clientId'])
 @Index(['module', 'action'])
+@Index(['clientId'])
 export class Permission {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -45,6 +49,18 @@ export class Permission {
     comment: 'Descrição da permissão',
   })
   description: string;
+
+  @Column({
+    type: 'uuid',
+    name: 'client_id',
+    nullable: true,
+    comment: 'ID do cliente (null para permissões globais)',
+  })
+  clientId: string | null;
+
+  @ManyToOne(() => Client, { nullable: true })
+  @JoinColumn({ name: 'client_id' })
+  client: Client | null;
 
   @OneToMany(
     () => RolePermission,

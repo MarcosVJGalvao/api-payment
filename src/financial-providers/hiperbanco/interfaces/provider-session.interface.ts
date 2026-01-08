@@ -19,5 +19,6 @@ export interface ProviderJwtPayload {
     sessionId: string;
     providerSlug: FinancialProvider;
     clientId: string;
+    accountId?: string;
     loginType: 'backoffice' | 'bank';
 }

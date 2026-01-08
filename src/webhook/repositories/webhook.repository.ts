@@ -21,12 +21,14 @@ export class WebhookRepository {
      * @param provider Provedor financeiro.
      * @param dto Dados do webhook.
      * @param response Resposta do provedor.
+     * @param clientId ID do cliente.
      * @returns Webhook persistido.
      */
     async saveWebhook(
         provider: FinancialProvider,
         dto: RegisterWebhookDto,
         response: RegisterWebhookResponse,
+        clientId: string,
     ): Promise<Webhook> {
         const webhook = this.repository.create({
             name: dto.name,
@@ -37,6 +39,7 @@ export class WebhookRepository {
             externalId: response.id,
             publicKey: response.publicKey,
             isActive: true,
+            clientId,
         });
         return this.repository.save(webhook);
     }
@@ -51,6 +54,14 @@ export class WebhookRepository {
 
     async findByProvider(provider: FinancialProvider): Promise<Webhook[]> {
         return this.repository.find({ where: { providerSlug: provider } });
+    }
+
+    async findByClientId(clientId: string): Promise<Webhook[]> {
+        return this.repository.find({ where: { clientId } });
+    }
+
+    async findByExternalIdAndClient(externalId: string, clientId: string): Promise<Webhook | null> {
+        return this.repository.findOne({ where: { externalId, clientId } });
     }
 
     async softDelete(id: string): Promise<void> {
