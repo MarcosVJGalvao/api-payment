@@ -28,7 +28,7 @@ async function bootstrap() {
   const standaloneLogger = createStandaloneLogger();
 
   console.log('\n╔══════════════════════════════════════════════════════════╗');
-  console.log('║  🚀  SCHOOL API - Starting Application                   ║');
+  console.log('║  🚀  PAYMENTS API - Starting Application                 ║');
   console.log('╚══════════════════════════════════════════════════════════╝\n');
 
   try {

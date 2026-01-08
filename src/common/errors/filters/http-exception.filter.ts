@@ -40,7 +40,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       statusCode: status,
       request: formatRequest(request),
       response: {
-        erroCode: errorCode,
+        errorCode: errorCode,
         message,
         correlationId,
       },
@@ -148,7 +148,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     response.setHeader('X-Correlation-ID', correlationId);
     response.status(status).json({
-      erroCode: errorCode,
+      errorCode: errorCode,
       message,
       correlationId,
     });

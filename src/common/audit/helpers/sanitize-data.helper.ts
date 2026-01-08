@@ -68,7 +68,9 @@ export class SanitizeDataHelper {
 
         try {
           sanitized[key] = this.sanitize(dataObj[key], depth + 1);
-        } catch {
+        } catch (error) {
+          // Silently skip fields that fail to sanitize to prevent errors from breaking the entire sanitization process
+          // In debug mode, this could be logged, but for now we skip to maintain data flow
           continue;
         }
       }
@@ -126,7 +128,9 @@ export class SanitizeDataHelper {
             fieldsToRemove,
             depth + 1,
           );
-        } catch {
+        } catch (error) {
+          // Silently skip fields that fail to remove to prevent errors from breaking the entire removal process
+          // In debug mode, this could be logged, but for now we skip to maintain data flow
           continue;
         }
       }
