@@ -1,0 +1,105 @@
+import { Injectable } from '@nestjs/common';
+import { HiperbancoHttpService } from '@/financial-providers/hiperbanco/hiperbanco-http.service';
+import { CreateBoletoDto } from '../../dto/create-boleto.dto';
+import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import { BoletoEmissionResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
+import { BoletoType } from '../../enums/boleto-type.enum';
+
+/**
+ * Helper responsável pela comunicação com o Hiperbanco para operações de boletos.
+ */
+@Injectable()
+export class HiperbancoBoletoHelper {
+    constructor(private readonly hiperbancoHttp: HiperbancoHttpService) { }
+
+    /**
+     * Emite um boleto no Hiperbanco.
+     * @param dto Dados do boleto a ser emitido.
+     * @param session Sessão autenticada do provedor (já validada pelo guard).
+     * @returns Resposta do Hiperbanco com dados do boleto emitido.
+     */
+    async emitBoleto(dto: CreateBoletoDto, session: ProviderSession): Promise<BoletoEmissionResponse> {
+        const payload = this.buildPayload(dto);
+
+        return this.hiperbancoHttp.post<BoletoEmissionResponse>(
+            '/boletos/emission',
+            payload,
+            {
+                headers: {
+                    Authorization: `Bearer ${session.hiperbancoToken}`,
+                },
+            },
+        );
+    }
+
+    /**
+     * Constrói o payload para emissão de boleto conforme o tipo (Levy ou Deposit).
+     * @param dto Dados do boleto
+     * @returns Payload formatado para a API do Hiperbanco
+     */
+    private buildPayload(dto: CreateBoletoDto): Record<string, unknown> {
+        const basePayload: Record<string, unknown> = {
+            account: {
+                number: dto.account.number,
+                branch: dto.account.branch,
+            },
+            documentNumber: dto.documentNumber,
+            amount: dto.amount,
+            dueDate: dto.dueDate,
+            type: dto.type,
+        };
+
+        if (dto.alias) {
+            basePayload.alias = dto.alias;
+        }
+
+        if (dto.type === BoletoType.LEVY) {
+            // Para tipo Levy, incluir campos específicos
+            if (dto.closePayment) {
+                basePayload.closePayment = dto.closePayment;
+            }
+
+            if (dto.payer) {
+                basePayload.payer = {
+                    document: dto.payer.document,
+                    name: dto.payer.name,
+                    tradeName: dto.payer.tradeName,
+                    address: {
+                        zipCode: dto.payer.address.zipCode,
+                        addressLine: dto.payer.address.addressLine,
+                        neighborhood: dto.payer.address.neighborhood,
+                        city: dto.payer.address.city,
+                        state: dto.payer.address.state,
+                    },
+                };
+            }
+
+            if (dto.interest) {
+                basePayload.interest = {
+                    startDate: dto.interest.startDate,
+                    value: dto.interest.value,
+                    type: dto.interest.type,
+                };
+            }
+
+            if (dto.fine) {
+                basePayload.fine = {
+                    startDate: dto.fine.startDate,
+                    value: dto.fine.value,
+                    type: dto.fine.type,
+                };
+            }
+
+            if (dto.discount) {
+                basePayload.discount = {
+                    limitDate: dto.discount.limitDate,
+                    value: dto.discount.value,
+                    type: dto.discount.type,
+                };
+            }
+        }
+        // Para tipo Deposit, não incluir payer, interest, fine, discount
+
+        return basePayload;
+    }
+}
