@@ -1,6 +1,4 @@
 import { HttpStatus } from '@nestjs/common';
-import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
-import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 
 export interface LogicalError {
   message: string;

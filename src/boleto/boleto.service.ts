@@ -1,7 +1,6 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { instanceToPlain } from 'class-transformer';
 import { AppLoggerService } from '@/common/logger/logger.service';
 import { BaseQueryService } from '@/common/base-query/service/base-query.service';
 import { Boleto } from './entities/boleto.entity';

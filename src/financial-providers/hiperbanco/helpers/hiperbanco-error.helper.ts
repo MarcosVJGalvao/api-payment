@@ -2,7 +2,6 @@ import { HttpStatus } from '@nestjs/common';
 import { AxiosError, isAxiosError } from 'axios';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
-import { HiperbancoErrorResponse } from '../interfaces/hiperbanco-responses.interface';
 import { isHiperbancoErrorResponse } from './hiperbanco-validators.helper';
 
 /**

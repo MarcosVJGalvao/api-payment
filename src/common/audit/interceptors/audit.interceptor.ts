@@ -25,7 +25,6 @@ import {
   processUnhandledError,
 } from '@/common/errors/helpers/error.helpers';
 import { extractMessage } from '@/common/errors/helpers/message.helpers';
-import { RequestWithAccount } from '@/financial-providers/guards/account.guard';
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {

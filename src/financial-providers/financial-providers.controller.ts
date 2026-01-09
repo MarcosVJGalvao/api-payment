@@ -6,11 +6,9 @@ import {
   Post,
   UseInterceptors,
   ParseEnumPipe,
-  HttpStatus,
-  UseGuards,
   Req,
 } from '@nestjs/common';
-import { ApiTags, ApiHeader } from '@nestjs/swagger';
+import { ApiTags } from '@nestjs/swagger';
 import { FinancialCredentialsService } from './services/financial-credentials.service';
 import { HiperbancoAuthService } from './hiperbanco/hiperbanco-auth.service';
 import { CreateProviderCredentialDto } from './dto/create-provider-credential.dto';
@@ -28,8 +26,6 @@ import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { RequireClient } from '@/common/decorators/require-client.decorator';
 import { RequireClientPermission } from '@/common/decorators/require-client-permission.decorator';
 import type { RequestWithClient } from '@/common/guards/client.guard';
-import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
-import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { ProviderLoginType } from './enums/provider-login-type.enum';
 
 @ApiTags('Provedores Financeiros')
