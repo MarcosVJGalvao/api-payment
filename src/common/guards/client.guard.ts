@@ -4,7 +4,7 @@ import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exce
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { ClientStatus } from '@/client/enums/client-status.enum';
 
-export interface RequestWithClient extends Request {
+export interface RequestWithClient {
   clientId?: string;
   client?: {
     id: string;
@@ -14,8 +14,9 @@ export interface RequestWithClient extends Request {
   headers: {
     'x-client-id'?: string;
     'X-Client-Id'?: string;
-    [key: string]: any;
+    [key: string]: string | string[] | undefined;
   };
+  [key: string]: unknown;
 }
 
 @Injectable()

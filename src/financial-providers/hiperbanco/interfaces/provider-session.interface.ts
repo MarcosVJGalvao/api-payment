@@ -1,4 +1,5 @@
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
+import { ProviderLoginType } from '../../enums/provider-login-type.enum';
 
 /**
  * Interface para sessão de provedor armazenada no Redis
@@ -10,7 +11,7 @@ export interface ProviderSession {
     hiperbancoToken: string;
     userId?: string;
     accountId?: string;
-    loginType: 'backoffice' | 'bank';
+    loginType: ProviderLoginType;
     createdAt: number;
     expiresAt: number;
 }
@@ -20,5 +21,5 @@ export interface ProviderJwtPayload {
     providerSlug: FinancialProvider;
     clientId: string;
     accountId?: string;
-    loginType: 'backoffice' | 'bank';
+    loginType: ProviderLoginType;
 }

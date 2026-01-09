@@ -1,6 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { ProviderCredential } from '../entities/provider-credential.entity';
+import { ProviderLoginType } from '../enums/provider-login-type.enum';
 
 export function ApiGetProviderConfig() {
     return applyDecorators(
@@ -14,6 +15,13 @@ export function ApiGetProviderConfig() {
             name: 'provider',
             description: 'Slug identificador do provedor financeiro',
             example: 'hiperbanco',
+            required: true,
+        }),
+        ApiParam({
+            name: 'loginType',
+            description: 'Tipo de login: backoffice (email/senha) ou bank (documento/senha)',
+            enum: ProviderLoginType,
+            example: ProviderLoginType.BACKOFFICE,
             required: true,
         }),
         ApiResponse({

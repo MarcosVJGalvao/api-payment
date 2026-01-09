@@ -3,19 +3,16 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
-  ManyToOne,
+  Index,
   OneToMany,
   PrimaryGeneratedColumn,
   Unique,
   UpdateDateColumn,
-  JoinColumn,
 } from 'typeorm';
 import { RolePermission } from './role-permission.entity';
-import { Client } from '@/client/entities/client.entity';
 
 @Entity('role')
-@Unique(['name', 'clientId'])
-@Index(['clientId'])
+@Unique(['name'])
 export class Role {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -33,18 +30,6 @@ export class Role {
     comment: 'Descrição da role',
   })
   description: string;
-
-  @Column({
-    type: 'uuid',
-    name: 'client_id',
-    nullable: true,
-    comment: 'ID do cliente (null para roles globais)',
-  })
-  clientId: string | null;
-
-  @ManyToOne(() => Client, { nullable: true })
-  @JoinColumn({ name: 'client_id' })
-  client: Client | null;
 
   @OneToMany(() => RolePermission, (rolePermission) => rolePermission.role, {
     cascade: true,

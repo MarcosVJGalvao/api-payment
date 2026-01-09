@@ -13,6 +13,7 @@ import { AuditAction } from '@/common/audit/enums/audit-action.enum';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { ProviderAuthGuard } from '@/financial-providers/guards/provider-auth.guard';
 import { RequireLoginType } from '@/financial-providers/decorators/require-login-type.decorator';
+import { ProviderLoginType } from '@/financial-providers/enums/provider-login-type.enum';
 import { FinancialProviderPipe } from './pipes/financial-provider.pipe';
 import { RequireClientPermission } from '@/common/decorators/require-client-permission.decorator';
 import type { RequestWithSession } from '@/financial-providers/hiperbanco/interfaces/request-with-session.interface';
@@ -21,12 +22,12 @@ import type { RequestWithSession } from '@/financial-providers/hiperbanco/interf
 @Controller('webhook')
 @ApiBearerAuth()
 @RequireClientPermission('integration:webhook')
+@UseGuards(ProviderAuthGuard)
+@RequireLoginType(ProviderLoginType.BACKOFFICE)
 export class WebhookController {
     constructor(private readonly webhookService: WebhookService) { }
 
     @Post(':provider/register')
-    @UseGuards(ProviderAuthGuard)
-    @RequireLoginType('backoffice')
     @ApiRegisterWebhook()
     @Audit({
         action: AuditAction.WEBHOOK_REGISTERED,
@@ -43,8 +44,6 @@ export class WebhookController {
     }
 
     @Get(':provider')
-    @UseGuards(ProviderAuthGuard)
-    @RequireLoginType('backoffice')
     @ApiListWebhooks()
     async listWebhooks(
         @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
@@ -55,8 +54,6 @@ export class WebhookController {
     }
 
     @Patch(':provider/:id')
-    @UseGuards(ProviderAuthGuard)
-    @RequireLoginType('backoffice')
     @ApiUpdateWebhook()
     @Audit({
         action: AuditAction.WEBHOOK_UPDATED,
@@ -76,8 +73,6 @@ export class WebhookController {
 
     @Delete(':provider/:id')
     @HttpCode(HttpStatus.NO_CONTENT)
-    @UseGuards(ProviderAuthGuard)
-    @RequireLoginType('backoffice')
     @ApiDeleteWebhook()
     @Audit({
         action: AuditAction.WEBHOOK_DELETED,

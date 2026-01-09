@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsEnum, Matches } from 'class-validator';
-import { ClientStatus } from '../enums/client-status.enum';
+import { IsString, IsNotEmpty, IsOptional, Matches, IsArray } from 'class-validator';
 import { ICreateClient } from '../interfaces/create-client.interface';
 
 export class CreateClientDto implements ICreateClient {
@@ -15,8 +14,13 @@ export class CreateClientDto implements ICreateClient {
   @Matches(/^\d+$/, { message: 'Documento deve conter apenas números' })
   document: string;
 
-  @ApiPropertyOptional({ enum: ClientStatus, description: 'Status do cliente', default: ClientStatus.ACTIVE })
+  @ApiPropertyOptional({ 
+    description: 'Scopes (permissões) a serem vinculados ao cliente', 
+    example: ['financial:boleto', 'auth:bank'],
+    type: [String],
+  })
   @IsOptional()
-  @IsEnum(ClientStatus)
-  status?: ClientStatus;
+  @IsArray()
+  @IsString({ each: true })
+  scopes?: string[];
 }

@@ -1,4 +1,4 @@
-import { RequestWithAccount } from '@/common/guards/account.guard';
+import { RequestWithAccount } from '@/financial-providers/guards/account.guard';
 import { ProviderSession } from './provider-session.interface';
 
 /**

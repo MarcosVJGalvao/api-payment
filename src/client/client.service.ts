@@ -10,6 +10,8 @@ import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { BaseQueryService } from '@/common/base-query/service/base-query.service';
 import { PaginationResult } from '@/common/base-query/interfaces/pagination-result.interface';
 import { FilterOperator } from '@/common/base-query/enums/filter-operator.enum';
+import { ClientStatus } from './enums/client-status.enum';
+import { PermissionService } from '@/permissions/services/permission.service';
 
 @Injectable()
 export class ClientService {
@@ -17,6 +19,7 @@ export class ClientService {
     @InjectRepository(Client)
     private readonly repository: Repository<Client>,
     private readonly baseQueryService: BaseQueryService,
+    private readonly permissionService: PermissionService,
   ) {}
 
   async create(createClientDto: CreateClientDto): Promise<Client> {
@@ -34,12 +37,21 @@ export class ClientService {
       );
     }
 
+    const { scopes, ...clientData } = createClientDto;
+
     const client = this.repository.create({
-      ...createClientDto,
-      status: createClientDto.status || 'ACTIVE',
+      ...clientData,
+      status: ClientStatus.ACTIVE,
     });
 
-    return this.repository.save(client);
+    const savedClient = await this.repository.save(client);
+
+    // Vincular scopes ao client se fornecidos
+    if (scopes && scopes.length > 0) {
+      await this.permissionService.assignPermissionsToClient(savedClient.id, scopes);
+    }
+
+    return savedClient;
   }
 
   async findAll(queryDto: QueryClientDto): Promise<PaginationResult<Client>> {
@@ -79,14 +91,23 @@ export class ClientService {
   async update(id: string, updateClientDto: UpdateClientDto): Promise<Client> {
     const client = await this.findById(id);
 
-    if (updateClientDto.name) {
-      client.name = updateClientDto.name;
+    const { scopes, ...clientData } = updateClientDto;
+
+    if (clientData.name) {
+      client.name = clientData.name;
     }
-    if (updateClientDto.status) {
-      client.status = updateClientDto.status;
+    if (clientData.status) {
+      client.status = clientData.status;
     }
 
-    return this.repository.save(client);
+    const savedClient = await this.repository.save(client);
+
+    // Atualizar scopes se fornecidos
+    if (scopes !== undefined) {
+      await this.permissionService.updateClientPermissions(savedClient.id, scopes);
+    }
+
+    return savedClient;
   }
 
   async remove(id: string): Promise<void> {

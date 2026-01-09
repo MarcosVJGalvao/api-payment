@@ -10,13 +10,13 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Client } from '@/client/entities/client.entity';
-import { Role } from './role.entity';
+import { Permission } from './permission.entity';
 
-@Entity('client_role')
-@Index(['clientId', 'roleId'], { unique: true })
+@Entity('client_permission')
+@Index(['clientId', 'permissionId'], { unique: true })
 @Index(['clientId'])
-@Index(['roleId'])
-export class ClientRole {
+@Index(['permissionId'])
+export class ClientPermission {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -33,14 +33,14 @@ export class ClientRole {
 
   @Column({
     type: 'uuid',
-    name: 'role_id',
-    comment: 'ID da role',
+    name: 'permission_id',
+    comment: 'ID da permissão (scope)',
   })
-  roleId: string;
+  permissionId: string;
 
-  @ManyToOne(() => Role)
-  @JoinColumn({ name: 'role_id' })
-  role: Role;
+  @ManyToOne(() => Permission)
+  @JoinColumn({ name: 'permission_id' })
+  permission: Permission;
 
   @CreateDateColumn({
     name: 'created_at',

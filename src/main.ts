@@ -32,7 +32,9 @@ async function bootstrap() {
   console.log('╚══════════════════════════════════════════════════════════╝\n');
 
   try {
+    console.log('📦 Loading secrets from Vault...');
     await loadSecretsFromVault();
+    console.log('✅ Secrets loaded successfully');
   } catch (error) {
     standaloneLogger.error(
       `Failed to load secrets from Vault: ${error instanceof Error ? error.message : String(error)}`,
@@ -43,59 +45,71 @@ async function bootstrap() {
     }
   }
 
-  const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn'],
-    bufferLogs: true,
-  });
+  try {
+    console.log('🏗️  Creating NestJS application...');
+    const app = await NestFactory.create(AppModule, {
+      logger: ['error', 'warn'],
+      bufferLogs: true,
+    });
+    console.log('✅ NestJS application created successfully');
 
-  const logger = app.get(AppLoggerService);
-  const configService = app.get(ConfigService);
+    console.log('🔧 Configuring application...');
+    const logger = app.get(AppLoggerService);
+    const configService = app.get(ConfigService);
 
-  app.enableCors();
+    console.log('🌐 Enabling CORS...');
+    app.enableCors();
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      transform: true,
-      whitelist: true,
-    }),
-  );
+    app.useGlobalPipes(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+      }),
+    );
 
-  app.useGlobalFilters(new HttpExceptionFilter(logger));
+    app.useGlobalFilters(new HttpExceptionFilter(logger));
 
-  app.useGlobalInterceptors(
-    new RequestLoggingInterceptor(logger),
-    new ConditionalClassSerializerInterceptor(app.get(Reflector)),
-    new RemoveNestedTimestampsInterceptor(),
-    new RemoveSensitiveFieldsInterceptor([
-      'password',
-      'secret',
-      'secretEncrypted',
-      'token',
-      'apiKey',
-      'api_key',
-    ]),
-  );
+    app.useGlobalInterceptors(
+      new RequestLoggingInterceptor(logger),
+      new ConditionalClassSerializerInterceptor(app.get(Reflector)),
+      new RemoveNestedTimestampsInterceptor(),
+      new RemoveSensitiveFieldsInterceptor([
+        'password',
+        'secret',
+        'secretEncrypted',
+        'token',
+        'apiKey',
+        'api_key',
+      ]),
+    );
 
-  const swaggerService = app.get(SwaggerService);
-  swaggerService.generateDocument(app);
+    const swaggerService = app.get(SwaggerService);
+    swaggerService.generateDocument(app);
 
-  SwaggerModule.setup('api', app, swaggerService.getSwaggerDocument(), {
-    jsonDocumentUrl: '/api/openapi.json',
-    swaggerOptions: {
-      persistAuthorization: true,
-    },
-  });
+    SwaggerModule.setup('api', app, swaggerService.getSwaggerDocument(), {
+      jsonDocumentUrl: '/api/openapi.json',
+      swaggerOptions: {
+        persistAuthorization: true,
+      },
+    });
 
-  const port = configService.get<number>('PORT', 3000);
-  await app.listen(port);
+    const port = configService.get<number>('PORT', 3000);
+    await app.listen(port);
 
-  app.useLogger(logger);
+    app.useLogger(logger);
 
-  console.log('\n✅  Application Successfully Started\n');
-  console.log(`📍  Server:     http://localhost:${port}`);
-  console.log(`📚  Swagger UI: http://localhost:${port}/api`);
-  console.log(`📄  OpenAPI:    http://localhost:${port}/api/openapi.json`);
-  console.log('\n═══════════════════════════════════════════════════════════\n');
+    console.log('\n✅  Application Successfully Started\n');
+    console.log(`📍  Server:     http://localhost:${port}`);
+    console.log(`📚  Swagger UI: http://localhost:${port}/api`);
+    console.log(`📄  OpenAPI:    http://localhost:${port}/api/openapi.json`);
+    console.log('\n═══════════════════════════════════════════════════════════\n');
+  } catch (error) {
+    standaloneLogger.error(
+      `Failed to start application: ${error instanceof Error ? error.message : String(error)}`,
+      error instanceof Error ? error.stack : undefined,
+    );
+    throw error;
+  }
 }
 
 void bootstrap().catch((error) => {

@@ -11,6 +11,8 @@ import { BoletoProviderHelper } from './helpers/boleto-provider.helper';
 import { HiperbancoBoletoHelper } from './helpers/hiperbanco/hiperbanco-boleto.helper';
 import { FinancialProviderPipe } from './pipes/financial-provider.pipe';
 import { ClientModule } from '../client/client.module';
+import { PermissionsModule } from '../permissions/permissions.module';
+import { AccountModule } from '../account/account.module';
 
 @Module({
     imports: [
@@ -20,6 +22,8 @@ import { ClientModule } from '../client/client.module';
         AuditModule,
         LoggerModule,
         ClientModule,
+        PermissionsModule,
+        AccountModule,
     ],
     controllers: [BoletoController],
     providers: [

@@ -1,7 +1,7 @@
 import { applyDecorators, UseGuards } from '@nestjs/common';
 import { ApiHeader } from '@nestjs/swagger';
 import { ClientGuard } from '../guards/client.guard';
-import { AccountGuard } from '../guards/account.guard';
+import { AccountGuard } from '@/financial-providers/guards/account.guard';
 import { ClientPermissionGuard } from '../guards/client-permission.guard';
 
 /**

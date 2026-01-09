@@ -9,6 +9,7 @@ import { ProviderJwtService } from './services/provider-jwt.service';
 import { HiperbancoHttpService } from './hiperbanco/hiperbanco-http.service';
 import { HiperbancoAuthService } from './hiperbanco/hiperbanco-auth.service';
 import { ProviderAuthGuard } from './guards/provider-auth.guard';
+import { AccountGuard } from './guards/account.guard';
 import { FinancialProvidersController } from './financial-providers.controller';
 import { LoggerModule } from '../common/logger/logger.module';
 import { RedisModule } from '../common/redis/redis.module';
@@ -39,6 +40,7 @@ import { PermissionsModule } from '../permissions/permissions.module';
         HiperbancoHttpService,
         HiperbancoAuthService,
         ProviderAuthGuard,
+        AccountGuard,
     ],
     exports: [
         FinancialCredentialsService,
@@ -47,6 +49,7 @@ import { PermissionsModule } from '../permissions/permissions.module';
         HiperbancoHttpService,
         HiperbancoAuthService,
         ProviderAuthGuard,
+        AccountGuard,
     ],
 })
 export class FinancialProvidersModule { }

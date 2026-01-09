@@ -5,7 +5,7 @@ import { InternalAuthService } from '../services/internal-auth.service';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 
-export interface AuthenticatedInternalUserRequest extends Request {
+export interface AuthenticatedInternalUserRequest {
   user?: {
     id: string;
     username: string;
@@ -14,8 +14,9 @@ export interface AuthenticatedInternalUserRequest extends Request {
   };
   headers: {
     authorization?: string;
-    [key: string]: any;
+    [key: string]: string | string[] | undefined;
   };
+  [key: string]: unknown;
 }
 
 @Injectable()

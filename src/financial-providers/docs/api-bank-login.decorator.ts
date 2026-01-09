@@ -17,12 +17,22 @@ export function ApiBankLogin() {
             schema: {
                 type: 'object',
                 properties: {
-                    token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
-                    user: {
-                        type: 'object',
-                        properties: {
-                            id: { type: 'string', example: 'user-id-123' },
-                            name: { type: 'string', example: 'João Silva' },
+                    access_token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+                    sessionId: { type: 'string', example: 'session-id-123' },
+                    documentNumber: { type: 'string', example: '12345678900', description: 'CPF ou CNPJ do usuário' },
+                    registerName: { type: 'string', example: 'João Silva', description: 'Nome de registro do usuário' },
+                    accounts: {
+                        type: 'array',
+                        description: 'Array de contas do usuário (originais do response do Hiperbanco)',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                id: { type: 'string', example: '5e7c38a7-8b2b-48a3-913f-0cebc6a89b04', description: 'ID da conta no provedor financeiro' },
+                                status: { type: 'string', example: 'ACTIVE', description: 'Status da conta' },
+                                branch: { type: 'string', example: '0001', description: 'Agência da conta' },
+                                number: { type: 'string', example: '1105329590', description: 'Número da conta' },
+                                type: { type: 'string', example: 'MAIN', description: 'Tipo da conta (MAIN ou SAVINGS)' },
+                            },
                         },
                     },
                 },

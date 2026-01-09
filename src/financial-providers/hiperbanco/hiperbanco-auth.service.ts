@@ -4,21 +4,25 @@ import { FinancialCredentialsService } from '../services/financial-credentials.s
 import { ProviderSessionService } from '../services/provider-session.service';
 import { ProviderJwtService } from '../services/provider-jwt.service';
 import { AppLoggerService } from '@/common/logger/logger.service';
-import { BackofficeLoginResponse, BankLoginResponse } from './interfaces/hiperbanco-responses.interface';
+import { BackofficeLoginResponse, BankLoginResponse, HiperbancoAccount } from './interfaces/hiperbanco-responses.interface';
 import { BankLoginDto } from '../dto/bank-login.dto';
 import { BackofficeLoginDto } from '../dto/backoffice-login.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import type { HiperbancoConfig } from './helpers/hiperbanco-config.helper';
 import { AccountService } from '@/account/account.service';
 import { OnboardingService } from '@/onboarding/onboarding.service';
-import { AccountStatus, AccountType } from '@/account/entities/account.entity';
+import { Account, AccountStatus, AccountType } from '@/account/entities/account.entity';
 import { OnboardingTypeAccount } from '@/onboarding/enums/onboarding-type-account.enum';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
+import { ProviderLoginType } from '../enums/provider-login-type.enum';
 
 export interface AuthLoginResponse {
     access_token: string;
     sessionId: string;
+    documentNumber?: string;
+    registerName?: string;
+    accounts?: HiperbancoAccount[];
 }
 
 @Injectable()
@@ -40,7 +44,7 @@ export class HiperbancoAuthService {
     async loginBackoffice(loginDto: BackofficeLoginDto): Promise<AuthLoginResponse> {
         this.logger.log('Initiating Backoffice login for Hiperbanco', this.context);
 
-        const credentials = await this.credentialsService.getPublicCredentials(this.PROVIDER_SLUG);
+        const credentials = await this.credentialsService.getPublicCredentials(this.PROVIDER_SLUG, ProviderLoginType.BACKOFFICE);
 
         const payload = {
             email: loginDto.email,
@@ -53,9 +57,9 @@ export class HiperbancoAuthService {
 
         const session = await this.sessionService.createSession({
             providerSlug: this.PROVIDER_SLUG,
-            clientId: credentials.client_id,
+            clientId: credentials.clientId!,
             hiperbancoToken: response.access_token,
-            loginType: 'backoffice',
+            loginType: ProviderLoginType.BACKOFFICE,
         });
 
         const token = this.jwtService.generateToken({
@@ -74,7 +78,7 @@ export class HiperbancoAuthService {
     async loginApiBank(loginDto: BankLoginDto, clientId: string): Promise<AuthLoginResponse> {
         this.logger.log(`Initiating API Bank login for document: ${loginDto.document.substring(0, 3)}***`, this.context);
 
-        const credentials = await this.credentialsService.getPublicCredentials(this.PROVIDER_SLUG);
+        const credentials = await this.credentialsService.getPublicCredentials(this.PROVIDER_SLUG, ProviderLoginType.BANK);
 
         const requestPayload = {
             document: loginDto.document,
@@ -87,7 +91,7 @@ export class HiperbancoAuthService {
 
         // Persistir Accounts
         const accounts = response.userData?.accounts || [];
-        const savedAccounts = [];
+        const savedAccounts: Account[] = [];
 
         for (const account of accounts) {
             const savedAccount = await this.accountService.createOrUpdate(
@@ -137,7 +141,7 @@ export class HiperbancoAuthService {
             hiperbancoToken: response.access_token,
             userId: response.userData?.id,
             accountId: primaryAccount.id,
-            loginType: 'bank',
+            loginType: ProviderLoginType.BANK,
         });
 
         const token = this.jwtService.generateToken({
@@ -148,9 +152,21 @@ export class HiperbancoAuthService {
             loginType: session.loginType,
         });
 
+        // Retornar as accounts originais do response do Hiperbanco (sem clientId)
+        const accountsFromResponse: HiperbancoAccount[] = accounts.map(({ id, status, branch, number, type }) => ({
+            id,
+            status,
+            branch,
+            number,
+            type,
+        }));
+
         return {
             access_token: token,
             sessionId: session.sessionId,
+            documentNumber: response.userData?.documentNumber,
+            registerName: response.userData?.registerName,
+            accounts: accountsFromResponse,
         };
     }
 }

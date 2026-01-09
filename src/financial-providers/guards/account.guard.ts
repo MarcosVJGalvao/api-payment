@@ -2,10 +2,10 @@ import { Injectable, ExecutionContext, HttpStatus, CanActivate } from '@nestjs/c
 import { AccountService } from '@/account/account.service';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
-import { ProviderJwtService } from '@/financial-providers/services/provider-jwt.service';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import { ProviderJwtService } from '../services/provider-jwt.service';
+import { ProviderSession } from '../hiperbanco/interfaces/provider-session.interface';
 
-export interface RequestWithAccount extends Request {
+export interface RequestWithAccount {
   clientId?: string;
   accountId?: string;
   providerSession?: ProviderSession;
@@ -15,8 +15,9 @@ export interface RequestWithAccount extends Request {
     'X-Client-Id'?: string;
     'x-account-id'?: string;
     'X-Account-Id'?: string;
-    [key: string]: any;
+    [key: string]: string | string[] | undefined;
   };
+  [key: string]: unknown;
 }
 
 @Injectable()

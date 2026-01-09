@@ -4,6 +4,9 @@ import { RegisterWebhookDto } from '../../dto/register-webhook.dto';
 import { Webhook } from '../../entities/webhook.entity';
 import { RegisterWebhookResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import { ProviderLoginType } from '@/financial-providers/enums/provider-login-type.enum';
+import { Client } from '@/client/entities/client.entity';
+import { ClientStatus } from '@/client/enums/client-status.enum';
 
 export const mockRegisterWebhookDto = (): RegisterWebhookDto => ({
     name: 'SANDBOX_BOLETO_CASH_IN',
@@ -22,6 +25,16 @@ export const mockWebhook = (): Webhook => ({
     externalId: '89444df2-a1d1-4fe8-ade8-3d03de0fd61m',
     publicKey: '872dc2ed-8bee-40b5-8465-5d2953ba76dp',
     isActive: true,
+    clientId: 'mock-client-id',
+    client: {
+        id: 'mock-client-id',
+        name: 'Mock Client',
+        document: '12345678900',
+        status: ClientStatus.ACTIVE,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: undefined,
+    } as Client,
     createdAt: new Date(),
     updatedAt: new Date(),
     deletedAt: undefined,
@@ -41,7 +54,7 @@ export const mockProviderSession = (): ProviderSession => ({
     providerSlug: FinancialProvider.HIPERBANCO,
     clientId: 'mock-client-id',
     hiperbancoToken: 'mock-hiperbanco-token',
-    loginType: 'backoffice',
+    loginType: ProviderLoginType.BACKOFFICE,
     createdAt: Date.now(),
     expiresAt: Date.now() + 30 * 60 * 1000,
 });
