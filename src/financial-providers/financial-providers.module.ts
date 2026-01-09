@@ -9,10 +9,15 @@ import { ProviderJwtService } from './services/provider-jwt.service';
 import { HiperbancoHttpService } from './hiperbanco/hiperbanco-http.service';
 import { HiperbancoAuthService } from './hiperbanco/hiperbanco-auth.service';
 import { ProviderAuthGuard } from './guards/provider-auth.guard';
+import { AccountGuard } from './guards/account.guard';
 import { FinancialProvidersController } from './financial-providers.controller';
 import { LoggerModule } from '../common/logger/logger.module';
 import { RedisModule } from '../common/redis/redis.module';
 import { FinancialConfigModule } from './financial-config.module';
+import { AccountModule } from '../account/account.module';
+import { OnboardingModule } from '../onboarding/onboarding.module';
+import { ClientModule } from '../client/client.module';
+import { PermissionsModule } from '../permissions/permissions.module';
 
 @Module({
     imports: [
@@ -22,6 +27,10 @@ import { FinancialConfigModule } from './financial-config.module';
         LoggerModule,
         RedisModule,
         FinancialConfigModule,
+        AccountModule,
+        OnboardingModule,
+        ClientModule,
+        PermissionsModule,
     ],
     controllers: [FinancialProvidersController],
     providers: [
@@ -31,6 +40,7 @@ import { FinancialConfigModule } from './financial-config.module';
         HiperbancoHttpService,
         HiperbancoAuthService,
         ProviderAuthGuard,
+        AccountGuard,
     ],
     exports: [
         FinancialCredentialsService,
@@ -39,6 +49,7 @@ import { FinancialConfigModule } from './financial-config.module';
         HiperbancoHttpService,
         HiperbancoAuthService,
         ProviderAuthGuard,
+        AccountGuard,
     ],
 })
 export class FinancialProvidersModule { }

@@ -43,7 +43,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       },
       maxRetriesPerRequest: 3,
       enableReadyCheck: true,
-      lazyConnect: false,
+      lazyConnect: true, // Connect only when needed, not during initialization
+      connectTimeout: 10000, // 10 seconds timeout
     });
 
     this.setupErrorHandlers(client);
@@ -121,13 +122,19 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     try {
-      await this.client.ping();
+      // Try to connect with timeout
+      await Promise.race([
+        this.client.ping(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Redis connection timeout')), 10000),
+        ),
+      ]);
     } catch (error) {
-      this.logger.error(
-        `Failed to connect to Redis (mode: ${this.mode})`,
-        error instanceof Error ? error.stack : String(error),
+      this.logger.warn(
+        `Redis not available (mode: ${this.mode}): ${error instanceof Error ? error.message : String(error)}. Application will continue without Redis.`,
         'RedisService',
       );
+      // Don't throw - allow application to continue without Redis
     }
   }
 

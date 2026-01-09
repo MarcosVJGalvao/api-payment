@@ -6,6 +6,8 @@ import {
     UpdateDateColumn,
     DeleteDateColumn,
     Index,
+    ManyToOne,
+    JoinColumn,
 } from 'typeorm';
 import { BoletoStatus } from '../enums/boleto-status.enum';
 import { BoletoType } from '../enums/boleto-type.enum';
@@ -13,24 +15,17 @@ import { InterestType } from '../enums/interest-type.enum';
 import { FineType } from '../enums/fine-type.enum';
 import { DiscountType } from '../enums/discount-type.enum';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
+import { Client } from '@/client/entities/client.entity';
+import { Account } from '@/account/entities/account.entity';
+import { Exclude } from 'class-transformer';
 
 @Entity('boleto')
-@Index(['externalId'])
 @Index(['status'])
 @Index(['dueDate'])
 @Index(['providerSlug'])
 export class Boleto {
     @PrimaryGeneratedColumn('uuid')
     id: string;
-
-    @Column({
-        type: 'varchar',
-        length: 255,
-        name: 'external_id',
-        nullable: true,
-        comment: 'ID retornado pelo provedor financeiro',
-    })
-    externalId?: string;
 
     @Column({
         type: 'varchar',
@@ -133,7 +128,7 @@ export class Boleto {
         type: 'json',
         name: 'payer_address',
         nullable: true,
-        comment: 'Endereço completo do pagador',
+        comment: 'Endereço completo do pagador (JSON)',
     })
     payerAddress?: {
         zipCode: string;
@@ -250,12 +245,56 @@ export class Boleto {
     digitable?: string;
 
     @Column({
+        type: 'varchar',
+        length: 50,
+        name: 'our_number',
+        nullable: true,
+        comment: 'Número do nosso número do boleto',
+    })
+    ourNumber?: string;
+
+    @Column({
+        type: 'json',
+        nullable: true,
+        comment: 'Array de pagamentos do boleto recebido do Hiperbanco (pode ser null por muito tempo)',
+    })
+    payments?: Array<{
+        id: string;
+        amount: number;
+        paymentChannel: string;
+        paidOutDate: string;
+    }> | null;
+
+    @Column({
         type: 'enum',
         enum: FinancialProvider,
         name: 'provider_slug',
         comment: 'Identificador do provedor financeiro',
     })
     providerSlug: FinancialProvider;
+
+    @Column({
+        type: 'uuid',
+        name: 'client_id',
+        comment: 'ID do cliente',
+    })
+    @Exclude()
+    clientId: string;
+
+    @ManyToOne(() => Client)
+    @JoinColumn({ name: 'client_id' })
+    client: Client;
+
+    @Column({
+        type: 'uuid',
+        name: 'account_id',
+        comment: 'ID da conta que emitiu o boleto',
+    })
+    accountId: string;
+
+    @ManyToOne(() => Account)
+    @JoinColumn({ name: 'account_id' })
+    account: Account;
 
     @CreateDateColumn({
         name: 'created_at',

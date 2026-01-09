@@ -1,6 +1,7 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { instanceToPlain } from 'class-transformer';
 import { AppLoggerService } from '@/common/logger/logger.service';
 import { BaseQueryService } from '@/common/base-query/service/base-query.service';
 import { Boleto } from './entities/boleto.entity';
@@ -10,12 +11,14 @@ import { QueryBoletoDto } from './dto/query-boleto.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
 import { BoletoProviderHelper } from './helpers/boleto-provider.helper';
+import { BoletoSyncHelper } from './helpers/boleto-sync.helper';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { BoletoStatus } from './enums/boleto-status.enum';
 import { parseDateOnly } from '@/common/helpers/date.helpers';
 import { BoletoEmissionResponse, BoletoWebhookPayload } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { validateBoletoDates, parseBoletoStatus } from './helpers/boleto-validation.helper';
+import { FilterOperator } from '@/common/base-query/enums/filter-operator.enum';
 
 @Injectable()
 export class BoletoService {
@@ -25,6 +28,7 @@ export class BoletoService {
         @InjectRepository(Boleto)
         private readonly repository: Repository<Boleto>,
         private readonly providerHelper: BoletoProviderHelper,
+        private readonly syncHelper: BoletoSyncHelper,
         private readonly baseQueryService: BaseQueryService,
         private readonly logger: AppLoggerService,
     ) { }
@@ -34,14 +38,14 @@ export class BoletoService {
      * @param provider - Provedor financeiro
      * @param dto - Dados do boleto a ser criado
      * @param session - Sessão autenticada do provedor
-     * @returns Boleto criado e salvo no banco
+     * @returns Resposta do provedor com dados do boleto emitido mais o campo internalId (ID gerado pelo banco de dados)
      * @throws CustomHttpException se validação falhar ou emissão falhar
      */
     async createBoleto(
         provider: FinancialProvider,
         dto: CreateBoletoDto,
         session: ProviderSession,
-    ): Promise<Boleto> {
+    ): Promise<BoletoEmissionResponse> {
         this.logger.log(`Creating boleto for provider: ${provider}`, this.context);
 
         // Valida regras de negócio relacionadas a datas
@@ -51,9 +55,8 @@ export class BoletoService {
             // Emite o boleto no provedor
             const response: BoletoEmissionResponse = await this.providerHelper.emitBoleto(provider, dto, session);
 
-            // Cria a entidade Boleto
+            // Salva no banco de dados (para rastreamento interno, mas retorna a resposta do provedor)
             const boleto = this.repository.create({
-                externalId: response.id,
                 alias: dto.alias,
                 type: dto.type,
                 status: parseBoletoStatus(response.status),
@@ -73,19 +76,27 @@ export class BoletoService {
                 fineStartDate: dto.fine?.startDate ? parseDateOnly(dto.fine.startDate) : undefined,
                 fineValue: dto.fine?.value,
                 fineType: dto.fine?.type,
-                discountLimitDate: dto.discount?.limitDate ? parseDateOnly(dto.discount.limitDate) : undefined,
-                discountValue: dto.discount?.value,
-                discountType: dto.discount?.type,
+                ...(dto.discount && {
+                    discountLimitDate: parseDateOnly(dto.discount.limitDate),
+                    discountValue: dto.discount.value,
+                    discountType: dto.discount.type,
+                }),
                 authenticationCode: response.authenticationCode,
                 barcode: response.barcode,
                 digitable: response.digitable,
                 providerSlug: provider,
+                clientId: session.clientId,
+                accountId: session.accountId,
             });
 
             const savedBoleto = await this.repository.save(boleto);
-            this.logger.log(`Boleto created: ${savedBoleto.id}`, this.context);
+            this.logger.log(`Boleto saved to database: ${savedBoleto.id}`, this.context);
 
-            return savedBoleto;
+            // Retorna a resposta do provedor adicionando o ID gerado pelo banco de dados
+            return {
+                ...response,
+                internalId: savedBoleto.id,
+            };
         } catch (error) {
             this.logger.error(
                 `Failed to create boleto: ${error instanceof Error ? error.message : String(error)}`,
@@ -110,10 +121,13 @@ export class BoletoService {
     /**
      * Busca um boleto por ID.
      * @param id - ID do boleto
+     * @param clientId - ID do cliente (para validação de isolamento)
+     * @param accountId - ID da conta (para validação de isolamento)
+     * @param session - Sessão do provedor (opcional, usada para buscar detalhes atualizados do Hiperbanco)
      * @returns Boleto encontrado
-     * @throws CustomHttpException se o boleto não for encontrado
+     * @throws CustomHttpException se o boleto não for encontrado ou não pertence à conta
      */
-    async findById(id: string): Promise<Boleto> {
+    async findById(id: string, clientId: string, accountId: string, session?: ProviderSession): Promise<Boleto> {
         this.logger.log(`Finding boleto by id: ${id}`, this.context);
 
         const boleto = await this.repository.findOne({ where: { id } });
@@ -126,42 +140,35 @@ export class BoletoService {
             );
         }
 
-        return boleto;
-    }
-
-    /**
-     * Busca um boleto por ID externo (retornado pelo provedor).
-     * @param externalId - ID externo do boleto
-     * @returns Boleto encontrado
-     * @throws CustomHttpException se o boleto não for encontrado
-     */
-    async findByExternalId(externalId: string): Promise<Boleto> {
-        this.logger.log(`Finding boleto by externalId: ${externalId}`, this.context);
-
-        const boleto = await this.repository.findOne({ where: { externalId } });
-
-        if (!boleto) {
+        if (boleto.clientId !== clientId || boleto.accountId !== accountId) {
             throw new CustomHttpException(
-                `Boleto not found with externalId: ${externalId}`,
-                HttpStatus.NOT_FOUND,
-                ErrorCode.BOLETO_NOT_FOUND,
+                'Boleto does not belong to this account',
+                HttpStatus.FORBIDDEN,
+                ErrorCode.ACCESS_DENIED,
             );
+        }
+
+        if (session) {
+            return this.syncHelper.syncBoletoWithProvider(boleto, session);
         }
 
         return boleto;
     }
 
+
     /**
      * Atualiza um boleto.
      * @param id - ID do boleto
      * @param dto - Dados para atualização
+     * @param clientId - ID do cliente (para validação de isolamento)
+     * @param accountId - ID da conta (para validação de isolamento)
      * @returns Boleto atualizado
-     * @throws CustomHttpException se o boleto não for encontrado
+     * @throws CustomHttpException se o boleto não for encontrado ou não pertence à conta
      */
-    async updateBoleto(id: string, dto: UpdateBoletoDto): Promise<Boleto> {
+    async updateBoleto(id: string, dto: UpdateBoletoDto, clientId: string, accountId: string): Promise<Boleto> {
         this.logger.log(`Updating boleto: ${id}`, this.context);
 
-        const boleto = await this.findById(id);
+        const boleto = await this.findById(id, clientId, accountId);
 
         if (dto.status) {
             boleto.status = dto.status;
@@ -185,9 +192,11 @@ export class BoletoService {
     /**
      * Lista boletos com paginação, filtros e busca.
      * @param query - Parâmetros de query
+     * @param clientId - ID do cliente (para isolamento)
+     * @param accountId - ID da conta (para isolamento - cada conta só vê seus próprios boletos)
      * @returns Resultado paginado de boletos
      */
-    async listBoletos(query: QueryBoletoDto) {
+    async listBoletos(query: QueryBoletoDto, clientId: string, accountId: string) {
         this.logger.log('Listing boletos', this.context);
 
         const queryOptions = this.baseQueryService.buildQueryOptions(
@@ -195,13 +204,28 @@ export class BoletoService {
             query,
             {
                 defaultSortBy: 'createdAt',
-                searchFields: ['alias', 'documentNumber', 'externalId'],
+                searchFields: ['alias', 'documentNumber'],
                 dateField: 'dueDate',
                 filters: [
                     { field: 'status' },
                     { field: 'type' },
                     { field: 'providerSlug' },
                 ],
+            },
+        );
+
+        // Adicionar filtros de isolamento manualmente (clientId e accountId são obrigatórios)
+        queryOptions.filters = queryOptions.filters || [];
+        queryOptions.filters.push(
+            {
+                field: 'clientId',
+                operator: FilterOperator.EQUALS,
+                value: clientId,
+            },
+            {
+                field: 'accountId',
+                operator: FilterOperator.EQUALS,
+                value: accountId,
             },
         );
 
@@ -214,19 +238,23 @@ export class BoletoService {
      * @returns Boleto atualizado
      */
     async processWebhookUpdate(payload: BoletoWebhookPayload): Promise<Boleto | null> {
-        this.logger.log(`Processing webhook update for boleto: ${payload.externalId || payload.id}`, this.context);
+        this.logger.log(`Processing webhook update for boleto: ${payload.id || payload.authenticationCode}`, this.context);
 
         try {
-            const externalId = payload.externalId || payload.id;
-            if (!externalId) {
-                this.logger.warn('Webhook payload missing externalId or id', this.context);
-                return null;
+            // Identificar o boleto pelo authenticationCode, barcode ou digitable que são únicos
+            // O provider envia esses campos no webhook que foram salvos na emissão
+            let boleto: Boleto | null = null;
+
+            if (payload.authenticationCode) {
+                boleto = await this.repository.findOne({ where: { authenticationCode: payload.authenticationCode } });
+            } else if (payload.barcode) {
+                boleto = await this.repository.findOne({ where: { barcode: payload.barcode } });
+            } else if (payload.digitable) {
+                boleto = await this.repository.findOne({ where: { digitable: payload.digitable } });
             }
 
-            const boleto = await this.repository.findOne({ where: { externalId } });
-
             if (!boleto) {
-                this.logger.warn(`Boleto not found for externalId: ${externalId}`, this.context);
+                this.logger.warn(`Boleto not found for webhook payload: ${JSON.stringify(payload)}`, this.context);
                 return null;
             }
 
@@ -245,7 +273,7 @@ export class BoletoService {
             }
 
             const updatedBoleto = await this.repository.save(boleto);
-            this.logger.log(`Boleto updated via webhook: ${externalId}`, this.context);
+            this.logger.log(`Boleto updated via webhook: ${boleto.id}`, this.context);
 
             return updatedBoleto;
         } catch (error) {

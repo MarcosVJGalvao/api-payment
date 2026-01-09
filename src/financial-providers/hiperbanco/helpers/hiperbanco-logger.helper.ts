@@ -34,10 +34,10 @@ export function logTransaction(
         request: {
             method,
             url,
-            headers: requestHeaders,
+            headers: sanitizePayload(requestHeaders),
             body: requestBody ? sanitizePayload(requestBody) : undefined,
         },
-        response: responseBody,
+        response: responseBody ? sanitizePayload(responseBody) : undefined,
         duration: `${durationMs}ms`,
         provider: 'Hiperbanco',
         ...(error && { message: error }),

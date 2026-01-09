@@ -5,6 +5,8 @@ import { FinancialCredentialsService } from '../../services/financial-credential
 import { ProviderSessionService } from '../../services/provider-session.service';
 import { ProviderJwtService } from '../../services/provider-jwt.service';
 import { AppLoggerService } from '@/common/logger/logger.service';
+import { AccountService } from '@/account/account.service';
+import { OnboardingService } from '@/onboarding/onboarding.service';
 
 /**
  * Factory para criar o módulo de teste do HiperbancoAuthService.
@@ -47,6 +49,23 @@ export const createHiperbancoAuthTestFactory = async () => {
         verbose: jest.fn(),
     };
 
+    const accountServiceMock = {
+        createOrUpdate: jest.fn(),
+        findById: jest.fn(),
+        findAll: jest.fn(),
+        validateAccountBelongsToClient: jest.fn(),
+    };
+
+    const onboardingServiceMock = {
+        createOrUpdate: jest.fn(),
+        findById: jest.fn(),
+    };
+
+    const configMock = {
+        clientId: 'env-client-id',
+        baseUrl: 'https://api.hiperbanco.com',
+    };
+
     const module = await Test.createTestingModule({
         providers: [
             HiperbancoAuthService,
@@ -55,6 +74,9 @@ export const createHiperbancoAuthTestFactory = async () => {
             { provide: ProviderSessionService, useValue: sessionServiceMock },
             { provide: ProviderJwtService, useValue: jwtServiceMock },
             { provide: AppLoggerService, useValue: loggerMock },
+            { provide: AccountService, useValue: accountServiceMock },
+            { provide: OnboardingService, useValue: onboardingServiceMock },
+            { provide: 'HIPERBANCO_CONFIG', useValue: configMock },
         ],
     }).compile();
 
@@ -65,5 +87,7 @@ export const createHiperbancoAuthTestFactory = async () => {
         sessionServiceMock,
         jwtServiceMock,
         loggerMock,
+        accountServiceMock,
+        onboardingServiceMock,
     };
 };

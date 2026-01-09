@@ -1,15 +1,27 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString, MinLength, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { ProviderLoginType } from '../enums/provider-login-type.enum';
 
 /**
  * DTO para criação/atualização de credenciais de provedor financeiro.
+ * Permite múltiplas credenciais por provedor, diferenciando entre backoffice e bank.
+ * - BACKOFFICE: Login usando email e senha
+ * - BANK: Login usando documento (CPF/CNPJ) e senha
  */
 export class CreateProviderCredentialDto {
     @ApiProperty({
-        example: 'email@email.com',
-        description: 'Usuário ou email para login no provedor financeiro',
+        enum: ProviderLoginType,
+        example: ProviderLoginType.BACKOFFICE,
+        description: 'Tipo de login: backoffice (email/senha) ou bank (documento/senha)',
     })
-    @IsEmail()
+    @IsEnum(ProviderLoginType)
+    @IsNotEmpty()
+    loginType: ProviderLoginType;
+
+    @ApiProperty({
+        example: 'email@email.com',
+        description: 'Email (para backoffice) ou documento CPF/CNPJ (para bank) para login no provedor financeiro',
+    })
     @IsString()
     @IsNotEmpty()
     login: string;

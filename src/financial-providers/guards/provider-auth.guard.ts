@@ -5,6 +5,8 @@ import { ProviderSessionService } from '../services/provider-session.service';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { REQUIRED_LOGIN_TYPE_KEY } from '../decorators/require-login-type.decorator';
+import { IS_PUBLIC_KEY } from '@/auth/decorators/public.decorator';
+import { ProviderLoginType } from '../enums/provider-login-type.enum';
 
 @Injectable()
 export class ProviderAuthGuard implements CanActivate {
@@ -15,6 +17,15 @@ export class ProviderAuthGuard implements CanActivate {
     ) { }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
+        const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+            context.getHandler(),
+            context.getClass(),
+        ]);
+
+        if (isPublic) {
+            return true;
+        }
+
         const request = context.switchToHttp().getRequest();
         const authHeader = request.headers.authorization;
 
@@ -48,7 +59,7 @@ export class ProviderAuthGuard implements CanActivate {
         }
 
         // Verificar tipo de login requerido (se especificado via decorator)
-        const requiredLoginType = this.reflector.getAllAndOverride<'backoffice' | 'bank' | undefined>(
+        const requiredLoginType = this.reflector.getAllAndOverride<ProviderLoginType | undefined>(
             REQUIRED_LOGIN_TYPE_KEY,
             [context.getHandler(), context.getClass()],
         );

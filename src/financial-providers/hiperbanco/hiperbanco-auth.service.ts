@@ -4,15 +4,29 @@ import { FinancialCredentialsService } from '../services/financial-credentials.s
 import { ProviderSessionService } from '../services/provider-session.service';
 import { ProviderJwtService } from '../services/provider-jwt.service';
 import { AppLoggerService } from '@/common/logger/logger.service';
-import { BackofficeLoginResponse, BankLoginResponse } from './interfaces/hiperbanco-responses.interface';
+import { BackofficeLoginResponse, BankLoginResponse, HiperbancoAccount } from './interfaces/hiperbanco-responses.interface';
 import { BankLoginDto } from '../dto/bank-login.dto';
 import { BackofficeLoginDto } from '../dto/backoffice-login.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import type { HiperbancoConfig } from './helpers/hiperbanco-config.helper';
+import { AccountService } from '@/account/account.service';
+import { OnboardingService } from '@/onboarding/onboarding.service';
+import { Onboarding } from '@/onboarding/entities/onboarding.entity';
+import { ProviderLoginType } from '../enums/provider-login-type.enum';
+import {
+    persistAccounts,
+    getPrimaryAccount,
+    persistOnboarding,
+    mapAccountsToResponse,
+    createSessionAndToken,
+} from './helpers/bank-login.helper';
 
 export interface AuthLoginResponse {
     access_token: string;
     sessionId: string;
+    documentNumber?: string;
+    registerName?: string;
+    accounts?: HiperbancoAccount[];
 }
 
 @Injectable()
@@ -26,13 +40,15 @@ export class HiperbancoAuthService {
         private readonly sessionService: ProviderSessionService,
         private readonly jwtService: ProviderJwtService,
         private readonly logger: AppLoggerService,
+        private readonly accountService: AccountService,
+        private readonly onboardingService: OnboardingService,
         @Inject('HIPERBANCO_CONFIG') private readonly config: HiperbancoConfig,
     ) { }
 
     async loginBackoffice(loginDto: BackofficeLoginDto): Promise<AuthLoginResponse> {
         this.logger.log('Initiating Backoffice login for Hiperbanco', this.context);
 
-        const credentials = await this.credentialsService.getPublicCredentials(this.PROVIDER_SLUG);
+        const credentials = await this.credentialsService.getPublicCredentials(this.PROVIDER_SLUG, ProviderLoginType.BACKOFFICE);
 
         const payload = {
             email: loginDto.email,
@@ -43,19 +59,16 @@ export class HiperbancoAuthService {
         const response = await this.http.post<BackofficeLoginResponse>('/Backoffice/Login', payload);
         this.logger.log('Backoffice login successful', this.context);
 
-        const session = await this.sessionService.createSession({
-            providerSlug: this.PROVIDER_SLUG,
-            clientId: credentials.client_id,
-            hiperbancoToken: response.access_token,
-            loginType: 'backoffice',
-        });
-
-        const token = this.jwtService.generateToken({
-            sessionId: session.sessionId,
-            providerSlug: session.providerSlug,
-            clientId: session.clientId,
-            loginType: session.loginType,
-        });
+        const { session, token } = await createSessionAndToken(
+            {
+                providerSlug: this.PROVIDER_SLUG,
+                clientId: credentials.clientId!,
+                hiperbancoToken: response.access_token,
+                loginType: ProviderLoginType.BACKOFFICE,
+            },
+            this.sessionService,
+            this.jwtService,
+        );
 
         return {
             access_token: token,
@@ -63,10 +76,8 @@ export class HiperbancoAuthService {
         };
     }
 
-    async loginApiBank(loginDto: BankLoginDto): Promise<AuthLoginResponse> {
+    async loginApiBank(loginDto: BankLoginDto, clientId: string): Promise<AuthLoginResponse> {
         this.logger.log(`Initiating API Bank login for document: ${loginDto.document.substring(0, 3)}***`, this.context);
-
-        const credentials = await this.credentialsService.getPublicCredentials(this.PROVIDER_SLUG);
 
         const requestPayload = {
             document: loginDto.document,
@@ -77,25 +88,50 @@ export class HiperbancoAuthService {
         const response = await this.http.post<BankLoginResponse>('/Users/login/api-bank', requestPayload);
         this.logger.log('API Bank login successful', this.context);
 
-        const session = await this.sessionService.createSession({
-            providerSlug: this.PROVIDER_SLUG,
-            clientId: credentials.client_id,
-            hiperbancoToken: response.access_token,
-            userId: response.userData?.id,
-            accountId: response.userData?.accounts?.[0]?.id,
-            loginType: 'bank',
-        });
+        // Persistir Onboarding primeiro (se houver userData)
+        let onboarding: Onboarding | null = null;
+        if (response.userData) {
+            onboarding = await persistOnboarding(
+                response.userData,
+                clientId,
+                this.onboardingService,
+            );
+        }
 
-        const token = this.jwtService.generateToken({
-            sessionId: session.sessionId,
-            providerSlug: session.providerSlug,
-            clientId: session.clientId,
-            loginType: session.loginType,
-        });
+        // Persistir Accounts e associar ao onboarding
+        const accountsFromProvider = response.userData?.accounts || [];
+        const savedAccounts = await persistAccounts(
+            accountsFromProvider,
+            clientId,
+            this.accountService,
+            onboarding?.id,
+        );
+
+        // Determinar primeira conta (principal) - usar ID interno gerado pelo banco
+        const primaryAccount = getPrimaryAccount(savedAccounts);
+
+        const { session, token } = await createSessionAndToken(
+            {
+                providerSlug: this.PROVIDER_SLUG,
+                clientId,
+                hiperbancoToken: response.access_token,
+                userId: response.userData?.id,
+                accountId: primaryAccount.id, // ID interno do banco
+                loginType: ProviderLoginType.BANK,
+            },
+            this.sessionService,
+            this.jwtService,
+        );
+
+        // Mapear accounts salvos no banco para resposta (com ID interno)
+        const accountsFromResponse = mapAccountsToResponse(savedAccounts);
 
         return {
             access_token: token,
             sessionId: session.sessionId,
+            documentNumber: response.userData?.documentNumber,
+            registerName: response.userData?.registerName,
+            accounts: accountsFromResponse,
         };
     }
 }
