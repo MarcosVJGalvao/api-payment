@@ -1,4 +1,9 @@
-import { Injectable, ExecutionContext, HttpStatus, CanActivate } from '@nestjs/common';
+import {
+  Injectable,
+  ExecutionContext,
+  HttpStatus,
+  CanActivate,
+} from '@nestjs/common';
 import { AccountService } from '@/account/account.service';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
@@ -29,7 +34,10 @@ export class AccountGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithAccount>();
-    const clientId = request.clientId || request.headers['x-client-id'] || request.headers['X-Client-Id'];
+    const clientId =
+      request.clientId ||
+      request.headers['x-client-id'] ||
+      request.headers['X-Client-Id'];
 
     if (!clientId || typeof clientId !== 'string') {
       throw new CustomHttpException(
@@ -58,7 +66,8 @@ export class AccountGuard implements CanActivate {
 
     if (!accountId) {
       // Tentar do header como última opção
-      accountId = request.headers['x-account-id'] || request.headers['X-Account-Id'];
+      accountId =
+        request.headers['x-account-id'] || request.headers['X-Account-Id'];
     }
 
     if (!accountId) {
@@ -70,7 +79,10 @@ export class AccountGuard implements CanActivate {
     }
 
     // Validar que accountId pertence ao clientId
-    await this.accountService.validateAccountBelongsToClient(accountId, clientId);
+    await this.accountService.validateAccountBelongsToClient(
+      accountId,
+      clientId,
+    );
 
     request.clientId = clientId;
     request.accountId = accountId;

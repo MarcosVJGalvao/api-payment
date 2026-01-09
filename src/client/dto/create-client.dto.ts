@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, Matches, IsArray } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  Matches,
+  IsArray,
+} from 'class-validator';
 import { ICreateClient } from '../interfaces/create-client.interface';
 
 export class CreateClientDto implements ICreateClient {
@@ -8,14 +14,17 @@ export class CreateClientDto implements ICreateClient {
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ description: 'CPF ou CNPJ do cliente (apenas números)', example: '12345678901234' })
+  @ApiProperty({
+    description: 'CPF ou CNPJ do cliente (apenas números)',
+    example: '12345678901234',
+  })
   @IsString()
   @IsNotEmpty()
   @Matches(/^\d+$/, { message: 'Documento deve conter apenas números' })
   document: string;
 
-  @ApiPropertyOptional({ 
-    description: 'Scopes (permissões) a serem vinculados ao cliente', 
+  @ApiPropertyOptional({
+    description: 'Scopes (permissões) a serem vinculados ao cliente',
     example: ['financial:boleto', 'auth:bank'],
     type: [String],
   })

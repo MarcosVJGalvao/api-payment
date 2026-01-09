@@ -8,7 +8,7 @@ import { ApiGetSwaggerJson } from './docs/api-get-swagger-json.decorator';
 @ApiTags('Documentation')
 @Controller('api/docs')
 export class DocsController {
-  constructor(private readonly swaggerService: SwaggerService) { }
+  constructor(private readonly swaggerService: SwaggerService) {}
 
   @Get('verify-json')
   @Public()

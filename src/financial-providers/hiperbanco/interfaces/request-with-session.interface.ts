@@ -6,5 +6,5 @@ import { ProviderSession } from './provider-session.interface';
  * Usada em rotas que precisam de autenticação de provider.
  */
 export interface RequestWithSession extends RequestWithAccount {
-    providerSession: ProviderSession;
+  providerSession: ProviderSession;
 }

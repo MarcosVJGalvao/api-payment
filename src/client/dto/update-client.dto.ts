@@ -4,7 +4,10 @@ import { ClientStatus } from '../enums/client-status.enum';
 import { IUpdateClient } from '../interfaces/update-client.interface';
 
 export class UpdateClientDto implements IUpdateClient {
-  @ApiPropertyOptional({ description: 'Nome do cliente', example: 'Empresa XYZ Ltda' })
+  @ApiPropertyOptional({
+    description: 'Nome do cliente',
+    example: 'Empresa XYZ Ltda',
+  })
   @IsOptional()
   @IsString()
   name?: string;
@@ -14,8 +17,9 @@ export class UpdateClientDto implements IUpdateClient {
   @IsEnum(ClientStatus)
   status?: ClientStatus;
 
-  @ApiPropertyOptional({ 
-    description: 'Scopes (permissões) a serem vinculados ao cliente. Substitui todos os scopes atuais.', 
+  @ApiPropertyOptional({
+    description:
+      'Scopes (permissões) a serem vinculados ao cliente. Substitui todos os scopes atuais.',
     example: ['financial:boleto', 'auth:bank'],
     type: [String],
   })

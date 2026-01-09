@@ -10,28 +10,28 @@ import { ErrorCode } from '../errors/enums/error-code.enum';
  * @throws CustomHttpException se a data for inválida
  */
 export function parseDateString(dateString: string): Date {
-    if (typeof dateString !== 'string') {
-        throw new CustomHttpException(
-            'Invalid date value: Expected a string but received ' +
-            typeof dateString +
-            '. Value: ' +
-            String(dateString),
-            HttpStatus.BAD_REQUEST,
-            ErrorCode.INVALID_DATE,
-        );
-    }
+  if (typeof dateString !== 'string') {
+    throw new CustomHttpException(
+      'Invalid date value: Expected a string but received ' +
+        typeof dateString +
+        '. Value: ' +
+        String(dateString),
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_DATE,
+    );
+  }
 
-    const parsedDate = parse(dateString, 'yyyy-MM-dd HH:mm', new Date());
+  const parsedDate = parse(dateString, 'yyyy-MM-dd HH:mm', new Date());
 
-    if (!isValid(parsedDate)) {
-        throw new CustomHttpException(
-            `Invalid date value: ${dateString}. Expected format: YYYY-MM-DD HH:mm`,
-            HttpStatus.BAD_REQUEST,
-            ErrorCode.INVALID_DATE,
-        );
-    }
+  if (!isValid(parsedDate)) {
+    throw new CustomHttpException(
+      `Invalid date value: ${dateString}. Expected format: YYYY-MM-DD HH:mm`,
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_DATE,
+    );
+  }
 
-    return parsedDate;
+  return parsedDate;
 }
 
 /**
@@ -41,37 +41,37 @@ export function parseDateString(dateString: string): Date {
  * @throws CustomHttpException se a data for inválida
  */
 export function parseDateOnly(dateString: string): Date {
-    if (typeof dateString !== 'string') {
-        throw new CustomHttpException(
-            'Invalid date value: Expected a string but received ' +
-            typeof dateString +
-            '. Value: ' +
-            String(dateString),
-            HttpStatus.BAD_REQUEST,
-            ErrorCode.INVALID_DATE,
-        );
-    }
+  if (typeof dateString !== 'string') {
+    throw new CustomHttpException(
+      'Invalid date value: Expected a string but received ' +
+        typeof dateString +
+        '. Value: ' +
+        String(dateString),
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_DATE,
+    );
+  }
 
-    const yyyyMmDdRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!yyyyMmDdRegex.test(dateString)) {
-        throw new CustomHttpException(
-            `Invalid date value: ${dateString}. Expected format: YYYY-MM-DD`,
-            HttpStatus.BAD_REQUEST,
-            ErrorCode.INVALID_DATE,
-        );
-    }
+  const yyyyMmDdRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!yyyyMmDdRegex.test(dateString)) {
+    throw new CustomHttpException(
+      `Invalid date value: ${dateString}. Expected format: YYYY-MM-DD`,
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_DATE,
+    );
+  }
 
-    const [year, month, day] = dateString.split('-').map(Number);
-    const parsedDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+  const [year, month, day] = dateString.split('-').map(Number);
+  const parsedDate = new Date(year, month - 1, day, 0, 0, 0, 0);
 
-    if (!isValid(parsedDate)) {
-        throw new CustomHttpException(
-            `Invalid date value: ${dateString}. Expected format: YYYY-MM-DD`,
-            HttpStatus.BAD_REQUEST,
-            ErrorCode.INVALID_DATE,
-        );
-    }
-    return parsedDate;
+  if (!isValid(parsedDate)) {
+    throw new CustomHttpException(
+      `Invalid date value: ${dateString}. Expected format: YYYY-MM-DD`,
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_DATE,
+    );
+  }
+  return parsedDate;
 }
 
 /**
@@ -81,14 +81,14 @@ export function parseDateOnly(dateString: string): Date {
  * @throws CustomHttpException se a data for inválida
  */
 export function transformToISO(date: Date): string {
-    if (!isValid(date)) {
-        throw new CustomHttpException(
-            `Invalid date object received for ISO transformation.`,
-            HttpStatus.BAD_REQUEST,
-            ErrorCode.INVALID_DATE,
-        );
-    }
-    return formatISO(date, { representation: 'complete' });
+  if (!isValid(date)) {
+    throw new CustomHttpException(
+      `Invalid date object received for ISO transformation.`,
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_DATE,
+    );
+  }
+  return formatISO(date, { representation: 'complete' });
 }
 
 /**
@@ -98,14 +98,14 @@ export function transformToISO(date: Date): string {
  * @throws CustomHttpException se a data for inválida
  */
 export function formatToCustomISO(date: Date): string {
-    if (!isValid(date)) {
-        throw new CustomHttpException(
-            `Invalid date object received for custom format.`,
-            HttpStatus.BAD_REQUEST,
-            ErrorCode.INVALID_DATE,
-        );
-    }
-    return format(date, 'yyyy-MM-dd HH:mm:ss');
+  if (!isValid(date)) {
+    throw new CustomHttpException(
+      `Invalid date object received for custom format.`,
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_DATE,
+    );
+  }
+  return format(date, 'yyyy-MM-dd HH:mm:ss');
 }
 
 /**
@@ -115,14 +115,14 @@ export function formatToCustomISO(date: Date): string {
  * @throws CustomHttpException se a data for inválida
  */
 export function formatDateOnly(date: Date): string {
-    if (!isValid(date)) {
-        throw new CustomHttpException(
-            `Invalid date object received for date-only format.`,
-            HttpStatus.BAD_REQUEST,
-            ErrorCode.INVALID_DATE,
-        );
-    }
-    return format(date, 'yyyy-MM-dd');
+  if (!isValid(date)) {
+    throw new CustomHttpException(
+      `Invalid date object received for date-only format.`,
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_DATE,
+    );
+  }
+  return format(date, 'yyyy-MM-dd');
 }
 
 /**
@@ -132,28 +132,28 @@ export function formatDateOnly(date: Date): string {
  * @throws CustomHttpException se a data for inválida
  */
 export function parseISO(dateString: string): Date {
-    if (typeof dateString !== 'string') {
-        throw new CustomHttpException(
-            'Invalid date value: Expected a string but received ' +
-            typeof dateString +
-            '. Value: ' +
-            String(dateString),
-            HttpStatus.BAD_REQUEST,
-            ErrorCode.INVALID_DATE,
-        );
-    }
+  if (typeof dateString !== 'string') {
+    throw new CustomHttpException(
+      'Invalid date value: Expected a string but received ' +
+        typeof dateString +
+        '. Value: ' +
+        String(dateString),
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_DATE,
+    );
+  }
 
-    const parsedDate = new Date(dateString);
+  const parsedDate = new Date(dateString);
 
-    if (!isValid(parsedDate) || isNaN(parsedDate.getTime())) {
-        throw new CustomHttpException(
-            `Invalid date value: ${dateString}. Expected format: ISO 8601`,
-            HttpStatus.BAD_REQUEST,
-            ErrorCode.INVALID_DATE,
-        );
-    }
+  if (!isValid(parsedDate) || isNaN(parsedDate.getTime())) {
+    throw new CustomHttpException(
+      `Invalid date value: ${dateString}. Expected format: ISO 8601`,
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_DATE,
+    );
+  }
 
-    return parsedDate;
+  return parsedDate;
 }
 
 /**
@@ -166,13 +166,13 @@ export function parseISO(dateString: string): Date {
  * @returns Date parseada
  */
 export function parseDate(dateString: string): Date {
-    if (dateString.includes('T') || dateString.endsWith('Z')) {
-        return parseISO(dateString);
-    }
-    if (dateString.includes(' ') && dateString.includes(':')) {
-        return parseDateString(dateString);
-    }
-    return parseDateOnly(dateString);
+  if (dateString.includes('T') || dateString.endsWith('Z')) {
+    return parseISO(dateString);
+  }
+  if (dateString.includes(' ') && dateString.includes(':')) {
+    return parseDateString(dateString);
+  }
+  return parseDateOnly(dateString);
 }
 
 /**
@@ -181,16 +181,16 @@ export function parseDate(dateString: string): Date {
  * @returns Date com a data e hora atual validada
  */
 export function getCurrentDate(): Date {
-    const timestamp = getTime(new Date());
-    const currentDate = new Date(timestamp);
+  const timestamp = getTime(new Date());
+  const currentDate = new Date(timestamp);
 
-    if (!isValid(currentDate)) {
-        throw new CustomHttpException(
-            'Failed to get current date',
-            HttpStatus.INTERNAL_SERVER_ERROR,
-            ErrorCode.INVALID_DATE,
-        );
-    }
+  if (!isValid(currentDate)) {
+    throw new CustomHttpException(
+      'Failed to get current date',
+      HttpStatus.INTERNAL_SERVER_ERROR,
+      ErrorCode.INVALID_DATE,
+    );
+  }
 
-    return currentDate;
+  return currentDate;
 }

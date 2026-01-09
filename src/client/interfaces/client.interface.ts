@@ -9,4 +9,3 @@ export interface IClient {
   updatedAt: Date;
   deletedAt?: Date;
 }
-

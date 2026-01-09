@@ -152,7 +152,7 @@ export class PermissionService {
     createPermissionDto: CreatePermissionDto,
   ): Promise<Permission> {
     const existingPermission = await this.permissionRepository.findOne({
-      where: { 
+      where: {
         name: createPermissionDto.name,
       },
     });
@@ -284,7 +284,7 @@ export class PermissionService {
     throw new CustomHttpException(
       'Feature not available without User module',
       HttpStatus.NOT_IMPLEMENTED,
-      ErrorCode.FEATURE_NOT_IMPLEMENTED
+      ErrorCode.FEATURE_NOT_IMPLEMENTED,
     );
   }
 
@@ -309,7 +309,11 @@ export class PermissionService {
   async getClientRoles(clientId: string): Promise<Role[]> {
     const clientRoles = await this.clientRoleRepository.find({
       where: { clientId },
-      relations: ['role', 'role.rolePermissions', 'role.rolePermissions.permission'],
+      relations: [
+        'role',
+        'role.rolePermissions',
+        'role.rolePermissions.permission',
+      ],
     });
 
     return clientRoles.map((cr) => cr.role);
@@ -345,7 +349,10 @@ export class PermissionService {
    * @param permissionName - Nome da permissão (ex: 'financial:boleto')
    * @returns true se o client tem a permissão
    */
-  async clientHasPermission(clientId: string, permissionName: string): Promise<boolean> {
+  async clientHasPermission(
+    clientId: string,
+    permissionName: string,
+  ): Promise<boolean> {
     // Verificar permissões vinculadas diretamente ao client via ClientPermission
     const clientPermissions = await this.clientPermissionRepository.find({
       where: { clientId },
@@ -410,7 +417,10 @@ export class PermissionService {
    * @param clientId - ID do cliente
    * @param permissionName - Nome da permissão (ex: 'financial:boleto')
    */
-  async assignPermissionToClient(clientId: string, permissionName: string): Promise<void> {
+  async assignPermissionToClient(
+    clientId: string,
+    permissionName: string,
+  ): Promise<void> {
     // Buscar permissão global
     const permission = await this.permissionRepository.findOne({
       where: { name: permissionName },
@@ -424,9 +434,10 @@ export class PermissionService {
       );
     }
 
-    const existingClientPermission = await this.clientPermissionRepository.findOne({
-      where: { clientId, permissionId: permission.id },
-    });
+    const existingClientPermission =
+      await this.clientPermissionRepository.findOne({
+        where: { clientId, permissionId: permission.id },
+      });
 
     if (existingClientPermission) {
       return; // Já está vinculado
@@ -445,7 +456,10 @@ export class PermissionService {
    * @param clientId - ID do cliente
    * @param permissionName - Nome da permissão (ex: 'financial:boleto')
    */
-  async removePermissionFromClient(clientId: string, permissionName: string): Promise<void> {
+  async removePermissionFromClient(
+    clientId: string,
+    permissionName: string,
+  ): Promise<void> {
     // Buscar permissão global
     const permission = await this.permissionRepository.findOne({
       where: { name: permissionName },
@@ -481,7 +495,9 @@ export class PermissionService {
     });
 
     const existingNames = new Set(existingPermissions.map((p) => p.name));
-    const missingNames = permissionNames.filter((name) => !existingNames.has(name));
+    const missingNames = permissionNames.filter(
+      (name) => !existingNames.has(name),
+    );
 
     if (missingNames.length > 0) {
       throw new CustomHttpException(
@@ -497,7 +513,10 @@ export class PermissionService {
    * @param clientId - ID do cliente
    * @param permissionNames - Array de nomes de permissões
    */
-  async assignPermissionsToClient(clientId: string, permissionNames: string[]): Promise<void> {
+  async assignPermissionsToClient(
+    clientId: string,
+    permissionNames: string[],
+  ): Promise<void> {
     // Validar se todas as permissões existem antes de tentar vincular
     await this.validatePermissionsExist(permissionNames);
 
@@ -511,7 +530,10 @@ export class PermissionService {
    * @param clientId - ID do cliente
    * @param permissionNames - Array de nomes de permissões
    */
-  async removePermissionsFromClient(clientId: string, permissionNames: string[]): Promise<void> {
+  async removePermissionsFromClient(
+    clientId: string,
+    permissionNames: string[],
+  ): Promise<void> {
     for (const permissionName of permissionNames) {
       await this.removePermissionFromClient(clientId, permissionName);
     }
@@ -523,11 +545,16 @@ export class PermissionService {
    * @param clientId - ID do cliente
    * @param permissionNames - Array de nomes de permissões
    */
-  async updateClientPermissions(clientId: string, permissionNames: string[]): Promise<void> {
+  async updateClientPermissions(
+    clientId: string,
+    permissionNames: string[],
+  ): Promise<void> {
     // Remover todas as permissões atuais do client
-    const currentClientPermissions = await this.clientPermissionRepository.find({
-      where: { clientId },
-    });
+    const currentClientPermissions = await this.clientPermissionRepository.find(
+      {
+        where: { clientId },
+      },
+    );
 
     if (currentClientPermissions.length > 0) {
       await this.clientPermissionRepository.remove(currentClientPermissions);

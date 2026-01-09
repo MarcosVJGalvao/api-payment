@@ -1,4 +1,9 @@
-import { Module, MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
+import {
+  Module,
+  MiddlewareConsumer,
+  NestModule,
+  RequestMethod,
+} from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from './common/logger/logger.module';
 import { DocsModule } from './swagger/docs.module';
@@ -10,6 +15,7 @@ import { AuditModule } from './common/audit/audit.module';
 import { FinancialProvidersModule } from './financial-providers/financial-providers.module';
 import { WebhookModule } from './webhook/webhook.module';
 import { BoletoModule } from './boleto/boleto.module';
+import { BillPaymentModule } from './bill-payment/bill-payment.module';
 import { ClientModule } from './client/client.module';
 import { InternalUserModule } from './internal-user/internal-user.module';
 import { AppController } from './app.controller';
@@ -31,6 +37,7 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
     FinancialProvidersModule,
     WebhookModule,
     BoletoModule,
+    BillPaymentModule,
     ClientModule,
     InternalUserModule,
   ],

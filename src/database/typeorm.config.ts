@@ -5,7 +5,8 @@ import { getDatabaseConfig } from './helpers/database-config.helper';
 export const typeOrmConfig = (
   configService: ConfigService,
 ): TypeOrmModuleOptions => {
-  const { host, port, username, password, database } = getDatabaseConfig(configService);
+  const { host, port, username, password, database } =
+    getDatabaseConfig(configService);
   const sslMode = configService.get<string>('DB_SSL_MODE');
 
   return {

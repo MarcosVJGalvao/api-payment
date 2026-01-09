@@ -6,15 +6,15 @@ import { IFine } from './fine.interface';
 import { IDiscount } from './discount.interface';
 
 export interface ICreateBoleto {
-    alias?: string;
-    account: IAccount;
-    documentNumber: string;
-    amount: number;
-    dueDate: string;
-    closePayment?: string;
-    type: BoletoType;
-    payer?: IPayer;
-    interest?: IInterest;
-    fine?: IFine;
-    discount?: IDiscount;
+  alias?: string;
+  account: IAccount;
+  documentNumber: string;
+  amount: number;
+  dueDate: string;
+  closePayment?: string;
+  type: BoletoType;
+  payer?: IPayer;
+  interest?: IInterest;
+  fine?: IFine;
+  discount?: IDiscount;
 }

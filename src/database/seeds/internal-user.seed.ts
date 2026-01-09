@@ -11,7 +11,9 @@ export const internalUsers = [
   },
 ];
 
-export async function seedInternalUsers(dataSource: DataSource): Promise<InternalUser[]> {
+export async function seedInternalUsers(
+  dataSource: DataSource,
+): Promise<InternalUser[]> {
   const userRepository = dataSource.getRepository(InternalUser);
   const createdUsers: InternalUser[] = [];
 
@@ -36,7 +38,9 @@ export async function seedInternalUsers(dataSource: DataSource): Promise<Interna
       createdUsers.push(savedUser);
       console.log(`✓ Created internal user: ${userData.username}`);
       console.log(`  Email: ${userData.email}`);
-      console.log(`  Password: ${userData.password} (change after first login)`);
+      console.log(
+        `  Password: ${userData.password} (change after first login)`,
+      );
     } else {
       console.log(`- Internal user already exists: ${userData.username}`);
       createdUsers.push(existingUser);

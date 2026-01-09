@@ -48,7 +48,10 @@ export class AccountService {
     return this.repository.save(account);
   }
 
-  async validateAccountBelongsToClient(accountId: string, clientId: string): Promise<void> {
+  async validateAccountBelongsToClient(
+    accountId: string,
+    clientId: string,
+  ): Promise<void> {
     const account = await this.repository.findOne({
       where: { id: accountId, clientId },
     });

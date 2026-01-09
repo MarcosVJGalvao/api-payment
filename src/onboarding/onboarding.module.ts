@@ -6,10 +6,7 @@ import { OnboardingService } from './onboarding.service';
 import { ClientModule } from '../client/client.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Onboarding, Account]),
-    ClientModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Onboarding, Account]), ClientModule],
   providers: [OnboardingService],
   exports: [OnboardingService],
 })

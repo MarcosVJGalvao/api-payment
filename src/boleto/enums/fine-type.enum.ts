@@ -1,4 +1,4 @@
 export enum FineType {
-    FIXED_AMOUNT = 'FixedAmount',
-    PERCENT = 'Percent',
+  FIXED_AMOUNT = 'FixedAmount',
+  PERCENT = 'Percent',
 }

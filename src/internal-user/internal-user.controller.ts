@@ -6,9 +6,7 @@ import { LoginInternalUserDto } from './dto/login-internal-user.dto';
 @ApiTags('Usuários Internos')
 @Controller('internal-users')
 export class InternalUserController {
-  constructor(
-    private readonly authService: InternalAuthService,
-  ) {}
+  constructor(private readonly authService: InternalAuthService) {}
 
   @Post('login')
   @ApiOperation({ summary: 'Login de usuário interno' })

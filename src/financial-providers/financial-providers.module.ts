@@ -20,36 +20,36 @@ import { ClientModule } from '../client/client.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([ProviderCredential]),
-        HttpModule,
-        JwtModule.register({}),
-        LoggerModule,
-        RedisModule,
-        FinancialConfigModule,
-        AccountModule,
-        OnboardingModule,
-        ClientModule,
-        PermissionsModule,
-    ],
-    controllers: [FinancialProvidersController],
-    providers: [
-        FinancialCredentialsService,
-        ProviderSessionService,
-        ProviderJwtService,
-        HiperbancoHttpService,
-        HiperbancoAuthService,
-        ProviderAuthGuard,
-        AccountGuard,
-    ],
-    exports: [
-        FinancialCredentialsService,
-        ProviderSessionService,
-        ProviderJwtService,
-        HiperbancoHttpService,
-        HiperbancoAuthService,
-        ProviderAuthGuard,
-        AccountGuard,
-    ],
+  imports: [
+    TypeOrmModule.forFeature([ProviderCredential]),
+    HttpModule,
+    JwtModule.register({}),
+    LoggerModule,
+    RedisModule,
+    FinancialConfigModule,
+    AccountModule,
+    OnboardingModule,
+    ClientModule,
+    PermissionsModule,
+  ],
+  controllers: [FinancialProvidersController],
+  providers: [
+    FinancialCredentialsService,
+    ProviderSessionService,
+    ProviderJwtService,
+    HiperbancoHttpService,
+    HiperbancoAuthService,
+    ProviderAuthGuard,
+    AccountGuard,
+  ],
+  exports: [
+    FinancialCredentialsService,
+    ProviderSessionService,
+    ProviderJwtService,
+    HiperbancoHttpService,
+    HiperbancoAuthService,
+    ProviderAuthGuard,
+    AccountGuard,
+  ],
 })
-export class FinancialProvidersModule { }
+export class FinancialProvidersModule {}

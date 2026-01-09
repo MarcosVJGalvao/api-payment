@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  HttpStatus,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ProviderJwtService } from '../services/provider-jwt.service';
 import { ProviderSessionService } from '../services/provider-session.service';
@@ -10,69 +15,68 @@ import { ProviderLoginType } from '../enums/provider-login-type.enum';
 
 @Injectable()
 export class ProviderAuthGuard implements CanActivate {
-    constructor(
-        private readonly reflector: Reflector,
-        private readonly jwtService: ProviderJwtService,
-        private readonly sessionService: ProviderSessionService,
-    ) { }
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly jwtService: ProviderJwtService,
+    private readonly sessionService: ProviderSessionService,
+  ) {}
 
-    async canActivate(context: ExecutionContext): Promise<boolean> {
-        const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
-            context.getHandler(),
-            context.getClass(),
-        ]);
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
-        if (isPublic) {
-            return true;
-        }
-
-        const request = context.switchToHttp().getRequest();
-        const authHeader = request.headers.authorization;
-
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            throw new CustomHttpException(
-                'Authorization header missing or invalid',
-                HttpStatus.UNAUTHORIZED,
-                ErrorCode.INVALID_SESSION,
-            );
-        }
-
-        const token = authHeader.substring(7);
-        const payload = this.jwtService.verifyToken(token);
-
-        if (!payload) {
-            throw new CustomHttpException(
-                'Invalid or expired token',
-                HttpStatus.UNAUTHORIZED,
-                ErrorCode.INVALID_SESSION,
-            );
-        }
-
-        const session = await this.sessionService.getSession(payload.sessionId);
-
-        if (!session) {
-            throw new CustomHttpException(
-                'Session expired or not found',
-                HttpStatus.UNAUTHORIZED,
-                ErrorCode.SESSION_EXPIRED,
-            );
-        }
-
-        // Verificar tipo de login requerido (se especificado via decorator)
-        const requiredLoginType = this.reflector.getAllAndOverride<ProviderLoginType | undefined>(
-            REQUIRED_LOGIN_TYPE_KEY,
-            [context.getHandler(), context.getClass()],
-        );
-
-        if (requiredLoginType && session.loginType !== requiredLoginType) {
-            throw new CustomHttpException(
-                `Esta operação requer autenticação de ${requiredLoginType}`,
-                HttpStatus.FORBIDDEN,
-                ErrorCode.INVALID_LOGIN_TYPE,
-            );
-        }
-
-        request.providerSession = session;
-        return true;
+    if (isPublic) {
+      return true;
     }
+
+    const request = context.switchToHttp().getRequest();
+    const authHeader = request.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new CustomHttpException(
+        'Authorization header missing or invalid',
+        HttpStatus.UNAUTHORIZED,
+        ErrorCode.INVALID_SESSION,
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const payload = this.jwtService.verifyToken(token);
+
+    if (!payload) {
+      throw new CustomHttpException(
+        'Invalid or expired token',
+        HttpStatus.UNAUTHORIZED,
+        ErrorCode.INVALID_SESSION,
+      );
+    }
+
+    const session = await this.sessionService.getSession(payload.sessionId);
+
+    if (!session) {
+      throw new CustomHttpException(
+        'Session expired or not found',
+        HttpStatus.UNAUTHORIZED,
+        ErrorCode.SESSION_EXPIRED,
+      );
+    }
+
+    // Verificar tipo de login requerido (se especificado via decorator)
+    const requiredLoginType = this.reflector.getAllAndOverride<
+      ProviderLoginType | undefined
+    >(REQUIRED_LOGIN_TYPE_KEY, [context.getHandler(), context.getClass()]);
+
+    if (requiredLoginType && session.loginType !== requiredLoginType) {
+      throw new CustomHttpException(
+        `Esta operação requer autenticação de ${requiredLoginType}`,
+        HttpStatus.FORBIDDEN,
+        ErrorCode.INVALID_LOGIN_TYPE,
+      );
+    }
+
+    request.providerSession = session;
+    return true;
+  }
 }

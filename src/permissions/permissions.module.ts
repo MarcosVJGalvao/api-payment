@@ -27,7 +27,17 @@ import { BaseQueryModule } from '@/common/base-query/base-query.module';
     BaseQueryModule,
   ],
   controllers: [PermissionController, RoleController],
-  providers: [PermissionService, RoleService, PermissionsGuard, ClientPermissionGuard],
-  exports: [PermissionService, RoleService, PermissionsGuard, ClientPermissionGuard],
+  providers: [
+    PermissionService,
+    RoleService,
+    PermissionsGuard,
+    ClientPermissionGuard,
+  ],
+  exports: [
+    PermissionService,
+    RoleService,
+    PermissionsGuard,
+    ClientPermissionGuard,
+  ],
 })
-export class PermissionsModule { }
+export class PermissionsModule {}

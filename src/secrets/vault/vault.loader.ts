@@ -16,7 +16,6 @@ interface SecretBundleResponse {
   };
 }
 
-
 export async function loadSecretsFromVault(): Promise<void> {
   // Carregar .env primeiro, mas não sobrescrever valores já existentes
   // Isso permite que valores do Vault tenham prioridade
@@ -24,15 +23,14 @@ export async function loadSecretsFromVault(): Promise<void> {
   dotenv.config({ override: false, debug: false });
 
   const secretsSource = process.env.SECRETS_SOURCE?.toUpperCase();
-  
+
   if (secretsSource !== 'VAULT') {
     return;
   }
 
   try {
     // Use OCI_REGION with fallback to VAULT_REGION for compatibility
-    const region =
-      process.env.OCI_REGION || process.env.VAULT_REGION || '';
+    const region = process.env.OCI_REGION || process.env.VAULT_REGION || '';
 
     const vaultConfig: VaultConfig = {
       vaultOcid: process.env.VAULT_OCID || '',
@@ -45,12 +43,14 @@ export async function loadSecretsFromVault(): Promise<void> {
       throw new Error('VAULT_OCID is required when SECRETS_SOURCE=VAULT');
     }
 
-    vaultConfig.vaultOcid = (process.env.VAULT_OCID || '').trim().replace(/[\s\r\n\t\u00A0\u2000-\u200B\u2028\u2029\uFEFF]/g, '');
-    
+    vaultConfig.vaultOcid = (process.env.VAULT_OCID || '')
+      .trim()
+      .replace(/[\s\r\n\t\u00A0\u2000-\u200B\u2028\u2029\uFEFF]/g, '');
+
     if (!vaultConfig.vaultOcid) {
       throw new Error('VAULT_OCID is required when SECRETS_SOURCE=VAULT');
     }
-    
+
     if (!vaultConfig.vaultOcid.startsWith('ocid1.vault.')) {
       throw new Error('Invalid VAULT_OCID format');
     }
@@ -65,31 +65,34 @@ export async function loadSecretsFromVault(): Promise<void> {
     let usingInstancePrincipal = false;
 
     try {
-      const builder = new (common as any).InstancePrincipalsAuthenticationDetailsProviderBuilder();
+      const builder = new (
+        common as any
+      ).InstancePrincipalsAuthenticationDetailsProviderBuilder();
       authenticationDetailsProvider = await builder.build();
       usingInstancePrincipal = true;
     } catch (error) {
-      const instancePrincipalError = error instanceof Error ? error.message : String(error);
-      
+      const instancePrincipalError =
+        error instanceof Error ? error.message : String(error);
+
       let configFile = vaultConfig.configFile || '~/.oci/config';
       const profile = vaultConfig.profile || 'DEFAULT';
-      
+
       if (configFile.startsWith('~')) {
         const homeDir = os.homedir();
         configFile = path.join(homeDir, configFile.slice(1));
       }
-      
+
       const fs = require('fs');
       if (!fs.existsSync(configFile)) {
         throw new Error(`Config file not found: ${configFile}`);
       }
-      
+
       authenticationDetailsProvider =
         new common.ConfigFileAuthenticationDetailsProvider(configFile, profile);
     }
 
     let compartmentOcid = process.env.VAULT_COMPARTMENT_OCID;
-    
+
     if (!compartmentOcid && usingInstancePrincipal) {
       try {
         const kmsVaultClient = new keymanagement.KmsVaultClient({
@@ -97,12 +100,16 @@ export async function loadSecretsFromVault(): Promise<void> {
         });
         (kmsVaultClient as { regionId?: string }).regionId = vaultConfig.region;
 
-        const vaultDetails = await (kmsVaultClient as unknown as {
-          getVault(request: { vaultId: string }): Promise<{ vault?: { compartmentId?: string } }>;
-        }).getVault({
+        const vaultDetails = await (
+          kmsVaultClient as unknown as {
+            getVault(request: {
+              vaultId: string;
+            }): Promise<{ vault?: { compartmentId?: string } }>;
+          }
+        ).getVault({
           vaultId: vaultConfig.vaultOcid,
         });
-        
+
         compartmentOcid = vaultDetails.vault?.compartmentId;
       } catch (error) {
         compartmentOcid = undefined;
@@ -125,30 +132,45 @@ export async function loadSecretsFromVault(): Promise<void> {
       const promises = batch.map(async (secretName) => {
         try {
           const vaultIdToUse = vaultConfig.vaultOcid.trim();
-          
+
           const response = await secretsClient.getSecretBundleByName({
             secretName: secretName,
             vaultId: vaultIdToUse,
           });
-          
+
           if (!response) {
             throw new Error(`Secret '${secretName}' returned empty response`);
           }
 
-          const secretBundle = response.secretBundle || (response as unknown as { secretBundleContent?: { content?: string } });
-          const secretContent = 'secretBundleContent' in response 
-            ? (response as unknown as { secretBundleContent?: { content?: string } }).secretBundleContent
-            : secretBundle?.secretBundleContent;
-          
+          const secretBundle =
+            response.secretBundle ||
+            (response as unknown as {
+              secretBundleContent?: { content?: string };
+            });
+          const secretContent =
+            'secretBundleContent' in response
+              ? (
+                  response as unknown as {
+                    secretBundleContent?: { content?: string };
+                  }
+                ).secretBundleContent
+              : secretBundle?.secretBundleContent;
+
           if (!secretContent?.content) {
             throw new Error(`Secret '${secretName}' has no content`);
           }
 
-          const decodedValue = Buffer.from(secretContent.content, 'base64').toString('utf-8');
+          const decodedValue = Buffer.from(
+            secretContent.content,
+            'base64',
+          ).toString('utf-8');
           return { name: secretName, value: decodedValue };
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          throw new Error(`Failed to get secret '${secretName}': ${errorMessage}`);
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          throw new Error(
+            `Failed to get secret '${secretName}': ${errorMessage}`,
+          );
         }
       });
 
@@ -167,7 +189,7 @@ export async function loadSecretsFromVault(): Promise<void> {
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    
+
     // Remover informações sensíveis do erro
     const sanitizedError = errorMessage
       .replace(/ocid[^\s]+/gi, '[OCID]')
@@ -178,4 +200,3 @@ export async function loadSecretsFromVault(): Promise<void> {
     throw new Error(`VaultLoader failed: ${sanitizedError}`);
   }
 }
-

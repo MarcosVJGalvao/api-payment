@@ -20,4 +20,3 @@ export const SECRETS_MAPPING = [
   'R2_ACCOUNT_ID',
   'WEBHOOK_ENCRYPTION_KEY',
 ] as const;
-

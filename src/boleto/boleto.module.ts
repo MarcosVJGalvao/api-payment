@@ -16,24 +16,24 @@ import { PermissionsModule } from '../permissions/permissions.module';
 import { AccountModule } from '../account/account.module';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Boleto]),
-        FinancialProvidersModule,
-        BaseQueryModule,
-        AuditModule,
-        LoggerModule,
-        ClientModule,
-        PermissionsModule,
-        AccountModule,
-    ],
-    controllers: [BoletoController],
-    providers: [
-        BoletoService,
-        BoletoProviderHelper,
-        BoletoSyncHelper,
-        HiperbancoBoletoHelper,
-        FinancialProviderPipe,
-    ],
-    exports: [BoletoService],
+  imports: [
+    TypeOrmModule.forFeature([Boleto]),
+    FinancialProvidersModule,
+    BaseQueryModule,
+    AuditModule,
+    LoggerModule,
+    ClientModule,
+    PermissionsModule,
+    AccountModule,
+  ],
+  controllers: [BoletoController],
+  providers: [
+    BoletoService,
+    BoletoProviderHelper,
+    BoletoSyncHelper,
+    HiperbancoBoletoHelper,
+    FinancialProviderPipe,
+  ],
+  exports: [BoletoService],
 })
-export class BoletoModule { }
+export class BoletoModule {}

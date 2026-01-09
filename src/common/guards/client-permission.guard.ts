@@ -1,4 +1,9 @@
-import { Injectable, ExecutionContext, CanActivate, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  ExecutionContext,
+  CanActivate,
+  HttpStatus,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PermissionService } from '@/permissions/services/permission.service';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';

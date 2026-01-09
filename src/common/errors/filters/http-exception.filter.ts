@@ -21,7 +21,7 @@ import { extractModuleFromUrl } from '@/common/logger/helpers/url-module.helper'
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
-  constructor(private readonly logger: AppLoggerService) { }
+  constructor(private readonly logger: AppLoggerService) {}
 
   private logException(
     correlationId: string,
@@ -91,8 +91,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
         typeof exceptionResponse === 'string'
           ? exceptionResponse
           : typeof exceptionResponse === 'object' &&
-            exceptionResponse !== null &&
-            'message' in exceptionResponse
+              exceptionResponse !== null &&
+              'message' in exceptionResponse
             ? (exceptionResponse as any).message
             : 'Too many requests';
 

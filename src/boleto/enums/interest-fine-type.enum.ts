@@ -1,4 +1,4 @@
 export enum InterestFineType {
-    INTEREST = 'interest',
-    FINE = 'fine',
+  INTEREST = 'interest',
+  FINE = 'fine',
 }

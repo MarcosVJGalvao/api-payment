@@ -12,20 +12,20 @@ import { ClientModule } from '../client/client.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Webhook]),
-        FinancialProvidersModule,
-        LoggerModule,
-        ClientModule,
-        PermissionsModule,
-    ],
-    controllers: [WebhookController],
-    providers: [
-        WebhookService,
-        WebhookRepository,
-        WebhookProviderHelper,
-        HiperbancoWebhookHelper,
-    ],
-    exports: [WebhookService],
+  imports: [
+    TypeOrmModule.forFeature([Webhook]),
+    FinancialProvidersModule,
+    LoggerModule,
+    ClientModule,
+    PermissionsModule,
+  ],
+  controllers: [WebhookController],
+  providers: [
+    WebhookService,
+    WebhookRepository,
+    WebhookProviderHelper,
+    HiperbancoWebhookHelper,
+  ],
+  exports: [WebhookService],
 })
-export class WebhookModule { }
+export class WebhookModule {}

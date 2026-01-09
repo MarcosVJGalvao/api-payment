@@ -52,4 +52,4 @@ import { PermissionsModule } from '@/permissions/permissions.module';
     AuditAlertService,
   ],
 })
-export class AuditModule { }
+export class AuditModule {}

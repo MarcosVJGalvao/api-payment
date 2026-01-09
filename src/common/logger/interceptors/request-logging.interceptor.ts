@@ -14,7 +14,7 @@ import { extractModuleFromUrl } from '../helpers/url-module.helper';
 
 @Injectable()
 export class RequestLoggingInterceptor implements NestInterceptor {
-  constructor(private readonly logger: AppLoggerService) { }
+  constructor(private readonly logger: AppLoggerService) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const ctx = context.switchToHttp();
@@ -29,7 +29,7 @@ export class RequestLoggingInterceptor implements NestInterceptor {
 
     // Store response data
     let responseBody: any = null;
-    let responseHeaders: Record<string, any> = {};
+    const responseHeaders: Record<string, any> = {};
 
     // Capture response when it finishes
     response.on('finish', () => {
@@ -40,7 +40,8 @@ export class RequestLoggingInterceptor implements NestInterceptor {
         const allHeaders = { ...response.getHeaders() };
 
         // Extract content-type separately
-        const contentType = allHeaders['content-type'] || allHeaders['Content-Type'] || null;
+        const contentType =
+          allHeaders['content-type'] || allHeaders['Content-Type'] || null;
 
         // Remove headers that are not needed in logs
         const headersToRemove = [
@@ -59,7 +60,7 @@ export class RequestLoggingInterceptor implements NestInterceptor {
         ];
 
         const filteredHeaders: Record<string, any> = {};
-        Object.keys(allHeaders).forEach(key => {
+        Object.keys(allHeaders).forEach((key) => {
           if (!headersToRemove.includes(key.toLowerCase())) {
             filteredHeaders[key] = allHeaders[key];
           }
@@ -69,12 +70,19 @@ export class RequestLoggingInterceptor implements NestInterceptor {
         // Note: statusCode is already at root level, so we don't include it here
         const responseData: Record<string, any> = {
           'content-type': contentType,
-          headers: Object.keys(filteredHeaders).length > 0 ? filteredHeaders : undefined,
+          headers:
+            Object.keys(filteredHeaders).length > 0
+              ? filteredHeaders
+              : undefined,
           correlationId,
         };
 
         // If responseBody is an object, spread its fields into response
-        if (responseBody && typeof responseBody === 'object' && !Array.isArray(responseBody)) {
+        if (
+          responseBody &&
+          typeof responseBody === 'object' &&
+          !Array.isArray(responseBody)
+        ) {
           Object.assign(responseData, responseBody);
         } else if (responseBody) {
           // If it's not an object, keep it as 'body'
@@ -115,4 +123,3 @@ export class RequestLoggingInterceptor implements NestInterceptor {
     );
   }
 }
-
