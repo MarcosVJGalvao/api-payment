@@ -11,6 +11,7 @@ import { QueryBoletoDto } from './dto/query-boleto.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
 import { BoletoProviderHelper } from './helpers/boleto-provider.helper';
+import { BoletoSyncHelper } from './helpers/boleto-sync.helper';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { BoletoStatus } from './enums/boleto-status.enum';
@@ -27,6 +28,7 @@ export class BoletoService {
         @InjectRepository(Boleto)
         private readonly repository: Repository<Boleto>,
         private readonly providerHelper: BoletoProviderHelper,
+        private readonly syncHelper: BoletoSyncHelper,
         private readonly baseQueryService: BaseQueryService,
         private readonly logger: AppLoggerService,
     ) { }
@@ -121,10 +123,11 @@ export class BoletoService {
      * @param id - ID do boleto
      * @param clientId - ID do cliente (para validação de isolamento)
      * @param accountId - ID da conta (para validação de isolamento)
+     * @param session - Sessão do provedor (opcional, usada para buscar detalhes atualizados do Hiperbanco)
      * @returns Boleto encontrado
      * @throws CustomHttpException se o boleto não for encontrado ou não pertence à conta
      */
-    async findById(id: string, clientId: string, accountId: string): Promise<Boleto> {
+    async findById(id: string, clientId: string, accountId: string, session?: ProviderSession): Promise<Boleto> {
         this.logger.log(`Finding boleto by id: ${id}`, this.context);
 
         const boleto = await this.repository.findOne({ where: { id } });
@@ -137,13 +140,16 @@ export class BoletoService {
             );
         }
 
-        // Validar isolamento: boleto deve pertencer ao clientId e accountId
         if (boleto.clientId !== clientId || boleto.accountId !== accountId) {
             throw new CustomHttpException(
                 'Boleto does not belong to this account',
                 HttpStatus.FORBIDDEN,
                 ErrorCode.ACCESS_DENIED,
             );
+        }
+
+        if (session) {
+            return this.syncHelper.syncBoletoWithProvider(boleto, session);
         }
 
         return boleto;

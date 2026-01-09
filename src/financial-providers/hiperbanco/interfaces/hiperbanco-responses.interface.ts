@@ -88,3 +88,76 @@ export interface BoletoWebhookPayload extends Record<string, unknown> {
     barcode?: string;
     digitable?: string;
 }
+
+export interface BoletoPayment {
+    id: string;
+    amount: number;
+    paymentChannel: string;
+    paidOutDate: string;
+}
+
+export interface BoletoAddress {
+    addressLine: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    zipCode: string;
+}
+
+export interface BoletoPayer {
+    document: string;
+    name: string;
+    tradeName?: string;
+    address: BoletoAddress;
+}
+
+export interface BoletoRecipientFinal {
+    document: string;
+    name: string;
+    tradeName?: string;
+    address: BoletoAddress;
+}
+
+export interface BoletoAmount {
+    currency: string;
+    value: number;
+}
+
+export interface BoletoInterest {
+    startDate: string;
+    type: string;
+    value: number;
+}
+
+export interface BoletoFine {
+    startDate: string;
+    type: string;
+    value: number;
+}
+
+export interface BoletoAccount {
+    number: string;
+    branch: string;
+}
+
+export interface BoletoGetDataResponse {
+    authenticationCode: string;
+    barcode: string;
+    updatedAt: string;
+    ourNumber: string;
+    digitable: string;
+    status: string;
+    account: BoletoAccount;
+    document: string;
+    amount: BoletoAmount;
+    dueDate: string;
+    closePayment: string;
+    emissionDate: string;
+    type: string;
+    payer?: BoletoPayer;
+    recipientFinal?: BoletoRecipientFinal;
+    payments?: BoletoPayment[] | null;
+    interest?: BoletoInterest;
+    fine?: BoletoFine;
+    alias?: string;
+}

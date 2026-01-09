@@ -7,4 +7,5 @@ export enum BoletoStatus {
     EXPIRED = 'Expired',
     CANCELLED = 'Cancelled',
     OVERDUE = 'Overdue',
+    REGISTERED = 'Registered',
 }

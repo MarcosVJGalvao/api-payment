@@ -57,7 +57,7 @@ export class BoletoController {
         @Param('id') id: string,
         @Req() req: RequestWithSession,
     ) {
-        return this.boletoService.findById(id, req.clientId!, req.accountId!);
+        return this.boletoService.findById(id, req.clientId!, req.accountId!, req.providerSession);
     }
 
     @Get()

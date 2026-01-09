@@ -8,6 +8,7 @@ import { BaseQueryModule } from '../common/base-query/base-query.module';
 import { AuditModule } from '../common/audit/audit.module';
 import { LoggerModule } from '../common/logger/logger.module';
 import { BoletoProviderHelper } from './helpers/boleto-provider.helper';
+import { BoletoSyncHelper } from './helpers/boleto-sync.helper';
 import { HiperbancoBoletoHelper } from './helpers/hiperbanco/hiperbanco-boleto.helper';
 import { FinancialProviderPipe } from './pipes/financial-provider.pipe';
 import { ClientModule } from '../client/client.module';
@@ -29,6 +30,7 @@ import { AccountModule } from '../account/account.module';
     providers: [
         BoletoService,
         BoletoProviderHelper,
+        BoletoSyncHelper,
         HiperbancoBoletoHelper,
         FinancialProviderPipe,
     ],

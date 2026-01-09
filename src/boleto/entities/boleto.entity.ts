@@ -245,6 +245,27 @@ export class Boleto {
     digitable?: string;
 
     @Column({
+        type: 'varchar',
+        length: 50,
+        name: 'our_number',
+        nullable: true,
+        comment: 'Número do nosso número do boleto',
+    })
+    ourNumber?: string;
+
+    @Column({
+        type: 'json',
+        nullable: true,
+        comment: 'Array de pagamentos do boleto recebido do Hiperbanco (pode ser null por muito tempo)',
+    })
+    payments?: Array<{
+        id: string;
+        amount: number;
+        paymentChannel: string;
+        paidOutDate: string;
+    }> | null;
+
+    @Column({
         type: 'enum',
         enum: FinancialProvider,
         name: 'provider_slug',

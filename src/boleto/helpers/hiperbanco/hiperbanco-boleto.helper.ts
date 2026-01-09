@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { HiperbancoHttpService } from '@/financial-providers/hiperbanco/hiperbanco-http.service';
 import { CreateBoletoDto } from '../../dto/create-boleto.dto';
 import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
-import { BoletoEmissionResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
+import { BoletoEmissionResponse, BoletoGetDataResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { BoletoType } from '../../enums/boleto-type.enum';
 
 /**
@@ -24,6 +24,32 @@ export class HiperbancoBoletoHelper {
         return this.hiperbancoHttp.post<BoletoEmissionResponse>(
             '/boletos/emission',
             payload,
+            {
+                headers: {
+                    Authorization: `Bearer ${session.hiperbancoToken}`,
+                },
+            },
+        );
+    }
+
+    /**
+     * Busca os detalhes de um boleto no Hiperbanco.
+     * @param authenticationCode Código de autenticação do boleto.
+     * @param accountBranch Agência da conta.
+     * @param accountNumber Número da conta.
+     * @param session Sessão autenticada do provedor (já validada pelo guard).
+     * @returns Resposta do Hiperbanco com dados detalhados do boleto.
+     */
+    async getBoletoData(
+        authenticationCode: string,
+        accountBranch: string,
+        accountNumber: string,
+        session: ProviderSession,
+    ): Promise<BoletoGetDataResponse> {
+        const path = `/boletos/getData/${authenticationCode}/${accountBranch}/${accountNumber}`;
+
+        return this.hiperbancoHttp.get<BoletoGetDataResponse>(
+            path,
             {
                 headers: {
                     Authorization: `Bearer ${session.hiperbancoToken}`,
