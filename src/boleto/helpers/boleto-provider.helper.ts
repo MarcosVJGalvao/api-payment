@@ -1,11 +1,12 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateBoletoDto } from '../dto/create-boleto.dto';
+import { CancelBoletoDto } from '../dto/cancel-boleto.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { HiperbancoBoletoHelper } from './hiperbanco/hiperbanco-boleto.helper';
-import { BoletoEmissionResponse, BoletoGetDataResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
+import { BoletoEmissionResponse, BoletoGetDataResponse, BoletoCancelResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 
 /**
  * Helper responsável por rotear requisições de boleto para o provedor correto.
@@ -65,4 +66,29 @@ export class BoletoProviderHelper {
                 );
         }
     }
+
+    /**
+     * Cancela um boleto no provedor especificado.
+     * @param provider - Provedor financeiro
+     * @param dto - Dados do boleto a ser cancelado
+     * @param session - Sessão autenticada do provedor
+     * @returns Resposta do cancelamento do boleto
+     */
+    async cancelBoleto(
+        provider: FinancialProvider,
+        dto: CancelBoletoDto,
+        session: ProviderSession,
+    ): Promise<BoletoCancelResponse> {
+        switch (provider) {
+            case FinancialProvider.HIPERBANCO:
+                return this.hiperbancoHelper.cancelBoleto(dto, session);
+            default:
+                throw new CustomHttpException(
+                    `Provider ${provider} is not supported`,
+                    HttpStatus.BAD_REQUEST,
+                    ErrorCode.INVALID_INPUT,
+                );
+        }
+    }
 }
+

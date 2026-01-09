@@ -24,4 +24,6 @@ export enum HiperbancoEndpoint {
     BOLETO_EMISSION = '/boletos/emission',
     /** Obter dados de um boleto (path params: authenticationCode/branch/number) */
     BOLETO_GET_DATA = '/boletos/getData',
+    /** Cancelar um boleto (DELETE com body) */
+    BOLETO_CANCEL = '/boletos',
 }

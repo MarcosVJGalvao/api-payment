@@ -75,14 +75,14 @@ export class HiperbancoHttpService {
         );
     }
 
-    async delete<T>(path: string, options?: HiperbancoRequestOptions): Promise<T> {
+    async delete<T>(path: string, data?: Record<string, unknown>, options?: HiperbancoRequestOptions): Promise<T> {
         const headers = buildHeaders(options);
         return executeHiperbancoRequest<T>(
             'DELETE',
             path,
             headers,
-            options?.params,
-            () => lastValueFrom(this.httpService.delete(this.config.baseUrl + path, { headers, params: options?.params })),
+            data,
+            () => lastValueFrom(this.httpService.delete(this.config.baseUrl + path, { headers, params: options?.params, data })),
             this.getRequestConfig()
         );
     }

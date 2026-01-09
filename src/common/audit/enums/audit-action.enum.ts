@@ -24,6 +24,7 @@ export enum AuditAction {
 
   // Boleto Module
   BOLETO_CREATED = 'BOLETO_CREATED',
+  BOLETO_CANCELLED = 'BOLETO_CANCELLED',
 
   // Client Module
   CLIENT_CREATED = 'CLIENT_CREATED',

@@ -6,6 +6,7 @@ import { AppLoggerService } from '@/common/logger/logger.service';
 import { BaseQueryService } from '@/common/base-query/service/base-query.service';
 import { Boleto } from './entities/boleto.entity';
 import { CreateBoletoDto } from './dto/create-boleto.dto';
+import { CancelBoletoDto } from './dto/cancel-boleto.dto';
 import { UpdateBoletoDto } from './dto/update-boleto.dto';
 import { QueryBoletoDto } from './dto/query-boleto.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
@@ -16,7 +17,7 @@ import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exce
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { BoletoStatus } from './enums/boleto-status.enum';
 import { parseDateOnly } from '@/common/helpers/date.helpers';
-import { BoletoEmissionResponse, BoletoWebhookPayload } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
+import { BoletoEmissionResponse, BoletoWebhookPayload, BoletoCancelResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { validateBoletoDates, parseBoletoStatus } from './helpers/boleto-validation.helper';
 import { FilterOperator } from '@/common/base-query/enums/filter-operator.enum';
 
@@ -231,6 +232,78 @@ export class BoletoService {
 
         return this.baseQueryService.findAll(this.repository, queryOptions);
     }
+
+    /**
+     * Cancela um boleto no provedor financeiro.
+     * @param id - ID interno do boleto
+     * @param provider - Provedor financeiro
+     * @param dto - Dados para cancelamento (authenticationCode e account)
+     * @param session - Sessão autenticada do provedor
+     * @returns Resposta do provedor confirmando o cancelamento
+     * @throws CustomHttpException se o boleto não for encontrado, não pertence à conta ou não pode ser cancelado
+     */
+    async cancelBoleto(
+        id: string,
+        provider: FinancialProvider,
+        dto: CancelBoletoDto,
+        session: ProviderSession,
+    ): Promise<BoletoCancelResponse> {
+        this.logger.log(`Cancelling boleto: ${id}`, this.context);
+
+        // Valida que accountId está presente na sessão (obrigatório para operações de boleto)
+        if (!session.accountId) {
+            throw new CustomHttpException(
+                'Account ID is required for boleto operations',
+                HttpStatus.BAD_REQUEST,
+                ErrorCode.INVALID_SESSION,
+            );
+        }
+
+        // Busca o boleto para validar existência e permissões
+        const boleto = await this.findById(id, session.clientId, session.accountId);
+
+        // Valida se o boleto pode ser cancelado (não pode se já estiver pago ou cancelado)
+        const nonCancellableStatuses = [BoletoStatus.PAID, BoletoStatus.CANCELLED];
+        if (nonCancellableStatuses.includes(boleto.status)) {
+            throw new CustomHttpException(
+                `Boleto cannot be cancelled with status: ${boleto.status}`,
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                ErrorCode.BOLETO_CANNOT_BE_CANCELLED,
+            );
+        }
+
+        try {
+            // Cancela o boleto no provedor
+            const response = await this.providerHelper.cancelBoleto(provider, dto, session);
+
+            // Atualiza o status no banco de dados
+            boleto.status = BoletoStatus.CANCELLED;
+            await this.repository.save(boleto);
+
+            this.logger.log(`Boleto cancelled successfully: ${id}`, this.context);
+
+            return response;
+        } catch (error) {
+            this.logger.error(
+                `Failed to cancel boleto: ${error instanceof Error ? error.message : String(error)}`,
+                error instanceof Error ? error.stack : undefined,
+                this.context,
+            );
+
+            // Se já for uma CustomHttpException (tratada pelo handleHiperbancoError), apenas propaga
+            if (error instanceof CustomHttpException) {
+                throw error;
+            }
+
+            // Para erros inesperados não tratados, usar Internal Server Error
+            throw new CustomHttpException(
+                'Failed to cancel boleto in financial provider',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                ErrorCode.BOLETO_CANCEL_FAILED,
+            );
+        }
+    }
+
 
     /**
      * Processa atualização recebida via webhook.

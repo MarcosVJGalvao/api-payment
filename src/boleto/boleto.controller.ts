@@ -1,6 +1,7 @@
 import {
     Body,
     Controller,
+    Delete,
     Get,
     Param,
     Post,
@@ -11,10 +12,12 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { BoletoService } from './boleto.service';
 import { CreateBoletoDto } from './dto/create-boleto.dto';
+import { CancelBoletoDto } from './dto/cancel-boleto.dto';
 import { QueryBoletoDto } from './dto/query-boleto.dto';
 import { ApiCreateBoleto } from './docs/api-create-boleto.decorator';
 import { ApiGetBoleto } from './docs/api-get-boleto.decorator';
 import { ApiListBoletos } from './docs/api-list-boletos.decorator';
+import { ApiCancelBoleto } from './docs/api-cancel-boleto.decorator';
 import { Audit } from '@/common/audit/decorators/audit.decorator';
 import { AuditAction } from '@/common/audit/enums/audit-action.enum';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
@@ -68,4 +71,22 @@ export class BoletoController {
     ) {
         return this.boletoService.listBoletos(query, req.clientId!, req.accountId!);
     }
+
+    @Delete(':provider/:id')
+    @ApiCancelBoleto()
+    @Audit({
+        action: AuditAction.BOLETO_CANCELLED,
+        entityType: 'Boleto',
+        description: 'Boleto cancelado',
+        captureNewValues: true,
+    })
+    async cancelBoleto(
+        @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
+        @Param('id') id: string,
+        @Req() req: RequestWithSession,
+        @Body() dto: CancelBoletoDto,
+    ) {
+        return this.boletoService.cancelBoleto(id, provider, dto, req.providerSession);
+    }
 }
+

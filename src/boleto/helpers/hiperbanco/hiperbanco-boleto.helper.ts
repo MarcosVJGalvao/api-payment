@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { HiperbancoHttpService } from '@/financial-providers/hiperbanco/hiperbanco-http.service';
 import { CreateBoletoDto } from '../../dto/create-boleto.dto';
+import { CancelBoletoDto } from '../../dto/cancel-boleto.dto';
 import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
-import { BoletoEmissionResponse, BoletoGetDataResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
+import { BoletoEmissionResponse, BoletoGetDataResponse, BoletoCancelResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { BoletoType } from '../../enums/boleto-type.enum';
 import { HiperbancoEndpoint } from '@/financial-providers/hiperbanco/enums/hiperbanco-endpoint.enum';
 
@@ -51,6 +52,32 @@ export class HiperbancoBoletoHelper {
 
         return this.hiperbancoHttp.get<BoletoGetDataResponse>(
             path,
+            {
+                headers: {
+                    Authorization: `Bearer ${session.hiperbancoToken}`,
+                },
+            },
+        );
+    }
+
+    /**
+     * Cancela um boleto no Hiperbanco.
+     * @param dto Dados do boleto a ser cancelado.
+     * @param session Sessão autenticada do provedor (já validada pelo guard).
+     * @returns Resposta do Hiperbanco confirmando o cancelamento.
+     */
+    async cancelBoleto(dto: CancelBoletoDto, session: ProviderSession): Promise<BoletoCancelResponse> {
+        const payload = {
+            authenticationCode: dto.authenticationCode,
+            account: {
+                number: dto.account.number,
+                branch: dto.account.branch,
+            },
+        };
+
+        return this.hiperbancoHttp.delete<BoletoCancelResponse>(
+            HiperbancoEndpoint.BOLETO_CANCEL,
+            payload,
             {
                 headers: {
                     Authorization: `Bearer ${session.hiperbancoToken}`,
@@ -130,3 +157,4 @@ export class HiperbancoBoletoHelper {
         return basePayload;
     }
 }
+

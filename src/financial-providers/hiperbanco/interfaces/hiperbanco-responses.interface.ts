@@ -161,3 +161,9 @@ export interface BoletoGetDataResponse {
     fine?: BoletoFine;
     alias?: string;
 }
+
+export interface BoletoCancelResponse extends Record<string, unknown> {
+    message?: string;
+    status?: string;
+}
+
