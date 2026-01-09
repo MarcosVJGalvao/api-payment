@@ -14,5 +14,6 @@ export const RequireClient = () =>
       name: 'X-Client-Id',
       description: 'ID do cliente',
       required: true,
+      schema: { type: 'string' },
     }),
   );

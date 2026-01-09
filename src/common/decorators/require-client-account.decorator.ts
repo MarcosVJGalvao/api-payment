@@ -15,10 +15,12 @@ export const RequireClientAccount = () =>
       name: 'X-Client-Id',
       description: 'ID do cliente',
       required: true,
+      schema: { type: 'string' },
     }),
     ApiHeader({
       name: 'X-Account-Id',
       description: 'ID da conta (pode vir do JWT após login bank)',
       required: false,
+      schema: { type: 'string' },
     }),
   );

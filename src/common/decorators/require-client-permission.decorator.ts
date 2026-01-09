@@ -18,6 +18,7 @@ export const RequireClientPermission = (permissionName: string) =>
       name: 'X-Client-Id',
       description: 'ID do cliente',
       required: true,
+      schema: { type: 'string' },
     }),
     SetMetadata(REQUIRED_CLIENT_PERMISSION_KEY, permissionName),
   );
