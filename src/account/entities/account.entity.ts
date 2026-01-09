@@ -10,6 +10,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Client } from '@/client/entities/client.entity';
+import { Onboarding } from '@/onboarding/entities/onboarding.entity';
 
 export enum AccountStatus {
   ACTIVE = 'ACTIVE',
@@ -25,6 +26,7 @@ export enum AccountType {
 @Entity('account')
 @Index(['externalId', 'clientId'], { unique: true })
 @Index(['clientId'])
+@Index(['onboardingId'])
 export class Account {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -47,6 +49,18 @@ export class Account {
   @ManyToOne(() => Client)
   @JoinColumn({ name: 'client_id' })
   client: Client;
+
+  @Column({
+    type: 'uuid',
+    name: 'onboarding_id',
+    nullable: true,
+    comment: 'ID do onboarding',
+  })
+  onboardingId?: string;
+
+  @ManyToOne(() => Onboarding, (onboarding) => onboarding.accounts)
+  @JoinColumn({ name: 'onboarding_id' })
+  onboarding?: Onboarding;
 
   @Column({
     type: 'enum',

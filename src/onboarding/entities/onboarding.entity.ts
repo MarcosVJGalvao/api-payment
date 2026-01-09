@@ -5,6 +5,7 @@ import {
   Entity,
   Index,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
   JoinColumn,
@@ -16,7 +17,6 @@ import { OnboardingTypeAccount } from '../enums/onboarding-type-account.enum';
 @Entity('onboarding')
 @Index(['externalUserId', 'clientId'], { unique: true })
 @Index(['clientId'])
-@Index(['accountId'])
 export class Onboarding {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -31,17 +31,6 @@ export class Onboarding {
   @ManyToOne(() => Client)
   @JoinColumn({ name: 'client_id' })
   client: Client;
-
-  @Column({
-    type: 'uuid',
-    name: 'account_id',
-    comment: 'ID da conta',
-  })
-  accountId: string;
-
-  @ManyToOne(() => Account)
-  @JoinColumn({ name: 'account_id' })
-  account: Account;
 
   @Column({
     type: 'varchar',
@@ -74,6 +63,9 @@ export class Onboarding {
     comment: 'Tipo de conta (PF ou PJ)',
   })
   typeAccount: OnboardingTypeAccount;
+
+  @OneToMany(() => Account, (account) => account.onboarding)
+  accounts: Account[];
 
   @CreateDateColumn({
     name: 'created_at',

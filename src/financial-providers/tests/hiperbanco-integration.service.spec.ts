@@ -92,9 +92,10 @@ describe('HiperbancoAuthService', () => {
             });
 
             const mockAccount: Account = {
-                id: 'account-uuid-id',
-                externalId: 'account-id',
+                id: 'account-uuid-id', // ID interno gerado pelo banco
+                externalId: 'account-id', // ID externo do provedor
                 clientId: 'client-id',
+                onboardingId: 'onboarding-uuid-id',
                 status: AccountStatus.ACTIVE,
                 branch: '0001',
                 number: '1105329590',
@@ -104,12 +105,23 @@ describe('HiperbancoAuthService', () => {
                 deletedAt: undefined,
             } as Account;
 
+            const mockOnboarding = {
+                id: 'onboarding-uuid-id',
+                externalUserId: 'user-id',
+                clientId: 'client-id',
+                registerName: 'João Silva',
+                documentNumber: '12345678900',
+                typeAccount: 'PF' as const,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                deletedAt: undefined,
+            };
+
             accountServiceMock.createOrUpdate.mockResolvedValue(mockAccount);
-            onboardingServiceMock.createOrUpdate.mockResolvedValue(undefined);
+            onboardingServiceMock.createOrUpdate.mockResolvedValue(mockOnboarding as any);
 
             const result = await service.loginApiBank(loginDto, 'client-id');
 
-            expect(credentialsServiceMock.getPublicCredentials).toHaveBeenCalledWith(FinancialProvider.HIPERBANCO, ProviderLoginType.BANK);
             expect(httpServiceMock.post).toHaveBeenCalledWith(
                 '/Users/login/api-bank',
                 {
@@ -118,12 +130,32 @@ describe('HiperbancoAuthService', () => {
                     clientId: 'env-client-id',
                 },
             );
+            expect(onboardingServiceMock.createOrUpdate).toHaveBeenCalledWith(
+                'user-id',
+                'client-id',
+                expect.objectContaining({
+                    registerName: 'João Silva',
+                    documentNumber: '12345678900',
+                    typeAccount: 'PF',
+                }),
+            );
+            expect(accountServiceMock.createOrUpdate).toHaveBeenCalledWith(
+                'account-id', // externalId do provedor
+                'client-id',
+                expect.objectContaining({
+                    status: AccountStatus.ACTIVE,
+                    branch: '0001',
+                    number: '1105329590',
+                    type: AccountType.MAIN,
+                    onboardingId: 'onboarding-uuid-id', // ID do onboarding criado
+                }),
+            );
             expect(sessionServiceMock.createSession).toHaveBeenCalledWith(
                 expect.objectContaining({
                     providerSlug: FinancialProvider.HIPERBANCO,
                     hiperbancoToken: 'bank-token',
                     userId: 'user-id',
-                    accountId: 'account-uuid-id',
+                    accountId: 'account-uuid-id', // ID interno do banco
                     loginType: ProviderLoginType.BANK,
                 }),
             );
@@ -134,7 +166,7 @@ describe('HiperbancoAuthService', () => {
                 registerName: 'João Silva',
                 accounts: [
                     {
-                        id: 'account-id',
+                        id: 'account-uuid-id', // ID interno do banco, não o externalId
                         status: 'ACTIVE',
                         branch: '0001',
                         number: '1105329590',

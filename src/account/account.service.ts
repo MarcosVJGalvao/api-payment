@@ -10,6 +10,7 @@ export interface CreateOrUpdateAccountData {
   branch: string;
   number: string;
   type: AccountType;
+  onboardingId?: string;
 }
 
 @Injectable()
@@ -33,6 +34,9 @@ export class AccountService {
       account.branch = data.branch;
       account.number = data.number;
       account.type = data.type;
+      if (data.onboardingId !== undefined) {
+        account.onboardingId = data.onboardingId;
+      }
     } else {
       account = this.repository.create({
         externalId,

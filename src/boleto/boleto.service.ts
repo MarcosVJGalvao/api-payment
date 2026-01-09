@@ -35,14 +35,14 @@ export class BoletoService {
      * @param provider - Provedor financeiro
      * @param dto - Dados do boleto a ser criado
      * @param session - Sessão autenticada do provedor
-     * @returns Boleto criado e salvo no banco
+     * @returns Resposta do provedor com dados do boleto emitido
      * @throws CustomHttpException se validação falhar ou emissão falhar
      */
     async createBoleto(
         provider: FinancialProvider,
         dto: CreateBoletoDto,
         session: ProviderSession,
-    ): Promise<Boleto> {
+    ): Promise<BoletoEmissionResponse> {
         this.logger.log(`Creating boleto for provider: ${provider}`, this.context);
 
         // Valida regras de negócio relacionadas a datas
@@ -52,7 +52,7 @@ export class BoletoService {
             // Emite o boleto no provedor
             const response: BoletoEmissionResponse = await this.providerHelper.emitBoleto(provider, dto, session);
 
-            // Cria a entidade Boleto
+            // Salva no banco de dados (para rastreamento interno, mas retorna a resposta do provedor)
             const boleto = this.repository.create({
                 externalId: response.id,
                 alias: dto.alias,
@@ -86,9 +86,10 @@ export class BoletoService {
             });
 
             const savedBoleto = await this.repository.save(boleto);
-            this.logger.log(`Boleto created: ${savedBoleto.id}`, this.context);
+            this.logger.log(`Boleto saved to database: ${savedBoleto.id}`, this.context);
 
-            return savedBoleto;
+            // Retorna a resposta original do provedor (igual ao retorno do provider)
+            return response;
         } catch (error) {
             this.logger.error(
                 `Failed to create boleto: ${error instanceof Error ? error.message : String(error)}`,

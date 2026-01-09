@@ -20,7 +20,6 @@ export class OnboardingService {
   async createOrUpdate(
     externalUserId: string,
     clientId: string,
-    accountId: string,
     data: CreateOrUpdateOnboardingData,
   ): Promise<Onboarding> {
     let onboarding = await this.repository.findOne({
@@ -31,12 +30,10 @@ export class OnboardingService {
       onboarding.registerName = data.registerName;
       onboarding.documentNumber = data.documentNumber;
       onboarding.typeAccount = data.typeAccount;
-      onboarding.accountId = accountId;
     } else {
       onboarding = this.repository.create({
         externalUserId,
         clientId,
-        accountId,
         ...data,
       });
     }
