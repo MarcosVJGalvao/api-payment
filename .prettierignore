@@ -1,0 +1,4 @@
+# Diretórios ignorados pelo Prettier
+dist
+node_modules
+coverage
