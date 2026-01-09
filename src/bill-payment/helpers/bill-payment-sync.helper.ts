@@ -8,6 +8,7 @@ import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { BillPaymentProviderHelper } from './bill-payment-provider.helper';
 import { BillPaymentDetailResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { BillPaymentStatus } from '../enums/bill-payment-status.enum';
+import { sanitizeDocument } from './document-sanitizer.helper';
 
 /**
  * Helper responsável pela sincronização de dados de pagamento de contas com provedores externos.
@@ -91,7 +92,14 @@ export class BillPaymentSyncHelper {
       }
 
       if (detailData.recipientDocument) {
-        updateData.recipientDocument = detailData.recipientDocument;
+        updateData.recipientDocument = sanitizeDocument(
+          detailData.recipientDocument,
+        );
+      }
+
+      // Atualizar digitable
+      if (detailData.digitable) {
+        updateData.digitable = detailData.digitable;
       }
 
       // Atualizar datas
@@ -105,6 +113,10 @@ export class BillPaymentSyncHelper {
 
       if (detailData.settleDate) {
         updateData.settleDate = this.parseDate(detailData.settleDate);
+      }
+
+      if (detailData.dueDate) {
+        updateData.dueDate = this.parseDate(detailData.dueDate);
       }
 
       // Atualizar no banco de dados

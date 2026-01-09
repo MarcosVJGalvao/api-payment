@@ -70,6 +70,7 @@ export interface ListWebhooksResponse {
 export interface HiperbancoErrorResponse {
   message?: string;
   errorCode?: string;
+  data?: Record<string, unknown>;
 }
 
 export interface BoletoEmissionResponse extends Record<string, unknown> {
@@ -213,6 +214,7 @@ export interface BillPaymentConfirmResponse extends Record<string, unknown> {
   authenticationCode: string;
   settleDate: string;
   transactionId: string;
+  digitable?: string;
 }
 
 export interface BillPaymentDetailResponse extends Record<string, unknown> {

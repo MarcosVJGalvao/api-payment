@@ -68,11 +68,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let status: HttpStatus;
     let errorCode: ErrorCode | string;
     let message: string | string[];
+    let data: Record<string, unknown> | undefined;
 
     if (exception instanceof CustomHttpException) {
       status = exception.getStatus();
       errorCode = exception.errorCode;
       message = exception.customMessage;
+      data = exception.data;
 
       this.logException(
         correlationId,
@@ -151,6 +153,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       errorCode: errorCode,
       message,
       correlationId,
+      ...(data && { data }),
     });
   }
 }

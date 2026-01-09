@@ -92,24 +92,6 @@ export class BillPayment {
   recipientDocument?: string;
 
   @Column({
-    type: 'varchar',
-    length: 255,
-    name: 'payer_name',
-    nullable: true,
-    comment: 'Nome do pagador',
-  })
-  payerName?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'payer_document',
-    nullable: true,
-    comment: 'CNPJ/CPF do pagador',
-  })
-  payerDocument?: string;
-
-  @Column({
     type: 'decimal',
     precision: 10,
     scale: 2,

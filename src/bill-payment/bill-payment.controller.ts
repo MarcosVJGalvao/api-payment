@@ -26,6 +26,7 @@ import { ProviderLoginType } from '@/financial-providers/enums/provider-login-ty
 import { FinancialProviderPipe } from './pipes/financial-provider.pipe';
 import { RequireClientPermission } from '@/common/decorators/require-client-permission.decorator';
 import type { RequestWithSession } from '@/financial-providers/hiperbanco/interfaces/request-with-session.interface';
+import { ValidateBillPaymentParamsDto } from './dto/validate-bill-payment-params.dto';
 
 @ApiTags('Bill Payments')
 @Controller('bill-payment')
@@ -39,12 +40,12 @@ export class BillPaymentController {
   @ApiValidateBillPayment()
   async validateBill(
     @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
-    @Param('digitable') digitable: string,
+    @Param() params: ValidateBillPaymentParamsDto,
     @Req() req: RequestWithSession,
   ) {
     return this.billPaymentService.validateBill(
       provider,
-      digitable,
+      params.digitable,
       req.providerSession,
     );
   }

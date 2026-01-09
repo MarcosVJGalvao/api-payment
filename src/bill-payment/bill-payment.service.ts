@@ -113,7 +113,7 @@ export class BillPaymentService {
       // Persistir no banco de dados
       const payment = this.repository.create({
         status: BillPaymentStatus.CREATED,
-        digitable: '', // Será atualizado na sincronização
+        digitable: response.digitable || '',
         validationId: dto.id,
         authenticationCode: response.authenticationCode,
         transactionId: response.transactionId,
