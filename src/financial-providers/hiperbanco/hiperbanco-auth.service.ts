@@ -13,6 +13,7 @@ import { AccountService } from '@/account/account.service';
 import { OnboardingService } from '@/onboarding/onboarding.service';
 import { Onboarding } from '@/onboarding/entities/onboarding.entity';
 import { ProviderLoginType } from '../enums/provider-login-type.enum';
+import { HiperbancoEndpoint } from './enums/hiperbanco-endpoint.enum';
 import {
     persistAccounts,
     getPrimaryAccount,
@@ -56,7 +57,7 @@ export class HiperbancoAuthService {
             client_id: this.config.clientId,
         };
 
-        const response = await this.http.post<BackofficeLoginResponse>('/Backoffice/Login', payload);
+        const response = await this.http.post<BackofficeLoginResponse>(HiperbancoEndpoint.LOGIN_BACKOFFICE, payload);
         this.logger.log('Backoffice login successful', this.context);
 
         const { session, token } = await createSessionAndToken(
@@ -85,7 +86,7 @@ export class HiperbancoAuthService {
             clientId: this.config.clientId,
         };
 
-        const response = await this.http.post<BankLoginResponse>('/Users/login/api-bank', requestPayload);
+        const response = await this.http.post<BankLoginResponse>(HiperbancoEndpoint.LOGIN_BANK, requestPayload);
         this.logger.log('API Bank login successful', this.context);
 
         // Persistir Onboarding primeiro (se houver userData)

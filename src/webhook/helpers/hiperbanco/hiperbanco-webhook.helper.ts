@@ -4,6 +4,7 @@ import { RegisterWebhookDto } from '../../dto/register-webhook.dto';
 import { ListWebhooksQueryDto } from '../../dto/list-webhooks-query.dto';
 import { RegisterWebhookResponse, ListWebhooksResponse, UpdateWebhookResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import { HiperbancoEndpoint } from '@/financial-providers/hiperbanco/enums/hiperbanco-endpoint.enum';
 
 /**
  * Helper responsável pela comunicação com o Hiperbanco para operações de webhooks.
@@ -20,7 +21,7 @@ export class HiperbancoWebhookHelper {
      */
     async registerWebhook(dto: RegisterWebhookDto, session: ProviderSession): Promise<RegisterWebhookResponse> {
         return this.hiperbancoHttp.post<RegisterWebhookResponse>(
-            '/WebhookInternal/registerWebhook',
+            HiperbancoEndpoint.WEBHOOK_REGISTER,
             {
                 name: dto.name,
                 context: dto.context,
@@ -55,7 +56,7 @@ export class HiperbancoWebhookHelper {
         }
 
         return this.hiperbancoHttp.get<ListWebhooksResponse>(
-            '/WebhookInternal/webhooks',
+            HiperbancoEndpoint.WEBHOOK_LIST,
             {
                 params,
                 headers: {
@@ -74,7 +75,7 @@ export class HiperbancoWebhookHelper {
      */
     async updateWebhook(webhookId: string, uri: string, session: ProviderSession): Promise<UpdateWebhookResponse> {
         return this.hiperbancoHttp.patch<UpdateWebhookResponse>(
-            `/WebhookInternal/changeWebhook/${webhookId}`,
+            `${HiperbancoEndpoint.WEBHOOK_UPDATE}/${webhookId}`,
             { uri },
             {
                 headers: {
@@ -91,7 +92,7 @@ export class HiperbancoWebhookHelper {
      */
     async deleteWebhook(webhookId: string, session: ProviderSession): Promise<void> {
         await this.hiperbancoHttp.delete(
-            `/WebhookInternal/deleteWebhook/${webhookId}`,
+            `${HiperbancoEndpoint.WEBHOOK_DELETE}/${webhookId}`,
             {
                 headers: {
                     Authorization: `Bearer ${session.hiperbancoToken}`,

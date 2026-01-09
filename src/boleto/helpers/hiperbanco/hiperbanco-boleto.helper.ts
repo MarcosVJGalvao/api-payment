@@ -4,6 +4,7 @@ import { CreateBoletoDto } from '../../dto/create-boleto.dto';
 import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
 import { BoletoEmissionResponse, BoletoGetDataResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { BoletoType } from '../../enums/boleto-type.enum';
+import { HiperbancoEndpoint } from '@/financial-providers/hiperbanco/enums/hiperbanco-endpoint.enum';
 
 /**
  * Helper responsável pela comunicação com o Hiperbanco para operações de boletos.
@@ -22,7 +23,7 @@ export class HiperbancoBoletoHelper {
         const payload = this.buildPayload(dto);
 
         return this.hiperbancoHttp.post<BoletoEmissionResponse>(
-            '/boletos/emission',
+            HiperbancoEndpoint.BOLETO_EMISSION,
             payload,
             {
                 headers: {
@@ -46,7 +47,7 @@ export class HiperbancoBoletoHelper {
         accountNumber: string,
         session: ProviderSession,
     ): Promise<BoletoGetDataResponse> {
-        const path = `/boletos/getData/${authenticationCode}/${accountBranch}/${accountNumber}`;
+        const path = `${HiperbancoEndpoint.BOLETO_GET_DATA}/${authenticationCode}/${accountBranch}/${accountNumber}`;
 
         return this.hiperbancoHttp.get<BoletoGetDataResponse>(
             path,
