@@ -7,9 +7,9 @@ import { AccountStatus, AccountType } from '@/account/entities/account.entity';
  * @returns AccountStatus válido
  */
 export function parseAccountStatus(status: string): AccountStatus {
-    const validStatuses = Object.values(AccountStatus);
-    const matchedStatus = validStatuses.find(s => s === status);
-    return matchedStatus ?? AccountStatus.ACTIVE;
+  const validStatuses = Object.values(AccountStatus);
+  const matchedStatus = validStatuses.find((s) => s === status);
+  return matchedStatus ?? AccountStatus.ACTIVE;
 }
 
 /**
@@ -19,7 +19,7 @@ export function parseAccountStatus(status: string): AccountStatus {
  * @returns AccountType válido
  */
 export function parseAccountType(type: string): AccountType {
-    const validTypes = Object.values(AccountType);
-    const matchedType = validTypes.find(t => t === type);
-    return matchedType ?? AccountType.MAIN;
+  const validTypes = Object.values(AccountType);
+  const matchedType = validTypes.find((t) => t === type);
+  return matchedType ?? AccountType.MAIN;
 }

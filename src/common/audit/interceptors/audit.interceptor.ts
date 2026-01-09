@@ -51,7 +51,7 @@ export class AuditInterceptor implements NestInterceptor {
     private readonly auditService: AuditService,
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
-  ) { }
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
@@ -119,10 +119,10 @@ export class AuditInterceptor implements NestInterceptor {
     const fetchOldValuesPromise =
       auditOptions.captureOldValues && entityId
         ? this.fetchEntityBeforeUpdate(
-          auditOptions.entityType,
-          entityId,
-          auditOptions.ignoreFields,
-        )
+            auditOptions.entityType,
+            entityId,
+            auditOptions.ignoreFields,
+          )
         : Promise.resolve(undefined);
 
     let newValues: Record<string, unknown> | undefined;

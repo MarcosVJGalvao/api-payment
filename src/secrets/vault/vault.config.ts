@@ -16,4 +16,3 @@ export interface SecretCache {
     timestamp: number;
   };
 }
-

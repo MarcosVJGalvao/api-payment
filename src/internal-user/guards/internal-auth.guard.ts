@@ -1,4 +1,9 @@
-import { Injectable, ExecutionContext, HttpStatus, CanActivate } from '@nestjs/common';
+import {
+  Injectable,
+  ExecutionContext,
+  HttpStatus,
+  CanActivate,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { InternalJwtService } from '../services/internal-jwt.service';
 import { InternalAuthService } from '../services/internal-auth.service';
@@ -27,7 +32,9 @@ export class InternalAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<AuthenticatedInternalUserRequest>();
+    const request = context
+      .switchToHttp()
+      .getRequest<AuthenticatedInternalUserRequest>();
     const authHeader = request.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

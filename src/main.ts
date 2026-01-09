@@ -97,7 +97,9 @@ async function bootstrap() {
     console.log(`📍  Server:     http://localhost:${port}`);
     console.log(`📚  Swagger UI: http://localhost:${port}/api`);
     console.log(`📄  OpenAPI:    http://localhost:${port}/api/openapi.json`);
-    console.log('\n═══════════════════════════════════════════════════════════\n');
+    console.log(
+      '\n═══════════════════════════════════════════════════════════\n',
+    );
   } catch (error) {
     standaloneLogger.error(
       `Failed to start application: ${error instanceof Error ? error.message : String(error)}`,

@@ -17,7 +17,9 @@ export class InternalAuthService {
     private readonly jwtService: InternalJwtService,
   ) {}
 
-  async login(loginDto: LoginInternalUserDto): Promise<{ access_token: string }> {
+  async login(
+    loginDto: LoginInternalUserDto,
+  ): Promise<{ access_token: string }> {
     const user = await this.repository.findOne({
       where: { username: loginDto.username },
     });
@@ -30,7 +32,10 @@ export class InternalAuthService {
       );
     }
 
-    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      user.password,
+    );
 
     if (!isPasswordValid) {
       throw new CustomHttpException(

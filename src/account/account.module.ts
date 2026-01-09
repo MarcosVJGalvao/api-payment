@@ -5,10 +5,7 @@ import { AccountService } from './account.service';
 import { ClientModule } from '../client/client.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Account]),
-    ClientModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Account]), ClientModule],
   providers: [AccountService],
   exports: [AccountService],
 })

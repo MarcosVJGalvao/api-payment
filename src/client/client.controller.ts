@@ -65,7 +65,10 @@ export class ClientController {
     captureNewValues: true,
     captureOldValues: true,
   })
-  async update(@Param('id') id: string, @Body() updateClientDto: UpdateClientDto) {
+  async update(
+    @Param('id') id: string,
+    @Body() updateClientDto: UpdateClientDto,
+  ) {
     return this.clientService.update(id, updateClientDto);
   }
 

@@ -9,17 +9,17 @@ export function extractModuleFromPath(filePath?: string): string | undefined {
     .replace(/\.(ts|js)$/, '');
 
   const pathParts = normalizedPath.split('/');
-  
+
   if (pathParts.length > 0) {
     const moduleName = pathParts[0];
-    
+
     if (moduleName === 'common') {
       if (pathParts.length > 1) {
         return `common.${pathParts[1]}`;
       }
       return 'common';
     }
-    
+
     return moduleName;
   }
 
@@ -32,7 +32,7 @@ export function extractModuleFromStack(stack?: string): string | undefined {
   }
 
   const stackLines = stack.split('\n');
-  
+
   for (const line of stackLines) {
     const match = line.match(/\(([^)]+\.(ts|js)):\d+:\d+\)/);
     if (match && match[1]) {
@@ -90,4 +90,3 @@ export function getModuleName(
 
   return 'unknown';
 }
-

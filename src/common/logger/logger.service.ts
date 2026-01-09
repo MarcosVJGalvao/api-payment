@@ -9,78 +9,84 @@ export const CLOUD_LOGGING_PROVIDER = 'CLOUD_LOGGING_PROVIDER';
 
 @Injectable()
 export class AppLoggerService implements LoggerService {
-    private logger: winston.Logger;
+  private logger: winston.Logger;
 
-    constructor(
-        private configService: ConfigService,
-        @Optional()
-        @Inject(CLOUD_LOGGING_PROVIDER)
-        private cloudLoggingProvider?: CloudLoggingProvider,
+  constructor(
+    private configService: ConfigService,
+    @Optional()
+    @Inject(CLOUD_LOGGING_PROVIDER)
+    private cloudLoggingProvider?: CloudLoggingProvider,
+  ) {
+    const isProduction =
+      this.configService.get<string>('NODE_ENV') === 'production';
+    const format = createLoggerFormat(isProduction);
+
+    const logDestination = this.configService.get<string>(
+      'LOG_DESTINATION',
+      'console',
+    );
+    const transports: winston.transport[] = [];
+
+    // Adicionar console transport se necessário
+    if (logDestination === 'console' || logDestination === 'both') {
+      transports.push(
+        new winston.transports.Console({
+          format: format,
+        }),
+      );
+    }
+
+    // Adicionar cloud transport se necessário
+    if (
+      (logDestination === 'cloud' ||
+        logDestination === 'both' ||
+        logDestination === 'oci') &&
+      this.cloudLoggingProvider
     ) {
-        const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
-        const format = createLoggerFormat(isProduction);
-
-        const logDestination = this.configService.get<string>('LOG_DESTINATION', 'console');
-        const transports: winston.transport[] = [];
-
-        // Adicionar console transport se necessário
-        if (logDestination === 'console' || logDestination === 'both') {
-            transports.push(
-                new winston.transports.Console({
-                    format: format,
-                }),
-            );
-        }
-
-        // Adicionar cloud transport se necessário
-        if (
-            (logDestination === 'cloud' || logDestination === 'both' || logDestination === 'oci') &&
-            this.cloudLoggingProvider
-        ) {
-            transports.push(
-                new CloudLoggingTransport({
-                    cloudLoggingProvider: this.cloudLoggingProvider,
-                }),
-            );
-        }
-
-        this.logger = winston.createLogger({
-            level: this.configService.get<string>('LOG_LEVEL', 'info'),
-            format,
-            transports,
-        });
+      transports.push(
+        new CloudLoggingTransport({
+          cloudLoggingProvider: this.cloudLoggingProvider,
+        }),
+      );
     }
 
-    log(message: string, context?: string) {
-        this.logger.info(message, { context });
-    }
+    this.logger = winston.createLogger({
+      level: this.configService.get<string>('LOG_LEVEL', 'info'),
+      format,
+      transports,
+    });
+  }
 
-    error(message: string, trace?: string, context?: string) {
-        this.logger.error(message, { trace, context });
-    }
+  log(message: string, context?: string) {
+    this.logger.info(message, { context });
+  }
 
-    warn(message: string, context?: string) {
-        this.logger.warn(message, { context });
-    }
+  error(message: string, trace?: string, context?: string) {
+    this.logger.error(message, { trace, context });
+  }
 
-    debug(message: string, context?: string) {
-        this.logger.debug(message, { context });
-    }
+  warn(message: string, context?: string) {
+    this.logger.warn(message, { context });
+  }
 
-    verbose(message: string, context?: string) {
-        this.logger.verbose(message, { context });
-    }
+  debug(message: string, context?: string) {
+    this.logger.debug(message, { context });
+  }
 
-    logWithContext(
-        level: 'log' | 'error' | 'warn' | 'debug' | 'verbose',
-        message: string,
-        meta?: Record<string, any>,
-        context?: string,
-    ) {
-        // Preserva todos os metadados - usado por HttpExceptionFilter
-        // e contém request, response, statusCode, stack, etc.
-        // Mapeia 'log' para 'info' já que Winston não tem nível 'log'
-        const winstonLevel = level === 'log' ? 'info' : level;
-        this.logger[winstonLevel](message, { ...meta, context });
-    }
+  verbose(message: string, context?: string) {
+    this.logger.verbose(message, { context });
+  }
+
+  logWithContext(
+    level: 'log' | 'error' | 'warn' | 'debug' | 'verbose',
+    message: string,
+    meta?: Record<string, any>,
+    context?: string,
+  ) {
+    // Preserva todos os metadados - usado por HttpExceptionFilter
+    // e contém request, response, statusCode, stack, etc.
+    // Mapeia 'log' para 'info' já que Winston não tem nível 'log'
+    const winstonLevel = level === 'log' ? 'info' : level;
+    this.logger[winstonLevel](message, { ...meta, context });
+  }
 }

@@ -10,10 +10,7 @@ import { VaultConfig } from './vault.config';
   providers: [
     {
       provide: VaultService,
-      useFactory: (
-        configService: ConfigService,
-        logger: AppLoggerService,
-      ) => {
+      useFactory: (configService: ConfigService, logger: AppLoggerService) => {
         // Use OCI_REGION with fallback to VAULT_REGION for compatibility
         const region =
           configService.get<string>('OCI_REGION') ||
@@ -34,4 +31,3 @@ import { VaultConfig } from './vault.config';
   exports: [VaultService],
 })
 export class VaultModule {}
-

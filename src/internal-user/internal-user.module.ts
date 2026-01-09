@@ -8,10 +8,7 @@ import { InternalJwtService } from './services/internal-jwt.service';
 import { InternalAuthGuard } from './guards/internal-auth.guard';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([InternalUser]),
-    JwtModule.register({}),
-  ],
+  imports: [TypeOrmModule.forFeature([InternalUser]), JwtModule.register({})],
   controllers: [InternalUserController],
   providers: [InternalAuthService, InternalJwtService, InternalAuthGuard],
   exports: [InternalAuthService, InternalJwtService, InternalAuthGuard],

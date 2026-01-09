@@ -4,7 +4,8 @@ import { promisify } from 'util';
 const IV_LENGTH = 16;
 const ALGORITHM = 'aes-256-cbc';
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-secret-key-must-be-changed';
+const ENCRYPTION_KEY =
+  process.env.ENCRYPTION_KEY || 'default-secret-key-must-be-changed';
 
 /**
  * Helper para criptografia AES-256-CBC reversível.
@@ -12,40 +13,40 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-secret-key-must-be
  * (ex: credenciais de APIs externas).
  */
 export class CryptoHelper {
-    /**
-     * Deriva uma chave de 32 bytes a partir da chave de ambiente.
-     */
-    private static async getKey(): Promise<Buffer> {
-        return (await promisify(scrypt)(ENCRYPTION_KEY, 'salt', 32)) as Buffer;
-    }
+  /**
+   * Deriva uma chave de 32 bytes a partir da chave de ambiente.
+   */
+  private static async getKey(): Promise<Buffer> {
+    return (await promisify(scrypt)(ENCRYPTION_KEY, 'salt', 32)) as Buffer;
+  }
 
-    /**
-     * Criptografa um texto usando AES-256-CBC.
-     * @param text - Texto a ser criptografado
-     * @returns Texto criptografado no formato `iv:encrypted`
-     */
-    static async encrypt(text: string): Promise<string> {
-        const iv = randomBytes(IV_LENGTH);
-        const key = await this.getKey();
-        const cipher = createCipheriv(ALGORITHM, key, iv);
-        let encrypted = cipher.update(text);
-        encrypted = Buffer.concat([encrypted, cipher.final()]);
-        return iv.toString('hex') + ':' + encrypted.toString('hex');
-    }
+  /**
+   * Criptografa um texto usando AES-256-CBC.
+   * @param text - Texto a ser criptografado
+   * @returns Texto criptografado no formato `iv:encrypted`
+   */
+  static async encrypt(text: string): Promise<string> {
+    const iv = randomBytes(IV_LENGTH);
+    const key = await this.getKey();
+    const cipher = createCipheriv(ALGORITHM, key, iv);
+    let encrypted = cipher.update(text);
+    encrypted = Buffer.concat([encrypted, cipher.final()]);
+    return iv.toString('hex') + ':' + encrypted.toString('hex');
+  }
 
-    /**
-     * Descriptografa um texto criptografado com AES-256-CBC.
-     * @param text - Texto criptografado no formato `iv:encrypted`
-     * @returns Texto original descriptografado
-     */
-    static async decrypt(text: string): Promise<string> {
-        const textParts = text.split(':');
-        const iv = Buffer.from(textParts.shift()!, 'hex');
-        const encryptedText = Buffer.from(textParts.join(':'), 'hex');
-        const key = await this.getKey();
-        const decipher = createDecipheriv(ALGORITHM, key, iv);
-        let decrypted = decipher.update(encryptedText);
-        decrypted = Buffer.concat([decrypted, decipher.final()]);
-        return decrypted.toString();
-    }
+  /**
+   * Descriptografa um texto criptografado com AES-256-CBC.
+   * @param text - Texto criptografado no formato `iv:encrypted`
+   * @returns Texto original descriptografado
+   */
+  static async decrypt(text: string): Promise<string> {
+    const textParts = text.split(':');
+    const iv = Buffer.from(textParts.shift()!, 'hex');
+    const encryptedText = Buffer.from(textParts.join(':'), 'hex');
+    const key = await this.getKey();
+    const decipher = createDecipheriv(ALGORITHM, key, iv);
+    let decrypted = decipher.update(encryptedText);
+    decrypted = Buffer.concat([decrypted, decipher.final()]);
+    return decrypted.toString();
+  }
 }

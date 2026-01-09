@@ -10,6 +10,12 @@ export const permissions = [
     description: 'Access to boleto operations',
   },
   {
+    name: 'financial:bill-payment',
+    module: 'financial',
+    action: 'bill-payment',
+    description: 'Access to bill payment operations',
+  },
+  {
     name: 'financial:payment',
     module: 'financial',
     action: 'payment',
@@ -37,7 +43,9 @@ export const permissions = [
   },
 ];
 
-export async function seedPermissions(dataSource: DataSource): Promise<Permission[]> {
+export async function seedPermissions(
+  dataSource: DataSource,
+): Promise<Permission[]> {
   const permissionRepository = dataSource.getRepository(Permission);
   const createdPermissions: Permission[] = [];
 

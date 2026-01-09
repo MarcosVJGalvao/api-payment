@@ -6,6 +6,7 @@
 # Logs
 logs
 *.log
+lint-report.txt
 npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*

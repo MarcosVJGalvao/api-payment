@@ -48,7 +48,10 @@ export class ClientService {
 
     // Vincular scopes ao client se fornecidos
     if (scopes && scopes.length > 0) {
-      await this.permissionService.assignPermissionsToClient(savedClient.id, scopes);
+      await this.permissionService.assignPermissionsToClient(
+        savedClient.id,
+        scopes,
+      );
     }
 
     return savedClient;
@@ -104,7 +107,10 @@ export class ClientService {
 
     // Atualizar scopes se fornecidos
     if (scopes !== undefined) {
-      await this.permissionService.updateClientPermissions(savedClient.id, scopes);
+      await this.permissionService.updateClientPermissions(
+        savedClient.id,
+        scopes,
+      );
     }
 
     return savedClient;

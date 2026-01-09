@@ -10,7 +10,9 @@ export const validationSchema = Joi.object({
       then: Joi.required(),
       otherwise: Joi.optional(),
     })
-    .description('Database host (required when SECRETS_SOURCE=ENV, loaded from Vault when SECRETS_SOURCE=VAULT)'),
+    .description(
+      'Database host (required when SECRETS_SOURCE=ENV, loaded from Vault when SECRETS_SOURCE=VAULT)',
+    ),
   DB_PORT: Joi.number().default(3306).description('Database port'),
   DB_USERNAME: Joi.string()
     .when('SECRETS_SOURCE', {
@@ -18,14 +20,18 @@ export const validationSchema = Joi.object({
       then: Joi.required(),
       otherwise: Joi.optional(),
     })
-    .description('Database username (required when SECRETS_SOURCE=ENV, loaded from Vault when SECRETS_SOURCE=VAULT)'),
+    .description(
+      'Database username (required when SECRETS_SOURCE=ENV, loaded from Vault when SECRETS_SOURCE=VAULT)',
+    ),
   DB_PASSWORD: Joi.string()
     .when('SECRETS_SOURCE', {
       is: 'ENV',
       then: Joi.required(),
       otherwise: Joi.optional(),
     })
-    .description('Database password (required when SECRETS_SOURCE=ENV, loaded from Vault when SECRETS_SOURCE=VAULT)'),
+    .description(
+      'Database password (required when SECRETS_SOURCE=ENV, loaded from Vault when SECRETS_SOURCE=VAULT)',
+    ),
   DB_DATABASE: Joi.string().required().description('Database name'),
 
   // TypeORM Configuration
@@ -44,7 +50,9 @@ export const validationSchema = Joi.object({
       then: Joi.required(),
       otherwise: Joi.optional(),
     })
-    .description('JWT secret key (required when SECRETS_SOURCE=ENV, loaded from Vault when SECRETS_SOURCE=VAULT)'),
+    .description(
+      'JWT secret key (required when SECRETS_SOURCE=ENV, loaded from Vault when SECRETS_SOURCE=VAULT)',
+    ),
   JWT_EXPIRES_IN: Joi.string()
     .default('15m')
     .description('JWT access token expiration'),
@@ -82,7 +90,9 @@ export const validationSchema = Joi.object({
   LOG_DESTINATION: Joi.string()
     .valid('console', 'cloud', 'oci', 'both')
     .default('console')
-    .description('Log destination: console, cloud, oci, or both. Default: console'),
+    .description(
+      'Log destination: console, cloud, oci, or both. Default: console',
+    ),
 
   // Cloud Logging Configuration
   CLOUD_LOGGING_PROVIDER: Joi.string()
@@ -121,7 +131,7 @@ export const validationSchema = Joi.object({
     })
     .description(
       'OCID of the Log within the Log Group (required when LOG_DESTINATION is cloud/oci/both and CLOUD_LOGGING_PROVIDER is oci). ' +
-      'This is different from the Log Group OCID. You need to create a Log within the Log Group first.',
+        'This is different from the Log Group OCID. You need to create a Log within the Log Group first.',
     ),
   OCI_LOGGING_COMPARTMENT_OCID: Joi.string()
     .optional()

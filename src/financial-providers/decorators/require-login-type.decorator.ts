@@ -13,15 +13,15 @@ export const REQUIRED_LOGIN_TYPE_KEY = 'requiredLoginType';
  * @param loginType Tipo de login: BACKOFFICE (email/senha) ou BANK (documento/senha)
  */
 export const RequireLoginType = (loginType: ProviderLoginType) => {
-    if (loginType === ProviderLoginType.BANK) {
-        return applyDecorators(
-            RequireClientAccount(),
-            SetMetadata(REQUIRED_LOGIN_TYPE_KEY, loginType),
-        );
-    }
-    
+  if (loginType === ProviderLoginType.BANK) {
     return applyDecorators(
-        RequireClient(),
-        SetMetadata(REQUIRED_LOGIN_TYPE_KEY, loginType),
+      RequireClientAccount(),
+      SetMetadata(REQUIRED_LOGIN_TYPE_KEY, loginType),
     );
+  }
+
+  return applyDecorators(
+    RequireClient(),
+    SetMetadata(REQUIRED_LOGIN_TYPE_KEY, loginType),
+  );
 };

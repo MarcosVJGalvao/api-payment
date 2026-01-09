@@ -11,7 +11,10 @@ export class InternalJwtService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {
-    this.secret = this.configService.get<string>('INTERNAL_JWT_SECRET', 'internal-jwt-secret-key');
+    this.secret = this.configService.get<string>(
+      'INTERNAL_JWT_SECRET',
+      'internal-jwt-secret-key',
+    );
   }
 
   generateToken(payload: InternalUserJwtPayload): string {

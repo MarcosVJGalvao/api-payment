@@ -17,7 +17,9 @@ export async function runSeeds(dataSource: DataSource): Promise<void> {
     console.log(`✓ Created ${createdUsers.length} internal users\n`);
 
     console.log('✅ All seeds completed successfully!');
-    console.log('\n💡 Note: Permissions are global scopes. Link them to clients via API or manually.');
+    console.log(
+      '\n💡 Note: Permissions are global scopes. Link them to clients via API or manually.',
+    );
   } catch (error) {
     console.error('❌ Error running seeds:', error);
     throw error;

@@ -1,4 +1,4 @@
 export enum BoletoType {
-    DEPOSIT = 'Deposit',
-    LEVY = 'Levy',
+  DEPOSIT = 'Deposit',
+  LEVY = 'Levy',
 }

@@ -31,7 +31,7 @@ export class RoleService {
     private permissionService: PermissionService,
     private redisService: RedisService,
     private baseQueryService: BaseQueryService,
-  ) { }
+  ) {}
 
   async createRole(createRoleDto: CreateRoleDto): Promise<Role> {
     const existingRole = await this.roleRepository.findOne({
@@ -77,7 +77,7 @@ export class RoleService {
     throw new CustomHttpException(
       'Feature not available without User module',
       HttpStatus.NOT_IMPLEMENTED,
-      ErrorCode.FEATURE_NOT_IMPLEMENTED
+      ErrorCode.FEATURE_NOT_IMPLEMENTED,
     );
   }
 

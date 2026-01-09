@@ -23,7 +23,7 @@ export class AuditService {
     @InjectRepository(AuditLog)
     private readonly repository: Repository<AuditLog>,
     private readonly baseQueryService: BaseQueryService,
-  ) { }
+  ) {}
 
   async log(data: IAuditLogData): Promise<AuditLog | null> {
     try {

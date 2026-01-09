@@ -18,7 +18,7 @@ export class AuditLogRepository {
   constructor(
     @InjectRepository(AuditLog)
     private readonly repository: Repository<AuditLog>,
-  ) { }
+  ) {}
 
   async create(data: {
     action: AuditAction;

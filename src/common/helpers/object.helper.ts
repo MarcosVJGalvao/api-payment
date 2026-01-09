@@ -3,7 +3,7 @@
  * @param value O valor a ser verificado
  */
 export function isRecord(value: unknown): value is Record<string, unknown> {
-    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 /**
@@ -11,8 +11,10 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
  * Retorna ['password'] como fallback se a variável não estiver definida.
  */
 function getSensitiveFields(): string[] {
-    const envFields = process.env.SENSITIVE_FIELDS?.split(',').map((f) => f.trim()).filter(Boolean);
-    return envFields && envFields.length > 0 ? envFields : ['password'];
+  const envFields = process.env.SENSITIVE_FIELDS?.split(',')
+    .map((f) => f.trim())
+    .filter(Boolean);
+  return envFields && envFields.length > 0 ? envFields : ['password'];
 }
 
 /**
@@ -21,24 +23,24 @@ function getSensitiveFields(): string[] {
  * @param sensitiveKeys Lista de chaves a serem ocultadas (padrão: obtido de SENSITIVE_FIELDS)
  */
 export function sanitizePayload(
-    data: unknown,
-    sensitiveKeys: string[] = getSensitiveFields(),
+  data: unknown,
+  sensitiveKeys: string[] = getSensitiveFields(),
 ): unknown {
-    if (Array.isArray(data)) {
-        return data.map((item) => sanitizePayload(item, sensitiveKeys));
+  if (Array.isArray(data)) {
+    return data.map((item) => sanitizePayload(item, sensitiveKeys));
+  }
+
+  if (!isRecord(data)) return data;
+
+  const sanitized: Record<string, unknown> = {};
+
+  for (const key of Object.keys(data)) {
+    if (sensitiveKeys.includes(key)) {
+      sanitized[key] = '***REDACTED***';
+    } else {
+      sanitized[key] = sanitizePayload(data[key], sensitiveKeys);
     }
+  }
 
-    if (!isRecord(data)) return data;
-
-    const sanitized: Record<string, unknown> = {};
-
-    for (const key of Object.keys(data)) {
-        if (sensitiveKeys.includes(key)) {
-            sanitized[key] = '***REDACTED***';
-        } else {
-            sanitized[key] = sanitizePayload(data[key], sensitiveKeys);
-        }
-    }
-
-    return sanitized;
+  return sanitized;
 }

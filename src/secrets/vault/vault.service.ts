@@ -28,9 +28,7 @@ export class VaultService {
   constructor(
     private readonly config: VaultConfig,
     private readonly logger?: AppLoggerService,
-  ) { }
-
-
+  ) {}
 
   private async initializeClient(): Promise<void> {
     if (this.secretsClient) {
@@ -46,7 +44,9 @@ export class VaultService {
         let authenticationDetailsProvider: common.AuthenticationDetailsProvider;
 
         try {
-          const builder = new (common as any).InstancePrincipalsAuthenticationDetailsProviderBuilder();
+          const builder = new (
+            common as any
+          ).InstancePrincipalsAuthenticationDetailsProviderBuilder();
           authenticationDetailsProvider = await builder.build();
         } catch {
           let configFile = this.config.configFile || '~/.oci/config';
@@ -67,7 +67,8 @@ export class VaultService {
         this.secretsClient = new secretsmanagement.SecretsClient({
           authenticationDetailsProvider,
         });
-        (this.secretsClient as { regionId?: string }).regionId = this.config.region;
+        (this.secretsClient as { regionId?: string }).regionId =
+          this.config.region;
       } catch (error) {
         this.logger?.error(
           'Failed to initialize Vault client',
@@ -89,14 +90,12 @@ export class VaultService {
       return cached.value;
     }
 
-
-
     try {
       if (!this.config.vaultOcid) {
         throw new CustomHttpException(
           'Vault OCID is not available.',
           HttpStatus.INTERNAL_SERVER_ERROR,
-          ErrorCode.VAULT_CONFIGURATION_MISSING
+          ErrorCode.VAULT_CONFIGURATION_MISSING,
         );
       }
 
@@ -104,34 +103,46 @@ export class VaultService {
         throw new CustomHttpException(
           'Secrets client is not initialized.',
           HttpStatus.INTERNAL_SERVER_ERROR,
-          ErrorCode.VAULT_CONFIGURATION_MISSING
+          ErrorCode.VAULT_CONFIGURATION_MISSING,
         );
       }
 
-      const response = await (this.secretsClient as unknown as {
-        getSecretBundleByName(request: {
-          secretName: string;
-          vaultId: string;
-        }): Promise<SecretBundleResponse>;
-      }).getSecretBundleByName({
+      const response = await (
+        this.secretsClient as unknown as {
+          getSecretBundleByName(request: {
+            secretName: string;
+            vaultId: string;
+          }): Promise<SecretBundleResponse>;
+        }
+      ).getSecretBundleByName({
         secretName: secretName,
         vaultId: this.config.vaultOcid,
       });
 
-      const secretBundle = response.secretBundle || (response as unknown as { secretBundleContent?: { content?: string } });
-      const secretContent = 'secretBundleContent' in response
-        ? (response as unknown as { secretBundleContent?: { content?: string } }).secretBundleContent
-        : secretBundle?.secretBundleContent;
+      const secretBundle =
+        response.secretBundle ||
+        (response as unknown as { secretBundleContent?: { content?: string } });
+      const secretContent =
+        'secretBundleContent' in response
+          ? (
+              response as unknown as {
+                secretBundleContent?: { content?: string };
+              }
+            ).secretBundleContent
+          : secretBundle?.secretBundleContent;
 
       if (!secretContent?.content) {
         throw new CustomHttpException(
           `Secret '${secretName}' has no content`,
           HttpStatus.INTERNAL_SERVER_ERROR,
-          ErrorCode.VAULT_SECRET_CONTENT_MISSING
+          ErrorCode.VAULT_SECRET_CONTENT_MISSING,
         );
       }
 
-      const decodedValue = Buffer.from(secretContent.content, 'base64').toString('utf-8');
+      const decodedValue = Buffer.from(
+        secretContent.content,
+        'base64',
+      ).toString('utf-8');
 
       this.cache[secretName] = {
         value: decodedValue,
@@ -188,4 +199,3 @@ export class VaultService {
     this.cache = {};
   }
 }
-

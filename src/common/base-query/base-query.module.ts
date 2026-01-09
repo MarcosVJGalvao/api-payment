@@ -3,7 +3,7 @@ import { BaseQueryService } from './service/base-query.service';
 
 @Global()
 @Module({
-    providers: [BaseQueryService],
-    exports: [BaseQueryService],
+  providers: [BaseQueryService],
+  exports: [BaseQueryService],
 })
-export class BaseQueryModule { }
+export class BaseQueryModule {}

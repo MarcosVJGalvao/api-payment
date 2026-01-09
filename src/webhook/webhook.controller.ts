@@ -1,4 +1,17 @@
-import { Body, Controller, Get, Param, Post, Patch, Delete, Query, UseGuards, Req, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Patch,
+  Delete,
+  Query,
+  UseGuards,
+  Req,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { WebhookService } from './webhook.service';
 import { RegisterWebhookDto } from './dto/register-webhook.dto';
@@ -25,66 +38,87 @@ import type { RequestWithSession } from '@/financial-providers/hiperbanco/interf
 @UseGuards(ProviderAuthGuard)
 @RequireLoginType(ProviderLoginType.BACKOFFICE)
 export class WebhookController {
-    constructor(private readonly webhookService: WebhookService) { }
+  constructor(private readonly webhookService: WebhookService) {}
 
-    @Post(':provider/register')
-    @ApiRegisterWebhook()
-    @Audit({
-        action: AuditAction.WEBHOOK_REGISTERED,
-        entityType: 'Webhook',
-        description: 'Webhook registrado',
-        captureNewValues: true,
-    })
-    async registerWebhook(
-        @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
-        @Req() req: RequestWithSession,
-        @Body() dto: RegisterWebhookDto,
-    ) {
-        return this.webhookService.registerWebhook(provider, dto, req.providerSession, req.clientId!);
-    }
+  @Post(':provider/register')
+  @ApiRegisterWebhook()
+  @Audit({
+    action: AuditAction.WEBHOOK_REGISTERED,
+    entityType: 'Webhook',
+    description: 'Webhook registrado',
+    captureNewValues: true,
+  })
+  async registerWebhook(
+    @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
+    @Req() req: RequestWithSession,
+    @Body() dto: RegisterWebhookDto,
+  ) {
+    return this.webhookService.registerWebhook(
+      provider,
+      dto,
+      req.providerSession,
+      req.clientId!,
+    );
+  }
 
-    @Get(':provider')
-    @ApiListWebhooks()
-    async listWebhooks(
-        @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
-        @Req() req: RequestWithSession,
-        @Query() query: ListWebhooksQueryDto,
-    ) {
-        return this.webhookService.listWebhooks(provider, query, req.providerSession, req.clientId!);
-    }
+  @Get(':provider')
+  @ApiListWebhooks()
+  async listWebhooks(
+    @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
+    @Req() req: RequestWithSession,
+    @Query() query: ListWebhooksQueryDto,
+  ) {
+    return this.webhookService.listWebhooks(
+      provider,
+      query,
+      req.providerSession,
+      req.clientId!,
+    );
+  }
 
-    @Patch(':provider/:id')
-    @ApiUpdateWebhook()
-    @Audit({
-        action: AuditAction.WEBHOOK_UPDATED,
-        entityType: 'Webhook',
-        description: 'Webhook atualizado',
-        captureNewValues: true,
-        captureOldValues: true,
-    })
-    async updateWebhook(
-        @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
-        @Param('id') webhookId: string,
-        @Req() req: RequestWithSession,
-        @Body() dto: UpdateWebhookDto,
-    ) {
-        return this.webhookService.updateWebhook(provider, webhookId, dto, req.providerSession, req.clientId!);
-    }
+  @Patch(':provider/:id')
+  @ApiUpdateWebhook()
+  @Audit({
+    action: AuditAction.WEBHOOK_UPDATED,
+    entityType: 'Webhook',
+    description: 'Webhook atualizado',
+    captureNewValues: true,
+    captureOldValues: true,
+  })
+  async updateWebhook(
+    @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
+    @Param('id') webhookId: string,
+    @Req() req: RequestWithSession,
+    @Body() dto: UpdateWebhookDto,
+  ) {
+    return this.webhookService.updateWebhook(
+      provider,
+      webhookId,
+      dto,
+      req.providerSession,
+      req.clientId!,
+    );
+  }
 
-    @Delete(':provider/:id')
-    @HttpCode(HttpStatus.NO_CONTENT)
-    @ApiDeleteWebhook()
-    @Audit({
-        action: AuditAction.WEBHOOK_DELETED,
-        entityType: 'Webhook',
-        description: 'Webhook removido',
-        captureOldValues: true,
-    })
-    async deleteWebhook(
-        @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
-        @Param('id') webhookId: string,
-        @Req() req: RequestWithSession,
-    ) {
-        return this.webhookService.deleteWebhook(provider, webhookId, req.providerSession, req.clientId!);
-    }
+  @Delete(':provider/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiDeleteWebhook()
+  @Audit({
+    action: AuditAction.WEBHOOK_DELETED,
+    entityType: 'Webhook',
+    description: 'Webhook removido',
+    captureOldValues: true,
+  })
+  async deleteWebhook(
+    @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
+    @Param('id') webhookId: string,
+    @Req() req: RequestWithSession,
+  ) {
+    return this.webhookService.deleteWebhook(
+      provider,
+      webhookId,
+      req.providerSession,
+      req.clientId!,
+    );
+  }
 }

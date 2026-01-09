@@ -8,16 +8,17 @@ import { HttpStatus } from '@nestjs/common';
  * Quando SECRETS_SOURCE=VAULT: lê apenas de process.env (valores do Vault)
  * Quando SECRETS_SOURCE=ENV: lê do ConfigService (valores do .env)
  */
-export function getDatabaseConfig(
-  configService: ConfigService,
-): {
+export function getDatabaseConfig(configService: ConfigService): {
   host: string;
   port: number;
   username: string;
   password: string;
   database: string;
 } {
-  const secretsSource = configService.get<string>('SECRETS_SOURCE', 'ENV') || process.env.SECRETS_SOURCE || 'ENV';
+  const secretsSource =
+    configService.get<string>('SECRETS_SOURCE', 'ENV') ||
+    process.env.SECRETS_SOURCE ||
+    'ENV';
 
   if (secretsSource === 'VAULT') {
     const host = process.env.DB_HOST;
@@ -36,18 +37,18 @@ export function getDatabaseConfig(
     if (missingVars.length > 0) {
       throw new CustomHttpException(
         `Database configuration error: Secrets do Vault não foram carregados corretamente. ` +
-        `Variáveis faltando: ${missingVars.join(', ')}. ` +
-        `Verifique os logs do [VaultLoader] para mais detalhes.`,
+          `Variáveis faltando: ${missingVars.join(', ')}. ` +
+          `Verifique os logs do [VaultLoader] para mais detalhes.`,
         HttpStatus.INTERNAL_SERVER_ERROR,
-        ErrorCode.ENVIRONMENT_VARIABLE_MISSING
+        ErrorCode.ENVIRONMENT_VARIABLE_MISSING,
       );
     }
     return {
       host: host!,
-      port: port!,
+      port: port,
       username: username!,
       password: password!,
-      database: database!
+      database: database!,
     };
   } else {
     const host = configService.get<string>('DB_HOST');
@@ -65,9 +66,9 @@ export function getDatabaseConfig(
     if (missingVars.length > 0) {
       throw new CustomHttpException(
         `Database configuration error: Variáveis obrigatórias não encontradas: ${missingVars.join(', ')}. ` +
-        `Defina essas variáveis no arquivo .env.`,
+          `Defina essas variáveis no arquivo .env.`,
         HttpStatus.INTERNAL_SERVER_ERROR,
-        ErrorCode.ENVIRONMENT_VARIABLE_MISSING
+        ErrorCode.ENVIRONMENT_VARIABLE_MISSING,
       );
     }
     return {
@@ -75,8 +76,7 @@ export function getDatabaseConfig(
       port,
       username: username!,
       password: password!,
-      database: database!
+      database: database!,
     };
   }
 }
-

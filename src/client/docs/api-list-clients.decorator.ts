@@ -7,7 +7,11 @@ export function ApiListClients() {
     ApiQuery({ name: 'page', required: false, type: Number }),
     ApiQuery({ name: 'limit', required: false, type: Number }),
     ApiQuery({ name: 'search', required: false, type: String }),
-    ApiQuery({ name: 'status', required: false, enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED'] }),
+    ApiQuery({
+      name: 'status',
+      required: false,
+      enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED'],
+    }),
     ApiResponse({
       status: 200,
       description: 'Lista de clientes',

@@ -9,69 +9,71 @@ import { isHiperbancoErrorResponse } from './hiperbanco-validators.helper';
  * Tratamento centralizado de erros de requisição para o Hiperbanco e outras integrações HTTP.
  * Analisa o erro (Axios ou genérico), invoca o callback de log com os detalhes extraídos
  * e lança uma CustomHttpException padronizada.
- * 
+ *
  * @param error O erro capturado (unknown)
  * @param logCallback Callback para realizar o log da transação com os dados processados do erro
  * @throws CustomHttpException
  */
 
 export function handleHiperbancoError(
-    error: unknown,
-    logCallback: (
-        status: number,
-        responseData: unknown,
-        message: string,
-        stack: string | undefined
-    ) => void
+  error: unknown,
+  logCallback: (
+    status: number,
+    responseData: unknown,
+    message: string,
+    stack: string | undefined,
+  ) => void,
 ): never {
-    if (error instanceof CustomHttpException) {
-        throw error;
+  if (error instanceof CustomHttpException) {
+    throw error;
+  }
+
+  let message = 'Unknown error';
+  let status = HttpStatus.INTERNAL_SERVER_ERROR;
+  let responseData: unknown = undefined;
+  let stack: string | undefined = undefined;
+
+  let errorCode: string | undefined = undefined;
+
+  if (isAxiosError(error)) {
+    const axiosError = error as AxiosError;
+    responseData = axiosError.response?.data;
+
+    // Se não houver response, é erro de rede/timeout - usar Bad Gateway
+    if (!axiosError.response) {
+      status = HttpStatus.BAD_GATEWAY;
+      message =
+        axiosError.code === 'ECONNABORTED' ||
+        axiosError.message.includes('timeout')
+          ? 'Request timeout while communicating with external service'
+          : 'Failed to communicate with external service';
+      errorCode = ErrorCode.EXTERNAL_SERVICE_COMMUNICATION_ERROR;
+    } else {
+      status = axiosError.response.status;
+      message = axiosError.message;
     }
 
-    let message = 'Unknown error';
-    let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let responseData: unknown = undefined;
-    let stack: string | undefined = undefined;
-
-    let errorCode: string | undefined = undefined;
-
-    if (isAxiosError(error)) {
-        const axiosError = error as AxiosError;
-        responseData = axiosError.response?.data;
-        
-        // Se não houver response, é erro de rede/timeout - usar Bad Gateway
-        if (!axiosError.response) {
-            status = HttpStatus.BAD_GATEWAY;
-            message = axiosError.code === 'ECONNABORTED' || axiosError.message.includes('timeout')
-                ? 'Request timeout while communicating with external service'
-                : 'Failed to communicate with external service';
-            errorCode = ErrorCode.EXTERNAL_SERVICE_COMMUNICATION_ERROR;
-        } else {
-            status = axiosError.response.status;
-            message = axiosError.message;
-        }
-
-        if (isHiperbancoErrorResponse(responseData)) {
-            if (responseData.message) {
-                message = responseData.message;
-            }
-            if (responseData.errorCode) {
-                errorCode = responseData.errorCode;
-            }
-        }
-
-        stack = axiosError.stack;
-    } else if (error instanceof Error) {
-        message = error.message;
-        stack = error.stack;
+    if (isHiperbancoErrorResponse(responseData)) {
+      if (responseData.message) {
+        message = responseData.message;
+      }
+      if (responseData.errorCode) {
+        errorCode = responseData.errorCode;
+      }
     }
 
-    // Invoca o callback de log fornecido pelo serviço
-    logCallback(status, responseData, message, stack);
+    stack = axiosError.stack;
+  } else if (error instanceof Error) {
+    message = error.message;
+    stack = error.stack;
+  }
 
-    throw new CustomHttpException(
-        `Hiperbanco request failed: ${message}`,
-        status,
-        errorCode || ErrorCode.EXTERNAL_SERVICE_ERROR,
-    );
+  // Invoca o callback de log fornecido pelo serviço
+  logCallback(status, responseData, message, stack);
+
+  throw new CustomHttpException(
+    `Hiperbanco request failed: ${message}`,
+    status,
+    errorCode || ErrorCode.EXTERNAL_SERVICE_ERROR,
+  );
 }

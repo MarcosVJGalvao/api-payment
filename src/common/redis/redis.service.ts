@@ -35,7 +35,6 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-
     const client = new Redis(upstashUrl, {
       retryStrategy: (times) => {
         const delay = Math.min(times * 100, 3000);
@@ -60,7 +59,6 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     const port = this.configService.get<number>('REDIS_PORT', 6379);
     const password = this.configService.get<string>('REDIS_PASSWORD');
     const db = this.configService.get<number>('REDIS_DB', 0);
-
 
     const client = new Redis({
       host,
@@ -126,7 +124,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       await Promise.race([
         this.client.ping(),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Redis connection timeout')), 10000),
+          setTimeout(
+            () => reject(new Error('Redis connection timeout')),
+            10000,
+          ),
         ),
       ]);
     } catch (error) {

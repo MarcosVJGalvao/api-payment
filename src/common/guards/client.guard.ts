@@ -1,4 +1,9 @@
-import { Injectable, ExecutionContext, HttpStatus, CanActivate } from '@nestjs/common';
+import {
+  Injectable,
+  ExecutionContext,
+  HttpStatus,
+  CanActivate,
+} from '@nestjs/common';
 import { ClientService } from '@/client/client.service';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
@@ -25,7 +30,8 @@ export class ClientGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithClient>();
-    const clientId = request.headers['x-client-id'] || request.headers['X-Client-Id'];
+    const clientId =
+      request.headers['x-client-id'] || request.headers['X-Client-Id'];
 
     if (!clientId || typeof clientId !== 'string') {
       throw new CustomHttpException(
