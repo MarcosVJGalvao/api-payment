@@ -129,7 +129,6 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
           setTimeout(() => reject(new Error('Redis connection timeout')), 10000),
         ),
       ]);
-      this.logger.log(`Redis connected successfully (mode: ${this.mode})`, 'RedisService');
     } catch (error) {
       this.logger.warn(
         `Redis not available (mode: ${this.mode}): ${error instanceof Error ? error.message : String(error)}. Application will continue without Redis.`,

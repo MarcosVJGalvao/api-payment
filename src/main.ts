@@ -32,9 +32,7 @@ async function bootstrap() {
   console.log('╚══════════════════════════════════════════════════════════╝\n');
 
   try {
-    console.log('📦 Loading secrets from Vault...');
     await loadSecretsFromVault();
-    console.log('✅ Secrets loaded successfully');
   } catch (error) {
     standaloneLogger.error(
       `Failed to load secrets from Vault: ${error instanceof Error ? error.message : String(error)}`,
@@ -51,13 +49,10 @@ async function bootstrap() {
       logger: ['error', 'warn'],
       bufferLogs: true,
     });
-    console.log('✅ NestJS application created successfully');
 
-    console.log('🔧 Configuring application...');
     const logger = app.get(AppLoggerService);
     const configService = app.get(ConfigService);
 
-    console.log('🌐 Enabling CORS...');
     app.enableCors();
 
     app.useGlobalPipes(

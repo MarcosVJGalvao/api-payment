@@ -25,6 +25,7 @@ import {
   processUnhandledError,
 } from '@/common/errors/helpers/error.helpers';
 import { extractMessage } from '@/common/errors/helpers/message.helpers';
+import { RequestWithAccount } from '@/financial-providers/guards/account.guard';
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
@@ -65,6 +66,18 @@ export class AuditInterceptor implements NestInterceptor {
     let userId = user?.userId;
     let username = user?.username;
 
+    // Se não encontrou userId no request.user, tenta extrair do providerSession (para autenticação de provider)
+    if (!userId && 'providerSession' in request && request.providerSession) {
+      const providerSession = request.providerSession;
+      if ('userId' in providerSession && providerSession.userId) {
+        userId = String(providerSession.userId);
+      } else if ('accountId' in providerSession && providerSession.accountId) {
+        // Se não tiver userId, usa accountId como identificador alternativo
+        userId = String(providerSession.accountId);
+      }
+    }
+
+    // Tenta extrair do token JWT (para tokens de usuários internos)
     if (!userId) {
       const tokenUserId = this.extractUserIdFromToken(request);
       if (tokenUserId) {
@@ -88,7 +101,7 @@ export class AuditInterceptor implements NestInterceptor {
 
     if (!userId && !isPublicEndpoint) {
       this.logger.warn(
-        `UserId not found for audit action ${auditOptions.action} on ${request.method} ${request.url}. This may indicate an issue with authentication.`,
+        `UserId not available for audit log: ${auditOptions.action} on ${request.method} ${request.url}. UserId should be available for authenticated endpoints.`,
       );
     }
 

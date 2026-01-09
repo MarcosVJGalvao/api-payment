@@ -17,24 +17,15 @@ import { DiscountType } from '../enums/discount-type.enum';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { Client } from '@/client/entities/client.entity';
 import { Account } from '@/account/entities/account.entity';
+import { Exclude } from 'class-transformer';
 
 @Entity('boleto')
-@Index(['externalId'])
 @Index(['status'])
 @Index(['dueDate'])
 @Index(['providerSlug'])
 export class Boleto {
     @PrimaryGeneratedColumn('uuid')
     id: string;
-
-    @Column({
-        type: 'varchar',
-        length: 255,
-        name: 'external_id',
-        nullable: true,
-        comment: 'ID retornado pelo provedor financeiro',
-    })
-    externalId?: string;
 
     @Column({
         type: 'varchar',
@@ -137,7 +128,7 @@ export class Boleto {
         type: 'json',
         name: 'payer_address',
         nullable: true,
-        comment: 'Endereço completo do pagador',
+        comment: 'Endereço completo do pagador (JSON)',
     })
     payerAddress?: {
         zipCode: string;
@@ -266,6 +257,7 @@ export class Boleto {
         name: 'client_id',
         comment: 'ID do cliente',
     })
+    @Exclude()
     clientId: string;
 
     @ManyToOne(() => Client)

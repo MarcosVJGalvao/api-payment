@@ -1,6 +1,7 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { instanceToPlain } from 'class-transformer';
 import { AppLoggerService } from '@/common/logger/logger.service';
 import { BaseQueryService } from '@/common/base-query/service/base-query.service';
 import { Boleto } from './entities/boleto.entity';
@@ -35,7 +36,7 @@ export class BoletoService {
      * @param provider - Provedor financeiro
      * @param dto - Dados do boleto a ser criado
      * @param session - Sessão autenticada do provedor
-     * @returns Resposta do provedor com dados do boleto emitido
+     * @returns Resposta do provedor com dados do boleto emitido mais o campo internalId (ID gerado pelo banco de dados)
      * @throws CustomHttpException se validação falhar ou emissão falhar
      */
     async createBoleto(
@@ -54,7 +55,6 @@ export class BoletoService {
 
             // Salva no banco de dados (para rastreamento interno, mas retorna a resposta do provedor)
             const boleto = this.repository.create({
-                externalId: response.id,
                 alias: dto.alias,
                 type: dto.type,
                 status: parseBoletoStatus(response.status),
@@ -74,9 +74,11 @@ export class BoletoService {
                 fineStartDate: dto.fine?.startDate ? parseDateOnly(dto.fine.startDate) : undefined,
                 fineValue: dto.fine?.value,
                 fineType: dto.fine?.type,
-                discountLimitDate: dto.discount?.limitDate ? parseDateOnly(dto.discount.limitDate) : undefined,
-                discountValue: dto.discount?.value,
-                discountType: dto.discount?.type,
+                ...(dto.discount && {
+                    discountLimitDate: parseDateOnly(dto.discount.limitDate),
+                    discountValue: dto.discount.value,
+                    discountType: dto.discount.type,
+                }),
                 authenticationCode: response.authenticationCode,
                 barcode: response.barcode,
                 digitable: response.digitable,
@@ -88,8 +90,11 @@ export class BoletoService {
             const savedBoleto = await this.repository.save(boleto);
             this.logger.log(`Boleto saved to database: ${savedBoleto.id}`, this.context);
 
-            // Retorna a resposta original do provedor (igual ao retorno do provider)
-            return response;
+            // Retorna a resposta do provedor adicionando o ID gerado pelo banco de dados
+            return {
+                ...response,
+                internalId: savedBoleto.id,
+            };
         } catch (error) {
             this.logger.error(
                 `Failed to create boleto: ${error instanceof Error ? error.message : String(error)}`,
@@ -144,27 +149,6 @@ export class BoletoService {
         return boleto;
     }
 
-    /**
-     * Busca um boleto por ID externo (retornado pelo provedor).
-     * @param externalId - ID externo do boleto
-     * @returns Boleto encontrado
-     * @throws CustomHttpException se o boleto não for encontrado
-     */
-    async findByExternalId(externalId: string): Promise<Boleto> {
-        this.logger.log(`Finding boleto by externalId: ${externalId}`, this.context);
-
-        const boleto = await this.repository.findOne({ where: { externalId } });
-
-        if (!boleto) {
-            throw new CustomHttpException(
-                `Boleto not found with externalId: ${externalId}`,
-                HttpStatus.NOT_FOUND,
-                ErrorCode.BOLETO_NOT_FOUND,
-            );
-        }
-
-        return boleto;
-    }
 
     /**
      * Atualiza um boleto.
@@ -214,7 +198,7 @@ export class BoletoService {
             query,
             {
                 defaultSortBy: 'createdAt',
-                searchFields: ['alias', 'documentNumber', 'externalId'],
+                searchFields: ['alias', 'documentNumber'],
                 dateField: 'dueDate',
                 filters: [
                     { field: 'status' },
@@ -248,19 +232,23 @@ export class BoletoService {
      * @returns Boleto atualizado
      */
     async processWebhookUpdate(payload: BoletoWebhookPayload): Promise<Boleto | null> {
-        this.logger.log(`Processing webhook update for boleto: ${payload.externalId || payload.id}`, this.context);
+        this.logger.log(`Processing webhook update for boleto: ${payload.id || payload.authenticationCode}`, this.context);
 
         try {
-            const externalId = payload.externalId || payload.id;
-            if (!externalId) {
-                this.logger.warn('Webhook payload missing externalId or id', this.context);
-                return null;
+            // Identificar o boleto pelo authenticationCode, barcode ou digitable que são únicos
+            // O provider envia esses campos no webhook que foram salvos na emissão
+            let boleto: Boleto | null = null;
+
+            if (payload.authenticationCode) {
+                boleto = await this.repository.findOne({ where: { authenticationCode: payload.authenticationCode } });
+            } else if (payload.barcode) {
+                boleto = await this.repository.findOne({ where: { barcode: payload.barcode } });
+            } else if (payload.digitable) {
+                boleto = await this.repository.findOne({ where: { digitable: payload.digitable } });
             }
 
-            const boleto = await this.repository.findOne({ where: { externalId } });
-
             if (!boleto) {
-                this.logger.warn(`Boleto not found for externalId: ${externalId}`, this.context);
+                this.logger.warn(`Boleto not found for webhook payload: ${JSON.stringify(payload)}`, this.context);
                 return null;
             }
 
@@ -279,7 +267,7 @@ export class BoletoService {
             }
 
             const updatedBoleto = await this.repository.save(boleto);
-            this.logger.log(`Boleto updated via webhook: ${externalId}`, this.context);
+            this.logger.log(`Boleto updated via webhook: ${boleto.id}`, this.context);
 
             return updatedBoleto;
         } catch (error) {

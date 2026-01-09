@@ -10,7 +10,7 @@ export function ApiCreateBoleto() {
         }),
         ApiResponse({
             status: 201,
-            description: 'Boleto emitido com sucesso',
+            description: 'Boleto emitido com sucesso. Retorna os dados do provedor financeiro mais o campo internalId (ID gerado pelo banco de dados).',
         }),
         ApiResponse({
             status: 400,
