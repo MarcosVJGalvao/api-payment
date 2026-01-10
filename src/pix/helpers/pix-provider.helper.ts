@@ -3,7 +3,7 @@ import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
-import { HiperbancoPixHelper } from '@/financial-providers/hiperbanco/helpers/hiperbanco-pix.helper';
+import { HiperbancoPixHelper } from './hiperbanco/hiperbanco-pix.helper';
 import {
   PixGetKeysResponse,
   PixRegisterKeyResponse,
