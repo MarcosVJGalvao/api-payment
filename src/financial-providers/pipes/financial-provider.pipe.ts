@@ -1,27 +1,26 @@
-import { PipeTransform, Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, PipeTransform } from '@nestjs/common';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 
-/**
- * Pipe para validar e transformar o parâmetro provider em FinancialProvider enum.
- */
+const VALID_PROVIDERS = Object.values(FinancialProvider);
+
 @Injectable()
 export class FinancialProviderPipe implements PipeTransform<
   string,
   FinancialProvider
 > {
   transform(value: string): FinancialProvider {
-    const validProviders = Object.values(FinancialProvider);
+    const provider = VALID_PROVIDERS.find((p) => String(p) === value);
 
-    if (!validProviders.includes(value as FinancialProvider)) {
+    if (!provider) {
       throw new CustomHttpException(
-        `Provider '${value}' inválido. Valores aceitos: ${validProviders.join(', ')}`,
+        `Invalid provider '${value}'. Accepted values: ${VALID_PROVIDERS.join(', ')}`,
         HttpStatus.BAD_REQUEST,
         ErrorCode.INVALID_FINANCIAL_PROVIDER,
       );
     }
 
-    return value as FinancialProvider;
+    return provider;
   }
 }

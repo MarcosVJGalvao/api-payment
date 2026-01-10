@@ -23,7 +23,7 @@ import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { ProviderAuthGuard } from '@/financial-providers/guards/provider-auth.guard';
 import { RequireLoginType } from '@/financial-providers/decorators/require-login-type.decorator';
 import { ProviderLoginType } from '@/financial-providers/enums/provider-login-type.enum';
-import { FinancialProviderPipe } from './pipes/financial-provider.pipe';
+import { FinancialProviderPipe } from '@/financial-providers/pipes/financial-provider.pipe';
 import { RequireClientPermission } from '@/common/decorators/require-client-permission.decorator';
 import type { RequestWithSession } from '@/financial-providers/hiperbanco/interfaces/request-with-session.interface';
 import { ValidateBillPaymentParamsDto } from './dto/validate-bill-payment-params.dto';

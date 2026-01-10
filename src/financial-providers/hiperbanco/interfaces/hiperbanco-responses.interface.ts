@@ -238,3 +238,27 @@ export interface BillPaymentDetailResponse extends Record<string, unknown> {
   settleDate: string;
   dueDate: string;
 }
+
+// ============ PIX ============
+
+export interface PixKeyItem {
+  type: string;
+  value: string;
+}
+
+/** Resposta da consulta de chaves PIX (array) */
+export type PixGetKeysResponse = PixKeyItem[];
+
+/** Resposta do cadastro de chave PIX */
+export interface PixRegisterKeyResponse extends Record<string, unknown> {
+  addressingKey?: {
+    type: string;
+    value?: string;
+  };
+  account?: {
+    type: string;
+    branch: string;
+    number: string;
+  };
+  message?: string;
+}

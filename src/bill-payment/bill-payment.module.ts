@@ -10,7 +10,7 @@ import { LoggerModule } from '../common/logger/logger.module';
 import { BillPaymentProviderHelper } from './helpers/bill-payment-provider.helper';
 import { BillPaymentSyncHelper } from './helpers/bill-payment-sync.helper';
 import { HiperbancoBillPaymentHelper } from './helpers/hiperbanco/hiperbanco-bill-payment.helper';
-import { FinancialProviderPipe } from './pipes/financial-provider.pipe';
+import { FinancialProviderPipe } from '@/financial-providers/pipes/financial-provider.pipe';
 import { ClientModule } from '../client/client.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { AccountModule } from '../account/account.module';
