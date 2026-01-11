@@ -1,10 +1,7 @@
 import { Injectable, INestApplication } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder, OpenAPIObject } from '@nestjs/swagger';
 import { AppLoggerService } from '@/common/logger/logger.service';
-import {
-  SwaggerValue,
-  SwaggerSecurityScheme,
-} from './interfaces/swagger.interface';
+import { SwaggerValue } from './interfaces/swagger.interface';
 
 @Injectable()
 export class SwaggerService {
@@ -23,9 +20,27 @@ export class SwaggerService {
             type: 'http',
             scheme: 'bearer',
             bearerFormat: 'JWT',
-            description: 'Enter JWT token',
+            description: 'Token JWT para usuários do Backoffice',
           },
-          'bearer',
+          'backoffice-auth',
+        )
+        .addBearerAuth(
+          {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+            description: 'Token JWT para usuários Internos',
+          },
+          'internal-auth',
+        )
+        .addBearerAuth(
+          {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+            description: 'Token JWT para Provedores Financeiros',
+          },
+          'provider-auth',
         )
         .build();
 
@@ -95,21 +110,18 @@ export class SwaggerService {
       // Security → array sem duplicados
       if (swaggerObj.security) {
         if (!Array.isArray(swaggerObj.security)) {
-          swaggerObj.security = [{ bearer: [] }];
+          // Se não for array, tenta corrigir ou deixa como está se for objeto válido
+          // Mas o type definition diz que é array de objetos geralmente.
+          // Vamos manter a lógica original de fallback se não for array, mas cuidado
+          swaggerObj.security = [];
         } else {
           const securityArray = swaggerObj.security;
-          const normalized = securityArray
-            .map((sec) => {
-              if (typeof sec === 'object' && sec !== null) {
-                return { bearer: [] } as SwaggerSecurityScheme;
-              }
-              return {} as SwaggerSecurityScheme;
-            })
-            .filter(
-              (v, i, a) =>
-                i ===
-                a.findIndex((obj) => JSON.stringify(obj) === JSON.stringify(v)),
-            );
+          // Apenas remover duplicados, sem sobrescrever chaves
+          const normalized = securityArray.filter(
+            (v, i, a) =>
+              i ===
+              a.findIndex((obj) => JSON.stringify(obj) === JSON.stringify(v)),
+          );
           swaggerObj.security = normalized;
         }
       }

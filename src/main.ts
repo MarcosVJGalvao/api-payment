@@ -75,6 +75,7 @@ async function bootstrap() {
         'token',
         'apiKey',
         'api_key',
+        'secretAnswer',
       ]),
     );
 

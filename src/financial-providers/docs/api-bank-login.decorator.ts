@@ -8,9 +8,28 @@ export function ApiBankLogin() {
       summary: 'Autenticar usuário para operações bancárias',
       description:
         'Realiza a autenticação de um usuário final para operações bancárias no Hiperbanco. ' +
-        'O documento (CPF/CNPJ) e senha são fornecidos pela requisição e validados diretamente na API do provedor.',
+        'O documento (CPF/CNPJ) e senha são fornecidos pela requisição e validados diretamente na API do provedor. ' +
+        'Retorna um token JWT que contém o accountId para uso nas demais operações.',
     }),
-    ApiBody({ type: BankLoginDto }),
+    ApiBody({
+      type: BankLoginDto,
+      examples: {
+        'Login com CPF': {
+          summary: 'Login de pessoa física',
+          value: {
+            document: '47742663023',
+            password: 'SenhaSegura123@',
+          },
+        },
+        'Login com CNPJ': {
+          summary: 'Login de pessoa jurídica',
+          value: {
+            document: '12345678000199',
+            password: 'SenhaEmpresa456!',
+          },
+        },
+      },
+    }),
     ApiResponse({
       status: 200,
       description: 'Login realizado com sucesso',

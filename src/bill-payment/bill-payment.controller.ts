@@ -9,7 +9,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { BillPaymentService } from './bill-payment.service';
 import { ConfirmBillPaymentDto } from './dto/confirm-bill-payment.dto';
 import { QueryBillPaymentDto } from './dto/query-bill-payment.dto';
@@ -31,6 +31,7 @@ import { ValidateBillPaymentParamsDto } from './dto/validate-bill-payment-params
 @ApiTags('Bill Payments')
 @Controller('bill-payment')
 @UseGuards(ProviderAuthGuard)
+@ApiBearerAuth('provider-auth')
 @RequireLoginType(ProviderLoginType.BANK)
 @RequireClientPermission('financial:bill-payment')
 export class BillPaymentController {

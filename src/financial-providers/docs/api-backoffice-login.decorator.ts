@@ -1,16 +1,35 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiBody, ApiHeader } from '@nestjs/swagger';
 import { BackofficeLoginDto } from '../dto/backoffice-login.dto';
 
 export function ApiBackofficeLogin() {
   return applyDecorators(
+    ApiHeader({
+      name: 'X-Client-Id',
+      description:
+        'ID do cliente (obrigatório pois emails podem existir em múltiplos clientes)',
+      required: true,
+      schema: { type: 'string' },
+    }),
     ApiOperation({
       summary: 'Autenticar com o Backoffice do Hiperbanco',
       description:
         'Realiza a autenticação de um usuário backoffice no Hiperbanco. ' +
-        'Retorna um token JWT interno para uso nas demais operações.',
+        'Retorna um token JWT interno para uso nas demais operações. ' +
+        'Requer o header X-Client-Id para identificar o tenant.',
     }),
-    ApiBody({ type: BackofficeLoginDto }),
+    ApiBody({
+      type: BackofficeLoginDto,
+      examples: {
+        'Login Backoffice': {
+          summary: 'Autenticar usuário backoffice',
+          value: {
+            email: 'admin@empresa.com.br',
+            password: 'SenhaSegura123!',
+          },
+        },
+      },
+    }),
     ApiResponse({
       status: 200,
       description: 'Login realizado com sucesso',

@@ -1,14 +1,9 @@
 import { applyDecorators } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiParam,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiGetPixKeys() {
   return applyDecorators(
-    ApiBearerAuth(),
     ApiOperation({
       summary: 'Consultar chaves PIX',
       description:
@@ -16,8 +11,9 @@ export function ApiGetPixKeys() {
     }),
     ApiParam({
       name: 'provider',
-      description: 'Provedor financeiro (ex: hiperbanco)',
-      example: 'hiperbanco',
+      description: 'Provedor financeiro',
+      example: FinancialProvider.HIPERBANCO,
+      enum: FinancialProvider,
     }),
     ApiResponse({
       status: 200,

@@ -19,7 +19,38 @@ export function ApiRegisterWebhook() {
       enum: FinancialProvider,
       required: true,
     }),
-    ApiBody({ type: RegisterWebhookDto }),
+    ApiBody({
+      type: RegisterWebhookDto,
+      examples: {
+        'Webhook para Boleto': {
+          summary: 'Registrar webhook para eventos de Boleto',
+          value: {
+            name: 'SANDBOX_BOLETO_CASH_IN',
+            context: 'Boleto',
+            uri: 'https://meuwebhook.com/boleto',
+            eventName: 'BOLETO_CASH_IN_WAS_RECEIVED',
+          },
+        },
+        'Webhook para PIX': {
+          summary: 'Registrar webhook para eventos de PIX',
+          value: {
+            name: 'SANDBOX_PIX_CASH_IN',
+            context: 'Pix',
+            uri: 'https://meuwebhook.com/pix',
+            eventName: 'PIX_CASH_IN_WAS_CLEARED',
+          },
+        },
+        'Webhook para Pagamentos': {
+          summary: 'Registrar webhook para eventos de pagamentos',
+          value: {
+            name: 'SANDBOX_PAYMENT_COMPLETED',
+            context: 'Payment',
+            uri: 'https://meuwebhook.com/payment',
+            eventName: 'PAYMENT_WAS_COMPLETED',
+          },
+        },
+      },
+    }),
     ApiResponse({
       status: 201,
       description: 'Webhook registrado com sucesso',

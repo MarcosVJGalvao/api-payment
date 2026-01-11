@@ -1,15 +1,9 @@
 import { applyDecorators } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiQuery,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { BillPaymentStatus } from '../enums/bill-payment-status.enum';
 
 export function ApiListBillPayments() {
   return applyDecorators(
-    ApiBearerAuth(),
     ApiOperation({
       summary: 'Listar pagamentos de contas',
       description: 'Lista os pagamentos de contas com paginação e filtros.',

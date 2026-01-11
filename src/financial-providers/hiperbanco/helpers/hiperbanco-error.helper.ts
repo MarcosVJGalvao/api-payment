@@ -75,7 +75,7 @@ export function handleHiperbancoError(
   logCallback(status, responseData, message, stack);
 
   throw new CustomHttpException(
-    `Hiperbanco request failed: ${message}`,
+    `Provider request failed: ${message}`,
     status,
     errorCode || ErrorCode.EXTERNAL_SERVICE_ERROR,
     errorData,

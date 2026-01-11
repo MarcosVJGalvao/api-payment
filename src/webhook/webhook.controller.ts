@@ -12,7 +12,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
 import { WebhookService } from './webhook.service';
 import { RegisterWebhookDto } from './dto/register-webhook.dto';
 import { UpdateWebhookDto } from './dto/update-webhook.dto';
@@ -30,7 +30,13 @@ import { RequireClientPermission } from '@/common/decorators/require-client-perm
 
 @ApiTags('Webhooks')
 @Controller('webhook')
-@ApiBearerAuth()
+@ApiBearerAuth('backoffice-auth')
+@ApiHeader({
+  name: 'X-Client-Id',
+  description: 'ID do cliente',
+  required: true,
+  schema: { type: 'string' },
+})
 @RequireClientPermission('integration:webhook')
 @UseGuards(BackofficeAuthGuard)
 export class WebhookController {

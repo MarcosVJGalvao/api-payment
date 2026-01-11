@@ -36,7 +36,7 @@ import { ApiGetUserDirectPermissions } from '../docs/api-get-user-direct-permiss
 @Controller('permissions')
 @ApiTags('Permissões')
 @UseGuards(PermissionsGuard)
-@ApiBearerAuth()
+@ApiBearerAuth('internal-auth')
 export class PermissionController {
   constructor(private readonly permissionService: PermissionService) {}
 

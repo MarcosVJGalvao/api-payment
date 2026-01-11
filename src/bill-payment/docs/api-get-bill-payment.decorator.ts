@@ -1,14 +1,8 @@
 import { applyDecorators } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiParam,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 
 export function ApiGetBillPayment() {
   return applyDecorators(
-    ApiBearerAuth(),
     ApiOperation({
       summary: 'Buscar pagamento por ID',
       description:

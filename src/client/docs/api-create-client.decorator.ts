@@ -6,7 +6,27 @@ import { Client } from '../entities/client.entity';
 export function ApiCreateClient() {
   return applyDecorators(
     ApiOperation({ summary: 'Criar um novo cliente' }),
-    ApiBody({ type: CreateClientDto }),
+    ApiBody({
+      type: CreateClientDto,
+      examples: {
+        'Cliente PJ': {
+          summary: 'Criar cliente pessoa jurídica',
+          value: {
+            name: 'Empresa XYZ Ltda',
+            document: '12345678000199',
+            scopes: ['financial:boleto', 'financial:pix', 'auth:bank'],
+          },
+        },
+        'Cliente PF': {
+          summary: 'Criar cliente pessoa física',
+          value: {
+            name: 'João da Silva',
+            document: '12345678901',
+            scopes: ['financial:pix'],
+          },
+        },
+      },
+    }),
     ApiResponse({
       status: 201,
       description: 'Cliente criado com sucesso',

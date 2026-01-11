@@ -25,7 +25,7 @@ import { ExportResponseInterceptor } from '../interceptors/export-response.inter
 @Controller('audit')
 @ApiTags('Auditoria')
 @UseGuards(PermissionsGuard)
-@ApiBearerAuth()
+@ApiBearerAuth('internal-auth')
 export class AuditController {
   constructor(
     private readonly auditService: AuditService,

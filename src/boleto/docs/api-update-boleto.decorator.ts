@@ -1,14 +1,8 @@
 import { applyDecorators } from '@nestjs/common';
-import {
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
 export function ApiUpdateBoleto() {
   return applyDecorators(
-    ApiBearerAuth(),
     ApiOperation({
       summary: 'Atualizar boleto',
       description:

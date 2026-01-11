@@ -1,16 +1,10 @@
 import { applyDecorators } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiOperation,
-  ApiParam,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { GenerateTotpDto } from '../dto/generate-totp.dto';
+import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiGenerateTotp() {
   return applyDecorators(
-    ApiBearerAuth(),
     ApiOperation({
       summary: 'Gerar código TOTP',
       description:
@@ -20,10 +14,40 @@ export function ApiGenerateTotp() {
     }),
     ApiParam({
       name: 'provider',
-      description: 'Provedor financeiro (ex: hiperbanco)',
-      example: 'hiperbanco',
+      description: 'Provedor financeiro',
+      example: FinancialProvider.HIPERBANCO,
+      enum: FinancialProvider,
     }),
-    ApiBody({ type: GenerateTotpDto }),
+    ApiBody({
+      type: GenerateTotpDto,
+      examples: {
+        'TOTP para Email (Cadastro)': {
+          summary: 'Gerar código para cadastro de chave Email',
+          value: {
+            operation: 'RegisterEntry',
+            type: 'EMAIL',
+            value: 'exemplo@email.com',
+          },
+        },
+        'TOTP para Telefone (Cadastro)': {
+          summary: 'Gerar código para cadastro de chave Telefone',
+          value: {
+            operation: 'RegisterEntry',
+            type: 'PHONE',
+            value: '+5511999887766',
+          },
+        },
+        'TOTP para Portabilidade': {
+          summary: 'Gerar código para portabilidade - requer pixKeyClaimId',
+          value: {
+            operation: 'Portability',
+            type: 'EMAIL',
+            value: 'exemplo@email.com',
+            pixKeyClaimId: 'a5104f29-33a8-47e1-9c22-d1234567890a',
+          },
+        },
+      },
+    }),
     ApiResponse({
       status: 204,
       description: 'Código TOTP gerado e enviado com sucesso',

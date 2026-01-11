@@ -9,7 +9,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { BoletoService } from './boleto.service';
 import { CreateBoletoDto } from './dto/create-boleto.dto';
 import { CancelBoletoDto } from './dto/cancel-boleto.dto';
@@ -31,6 +31,7 @@ import type { RequestWithSession } from '@/financial-providers/hiperbanco/interf
 @ApiTags('Boletos')
 @Controller('boleto')
 @UseGuards(ProviderAuthGuard)
+@ApiBearerAuth('provider-auth')
 @RequireLoginType(ProviderLoginType.BANK)
 @RequireClientPermission('financial:boleto')
 export class BoletoController {

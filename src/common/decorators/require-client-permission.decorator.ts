@@ -1,5 +1,4 @@
 import { applyDecorators, SetMetadata, UseGuards } from '@nestjs/common';
-import { ApiHeader } from '@nestjs/swagger';
 import { ClientGuard } from '../guards/client.guard';
 import { ClientPermissionGuard } from '../guards/client-permission.guard';
 
@@ -14,11 +13,5 @@ export const REQUIRED_CLIENT_PERMISSION_KEY = 'requiredClientPermission';
 export const RequireClientPermission = (permissionName: string) =>
   applyDecorators(
     UseGuards(ClientGuard, ClientPermissionGuard),
-    ApiHeader({
-      name: 'X-Client-Id',
-      description: 'ID do cliente',
-      required: true,
-      schema: { type: 'string' },
-    }),
     SetMetadata(REQUIRED_CLIENT_PERMISSION_KEY, permissionName),
   );

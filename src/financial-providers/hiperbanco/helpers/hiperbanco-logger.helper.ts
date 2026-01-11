@@ -39,15 +39,15 @@ export function logTransaction(
     },
     response: responseBody ? sanitizePayload(responseBody) : undefined,
     duration: `${durationMs}ms`,
-    provider: 'Hiperbanco',
+    provider: 'Provider',
     ...(error && { message: error }),
     ...(stack && { stack }),
   };
 
   const isError = statusCode >= 400 || !!error;
   const message = isError
-    ? 'Hiperbanco Request Failed'
-    : 'Hiperbanco Request Success';
+    ? 'Provider Request Failed'
+    : 'Provider Request Success';
 
   logger.logWithContext(isError ? 'error' : 'log', message, meta, context);
 }

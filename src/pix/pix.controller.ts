@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { PixService } from './pix.service';
 import { RegisterPixKeyDto } from './dto/register-pix-key.dto';
 import { GenerateTotpDto } from './dto/generate-totp.dto';
@@ -21,6 +21,8 @@ import { ApiGetPixKeys } from './docs/api-get-pix-keys.decorator';
 import { ApiRegisterPixKey } from './docs/api-register-pix-key.decorator';
 import { ApiDeletePixKey } from './docs/api-delete-pix-key.decorator';
 import { ApiGenerateTotp } from './docs/api-generate-totp.decorator';
+import { ApiValidatePixKey } from './docs/api-validate-pix-key.decorator';
+import { ApiPixTransfer } from './docs/api-pix-transfer.decorator';
 import { Audit } from '@/common/audit/decorators/audit.decorator';
 import { AuditAction } from '@/common/audit/enums/audit-action.enum';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
@@ -34,6 +36,7 @@ import type { RequestWithSession } from '@/financial-providers/hiperbanco/interf
 @ApiTags('PIX')
 @Controller('pix')
 @UseGuards(ProviderAuthGuard)
+@ApiBearerAuth('provider-auth')
 @RequireLoginType(ProviderLoginType.BANK)
 @RequireClientPermission('financial:pix')
 export class PixController {
@@ -106,6 +109,7 @@ export class PixController {
   }
 
   @Get(':provider/validate/:addressingKey')
+  @ApiValidatePixKey()
   async validatePixKey(
     @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
     @Param() params: ValidatePixKeyParamsDto,
@@ -119,6 +123,7 @@ export class PixController {
   }
 
   @Post(':provider/transfer')
+  @ApiPixTransfer()
   @Audit({
     action: AuditAction.PIX_TRANSFER_CREATED,
     entityType: 'PixTransfer',

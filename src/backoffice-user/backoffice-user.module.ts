@@ -20,7 +20,7 @@ import { BackofficeAuthController } from './backoffice-auth.controller';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
+        secret: configService.get<string>('JWT_SECRET', 'secretKey'),
         signOptions: { expiresIn: '1d' },
       }),
       inject: [ConfigService],
