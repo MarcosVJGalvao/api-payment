@@ -62,8 +62,9 @@ export class AuditInterceptor implements NestInterceptor {
     }
 
     const user = request.user as JwtPayload | undefined;
-    let userId = user?.userId;
-    let username = user?.username;
+    // Suporta tanto 'userId' (auth padrão) quanto 'sub' (backoffice JWT)
+    let userId = user?.userId || user?.sub;
+    let username = user?.username || user?.email;
 
     // Se não encontrou userId no request.user, tenta extrair do providerSession (para autenticação de provider)
     if (!userId && 'providerSession' in request && request.providerSession) {

@@ -35,6 +35,12 @@ export class BackofficeJwtStrategy extends PassportStrategy(
       );
     }
     // Return user object attached to Request
-    return { ...user, clientId: payload.clientId };
+    // Inclui sub/userId para compatibilidade com AuditInterceptor
+    return {
+      ...user,
+      sub: payload.sub,
+      userId: payload.sub,
+      clientId: payload.clientId,
+    };
   }
 }

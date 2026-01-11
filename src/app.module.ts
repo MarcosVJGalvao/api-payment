@@ -25,6 +25,7 @@ import { InternalUserModule } from './internal-user/internal-user.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
+import { bullConfigFactory } from './config/bull.config';
 
 @Module({
   imports: [
@@ -40,13 +41,7 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
     AuditModule,
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        redis: {
-          host: configService.get('REDIS_HOST'),
-          port: configService.get('REDIS_PORT'),
-          password: configService.get('REDIS_PASSWORD'),
-        },
-      }),
+      useFactory: bullConfigFactory,
       inject: [ConfigService],
     }),
     BullBoardModule.forRoot({

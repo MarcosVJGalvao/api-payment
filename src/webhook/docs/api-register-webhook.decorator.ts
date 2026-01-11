@@ -52,22 +52,19 @@ export function ApiRegisterWebhook() {
       },
     }),
     ApiResponse({
-      status: 201,
-      description: 'Webhook registrado com sucesso',
+      status: 202,
+      description:
+        'Requisição de registro de webhook recebida e está sendo processada',
       schema: {
         type: 'object',
         properties: {
-          id: {
+          message: {
             type: 'string',
-            example: '89444df2-a1d1-4fe8-ade8-3d03de0fd61m',
+            example: 'Webhook registration queued',
           },
-          name: { type: 'string', example: 'SANDBOX_BOLETO_CASH_IN' },
-          context: { type: 'string', example: 'Boleto' },
-          eventName: { type: 'string', example: 'BOLETO_CASH_IN_WAS_RECEIVED' },
-          uri: { type: 'string', example: 'https://meuwebhook.com/123' },
-          publicKey: {
+          status: {
             type: 'string',
-            example: '872dc2ed-8bee-40b5-8465-5d2953ba76dp',
+            example: 'PROCESSING',
           },
         },
       },

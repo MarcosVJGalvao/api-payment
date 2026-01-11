@@ -16,6 +16,10 @@ export class WebhookRepository {
     private readonly repository: Repository<Webhook>,
   ) {}
 
+  getRepository(): Repository<Webhook> {
+    return this.repository;
+  }
+
   /**
    * Salva um webhook no banco de dados após registro no provedor.
    * @param provider Provedor financeiro.
@@ -58,6 +62,15 @@ export class WebhookRepository {
 
   async findByClientId(clientId: string): Promise<Webhook[]> {
     return this.repository.find({ where: { clientId } });
+  }
+
+  async findByClientIdAndProvider(
+    clientId: string,
+    provider: FinancialProvider,
+  ): Promise<Webhook[]> {
+    return this.repository.find({
+      where: { clientId, providerSlug: provider },
+    });
   }
 
   async findByExternalIdAndClient(

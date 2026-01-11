@@ -6,7 +6,6 @@ import {
   Post,
   Patch,
   Delete,
-  Query,
   UseGuards,
   Req,
   HttpCode,
@@ -16,7 +15,6 @@ import { ApiTags, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
 import { WebhookService } from './webhook.service';
 import { RegisterWebhookDto } from './dto/register-webhook.dto';
 import { UpdateWebhookDto } from './dto/update-webhook.dto';
-import { ListWebhooksQueryDto } from './dto/list-webhooks-query.dto';
 import { ApiRegisterWebhook } from './docs/api-register-webhook.decorator';
 import { ApiListWebhooks } from './docs/api-list-webhooks.decorator';
 import { ApiUpdateWebhook } from './docs/api-update-webhook.decorator';
@@ -43,6 +41,7 @@ export class WebhookController {
   constructor(private readonly webhookService: WebhookService) {}
 
   @Post(':provider/register')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiRegisterWebhook()
   @Audit({
     action: AuditAction.WEBHOOK_REGISTERED,
@@ -58,7 +57,6 @@ export class WebhookController {
     return this.webhookService.registerWebhook(
       provider,
       dto,
-      null, // Session not used in queue
       String(req.user.clientId),
     );
   }
@@ -68,12 +66,9 @@ export class WebhookController {
   async listWebhooks(
     @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
     @Req() req: any,
-    @Query() query: ListWebhooksQueryDto,
   ) {
     return this.webhookService.listWebhooks(
       provider,
-      query,
-      null,
       String(req.user.clientId),
     );
   }
@@ -97,7 +92,6 @@ export class WebhookController {
       provider,
       webhookId,
       dto,
-      null,
       String(req.user.clientId),
     );
   }
@@ -119,7 +113,6 @@ export class WebhookController {
     return this.webhookService.deleteWebhook(
       provider,
       webhookId,
-      null,
       String(req.user.clientId),
     );
   }

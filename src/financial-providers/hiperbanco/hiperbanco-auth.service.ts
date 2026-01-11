@@ -52,16 +52,28 @@ export class HiperbancoAuthService {
     private readonly redisService: RedisService,
   ) {}
 
+  private readonly CACHE_KEY = 'hiperbanco:shared_backoffice_token';
+
   async getSharedBackofficeSession(): Promise<string> {
-    const CACHE_KEY = 'hiperbanco:shared_backoffice_token';
-    const cachedToken = await this.redisService.get(CACHE_KEY);
+    const cachedToken = await this.redisService.get(this.CACHE_KEY);
 
     if (cachedToken) {
       return cachedToken;
     }
 
+    return this.refreshSharedBackofficeSession();
+  }
+
+  /**
+   * Invalida o token atual e obtém um novo token do provedor.
+   * Usado quando a sessão expira durante uma operação.
+   */
+  async refreshSharedBackofficeSession(): Promise<string> {
+    // Limpa o token antigo do Redis
+    await this.redisService.del(this.CACHE_KEY);
+
     this.logger.log(
-      'Shared Backoffice session not found or expired. Logging in...',
+      'Shared Backoffice session expired or not found. Logging in...',
       this.context,
     );
 
@@ -78,7 +90,11 @@ export class HiperbancoAuthService {
       );
 
       // Cache for 29 minutes
-      await this.redisService.set(CACHE_KEY, response.access_token, 29 * 60);
+      await this.redisService.set(
+        this.CACHE_KEY,
+        response.access_token,
+        29 * 60,
+      );
 
       this.logger.log('Shared Backoffice login successful', this.context);
       return response.access_token;

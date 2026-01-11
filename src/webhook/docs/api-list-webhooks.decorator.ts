@@ -1,7 +1,6 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import { WebhookStatus } from '../dto/list-webhooks-query.dto';
 
 export function ApiListWebhooks() {
   return applyDecorators(
@@ -17,26 +16,6 @@ export function ApiListWebhooks() {
       example: FinancialProvider.HIPERBANCO,
       enum: FinancialProvider,
       required: true,
-    }),
-    ApiQuery({
-      name: 'status',
-      description: 'Filtrar por status',
-      enum: WebhookStatus,
-      required: false,
-    }),
-    ApiQuery({
-      name: 'page',
-      description: 'Número da página',
-      type: Number,
-      required: false,
-      example: 1,
-    }),
-    ApiQuery({
-      name: 'pageSize',
-      description: 'Itens por página (máximo 100)',
-      type: Number,
-      required: false,
-      example: 10,
     }),
     ApiResponse({
       status: 200,

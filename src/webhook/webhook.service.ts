@@ -10,13 +10,12 @@ import {
 } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { WebhookProviderHelper } from './helpers/webhook-provider.helper';
 import { WebhookRepository } from './repositories/webhook.repository';
+import { Webhook } from './entities/webhook.entity';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import type { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { AppLoggerService } from '@/common/logger/logger.service';
-import { HiperbancoAuthService } from '@/financial-providers/hiperbanco/hiperbanco-auth.service';
-import { ProviderLoginType } from '@/financial-providers/enums/provider-login-type.enum';
+import { ProviderSessionHelper } from './helpers/provider-session.helper';
 
 @Injectable()
 export class WebhookService {
@@ -27,62 +26,25 @@ export class WebhookService {
     private readonly providerHelper: WebhookProviderHelper,
     private readonly webhookRepository: WebhookRepository,
     private readonly logger: AppLoggerService,
-    private readonly hiperbancoAuthService: HiperbancoAuthService,
+    private readonly providerSessionHelper: ProviderSessionHelper,
   ) {}
-
-  private async ensureSession(
-    session: ProviderSession | null,
-    provider: FinancialProvider,
-  ): Promise<ProviderSession> {
-    if (session) return session;
-
-    if (provider === FinancialProvider.HIPERBANCO) {
-      const token =
-        await this.hiperbancoAuthService.getSharedBackofficeSession();
-      return {
-        sessionId: 'SHARED_BACKOFFICE_SESSION',
-        providerSlug: provider,
-        clientId: 'SHARED_BACKOFFICE',
-        hiperbancoToken: token,
-        loginType: ProviderLoginType.BACKOFFICE,
-        createdAt: Date.now(),
-        expiresAt: Date.now() + 3600 * 1000,
-      } as any;
-    }
-
-    throw new CustomHttpException(
-      'Provider does not support shared session',
-      HttpStatus.BAD_REQUEST,
-      ErrorCode.INVALID_INPUT,
-    );
-  }
 
   async registerWebhook(
     provider: FinancialProvider,
     dto: RegisterWebhookDto,
-    session: ProviderSession | null,
     clientId: string,
-  ): Promise<any> {
-    // Add to Queue
-    await this.webhookQueue.add(
-      {
-        provider,
-        dto,
-        clientId,
-      },
-      {
-        delay: 5000, // 5s delay as requested
-        attempts: 3,
-        backoff: 1000,
-      },
-    );
+  ): Promise<{ message: string; status: string }> {
+    await this.webhookQueue.add({
+      provider,
+      dto,
+      clientId,
+    });
 
     this.logger.log(
       `Webhook registration queued for client ${clientId}`,
       this.context,
     );
 
-    // Return Accepted
     return {
       message: 'Webhook registration queued',
       status: 'PROCESSING',
@@ -91,48 +53,26 @@ export class WebhookService {
 
   async listWebhooks(
     provider: FinancialProvider,
-    query: ListWebhooksQueryDto,
-    session: ProviderSession | null,
     clientId: string,
+  ): Promise<Webhook[]> {
+    return this.webhookRepository.findByClientIdAndProvider(clientId, provider);
+  }
+
+  async listWebhooksFromProvider(
+    provider: FinancialProvider,
+    query: ListWebhooksQueryDto,
   ): Promise<ListWebhooksResponse> {
-    const effectiveSession = await this.ensureSession(session, provider);
-
-    // Filtrar webhooks do provedor que pertencem ao clientId
-    const allWebhooks = await this.providerHelper.list(
-      provider,
-      query,
-      effectiveSession,
+    return this.providerSessionHelper.executeWithRetry(provider, (session) =>
+      this.providerHelper.list(provider, query, session),
     );
-
-    // Filtrar localmente por clientId
-    const localWebhooks = await this.webhookRepository.findByClientId(clientId);
-    const localExternalIds = new Set(localWebhooks.map((w) => w.externalId));
-
-    // Filtrar apenas webhooks que existem localmente e pertencem ao client
-    const filteredData = allWebhooks.data.filter((wh) =>
-      localExternalIds.has(wh.id),
-    );
-
-    return {
-      ...allWebhooks,
-      data: filteredData,
-      meta: {
-        ...allWebhooks.meta,
-        total: filteredData.length,
-      },
-    };
   }
 
   async updateWebhook(
     provider: FinancialProvider,
     webhookId: string,
     dto: UpdateWebhookDto,
-    session: ProviderSession | null,
     clientId: string,
   ): Promise<UpdateWebhookResponse> {
-    const effectiveSession = await this.ensureSession(session, provider);
-
-    // Validar que webhook pertence ao clientId
     const webhook = await this.webhookRepository.findByExternalIdAndClient(
       webhookId,
       clientId,
@@ -145,11 +85,10 @@ export class WebhookService {
       );
     }
 
-    const response = await this.providerHelper.update(
+    const response = await this.providerSessionHelper.executeWithRetry(
       provider,
-      webhookId,
-      dto,
-      effectiveSession,
+      (session) =>
+        this.providerHelper.update(provider, webhookId, dto, session),
     );
     await this.webhookRepository.updateWebhookUri(webhookId, dto.uri);
     return response;
@@ -158,12 +97,8 @@ export class WebhookService {
   async deleteWebhook(
     provider: FinancialProvider,
     webhookId: string,
-    session: ProviderSession | null,
     clientId: string,
   ): Promise<void> {
-    const effectiveSession = await this.ensureSession(session, provider);
-
-    // Validar que webhook pertence ao clientId
     const webhook = await this.webhookRepository.findByExternalIdAndClient(
       webhookId,
       clientId,
@@ -176,7 +111,9 @@ export class WebhookService {
       );
     }
 
-    await this.providerHelper.delete(provider, webhookId, effectiveSession);
+    await this.providerSessionHelper.executeWithRetry(provider, (session) =>
+      this.providerHelper.delete(provider, webhookId, session),
+    );
     await this.webhookRepository.softDelete(webhook.id);
   }
 }
