@@ -4,9 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import { PermissionService } from '../../services/permission.service';
 import { Permission } from '../../entities/permission.entity';
 import { Role } from '../../entities/role.entity';
-import { User } from '@/user/entities/user.entity';
-import { UserRole } from '@/user/entities/user-role.entity';
-import { UserPermission } from '@/user/entities/user-permission.entity';
+import { ClientRole } from '../../entities/client-role.entity';
+import { ClientPermission } from '../../entities/client-permission.entity';
 import { RedisService } from '@/common/redis/redis.service';
 import { BaseQueryService } from '@/common/base-query/service/base-query.service';
 
@@ -38,10 +37,6 @@ export const createPermissionServiceTestFactory = async () => {
     providers: [
       PermissionService,
       {
-        provide: getRepositoryToken(User),
-        useValue: mockRepository(),
-      },
-      {
         provide: getRepositoryToken(Permission),
         useValue: mockRepository(),
       },
@@ -50,11 +45,11 @@ export const createPermissionServiceTestFactory = async () => {
         useValue: mockRepository(),
       },
       {
-        provide: getRepositoryToken(UserRole),
+        provide: getRepositoryToken(ClientRole),
         useValue: mockRepository(),
       },
       {
-        provide: getRepositoryToken(UserPermission),
+        provide: getRepositoryToken(ClientPermission),
         useValue: mockRepository(),
       },
       {
@@ -74,13 +69,8 @@ export const createPermissionServiceTestFactory = async () => {
 
   return {
     permissionService: module.get<PermissionService>(PermissionService),
-    userRepositoryMock: module.get(getRepositoryToken(User)),
     permissionRepositoryMock: module.get(getRepositoryToken(Permission)),
     roleRepositoryMock: module.get(getRepositoryToken(Role)),
-    userRoleRepositoryMock: module.get(getRepositoryToken(UserRole)),
-    userPermissionRepositoryMock: module.get(
-      getRepositoryToken(UserPermission),
-    ),
     redisServiceMock,
     configServiceMock,
     baseQueryServiceMock,

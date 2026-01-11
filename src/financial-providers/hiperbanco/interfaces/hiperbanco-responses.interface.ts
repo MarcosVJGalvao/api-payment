@@ -238,3 +238,94 @@ export interface BillPaymentDetailResponse extends Record<string, unknown> {
   settleDate: string;
   dueDate: string;
 }
+
+// ============ PIX ============
+
+export interface PixKeyItem {
+  type: string;
+  value: string;
+}
+
+/** Resposta da consulta de chaves PIX (array) */
+export type PixGetKeysResponse = PixKeyItem[];
+
+/** Resposta do cadastro de chave PIX */
+export interface PixRegisterKeyResponse extends Record<string, unknown> {
+  addressingKey?: {
+    type: string;
+    value?: string;
+  };
+  account?: {
+    type: string;
+    branch: string;
+    number: string;
+  };
+  message?: string;
+}
+
+/** Resposta da validação de chave PIX (consulta DICT) */
+export interface PixValidateKeyResponse {
+  endToEndId: string;
+  addressingKey: {
+    type: string;
+    value: string;
+  };
+  account: {
+    bank: {
+      ispb: string;
+    };
+  };
+  holder: {
+    type: string;
+    name: string;
+    socialName?: string;
+    tradingName?: string;
+    document: {
+      value: string;
+      type: string;
+    };
+  };
+  status: string;
+  createdAt: string;
+  ownedAt: string;
+}
+
+/** Conta na resposta de transferência PIX */
+export interface PixTransferAccount {
+  branch: string;
+  number: string;
+  type: string;
+}
+
+/** Banco na resposta de transferência PIX */
+export interface PixTransferBank {
+  ispb: string;
+  compe?: string;
+  name?: string;
+}
+
+/** Participante (sender/recipient) na resposta de transferência PIX */
+export interface PixTransferParticipant {
+  documentType: string;
+  documentNumber: string;
+  name: string;
+  account: PixTransferAccount;
+  bank: PixTransferBank;
+}
+
+/** Resposta da transferência PIX */
+export interface PixTransferResponse {
+  amount: number;
+  withdrawalAmount?: number;
+  changeAmount?: number;
+  description?: string;
+  sender: PixTransferParticipant;
+  recipient: PixTransferParticipant;
+  authenticationCode: string;
+  requestDateTime: string;
+  transactionId: string;
+  correlationId?: string;
+  channel?: string;
+  status?: string;
+  type?: string;
+}

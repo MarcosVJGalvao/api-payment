@@ -48,6 +48,13 @@ export class AccountService {
     return this.repository.save(account);
   }
 
+  async findById(id: string): Promise<Account | null> {
+    return this.repository.findOne({
+      where: { id },
+      relations: ['onboarding'],
+    });
+  }
+
   async validateAccountBelongsToClient(
     accountId: string,
     clientId: string,

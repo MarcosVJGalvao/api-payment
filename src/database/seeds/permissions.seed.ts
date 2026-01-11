@@ -21,6 +21,12 @@ export const permissions = [
     action: 'payment',
     description: 'Access to payment operations',
   },
+  {
+    name: 'financial:pix',
+    module: 'financial',
+    action: 'pix',
+    description: 'Permite realizar transferências PIX',
+  },
   // Integration scopes
   {
     name: 'integration:webhook',

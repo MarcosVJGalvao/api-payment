@@ -34,4 +34,18 @@ export enum HiperbancoEndpoint {
   BILL_PAYMENT_CONFIRM = '/Payments/confirm',
   /** Consultar detalhes do pagamento (path params: branch/account/authCode) */
   BILL_PAYMENT_DETAIL = '/Payments/detail',
+
+  // ============ PIX ============
+  /** Consultar chaves PIX de uma conta (path param: accountNumber) */
+  PIX_GET_KEYS = '/pix',
+  /** Registrar nova chave PIX */
+  PIX_REGISTER_KEY = '/pix/register-pix-key',
+  /** Excluir chave PIX (path param: addressKey) */
+  PIX_DELETE_KEY = '/pix/keys',
+  /** Gerar código TOTP para validação de chaves EMAIL/PHONE */
+  PIX_GENERATE_TOTP = '/totp-code',
+  /** Validar chave PIX (consulta DICT) */
+  PIX_VALIDATE_KEY = '/pix/validate',
+  /** Transferência PIX */
+  PIX_TRANSFER = '/pix/transfer',
 }

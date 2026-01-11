@@ -4,10 +4,27 @@ import { UpdateRolePermissionsDto } from '../../dto/update-role-permissions.dto'
 import { QueryRoleDto } from '../../dto/query-role.dto';
 import { Role } from '../../entities/role.entity';
 import { RolePermission } from '../../entities/role-permission.entity';
-import { UserRole } from '@/user/entities/user-role.entity';
 import { PaginationResult } from '@/common/base-query/interfaces/pagination-result.interface';
-import { mockUserWithEmployee } from '@/user/tests/mocks/user.mock';
 import { mockPermission } from './permission.mock';
+
+// Mock types since User module is missing
+export class UserRole {
+  id: string;
+  user: any;
+  role: Role;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date;
+}
+
+export const mockUserWithEmployee = () => ({
+  id: '550e8400-e29b-41d4-a716-446655440010',
+  name: 'Test User',
+  email: 'test@example.com',
+  employee: {
+    id: 'employee-id',
+  },
+});
 
 export const mockCreateRoleDto = (): CreateRoleDto => ({
   name: 'manager',
@@ -75,7 +92,7 @@ export const mockRoleWithUsers = (): Role => {
   const role = mockRole();
   const userRole = mockUserRole();
   userRole.role = role;
-  role.userRoles = [userRole];
+  // role.userRoles = [userRole]; // Role entity does not have userRoles
   return role;
 };
 
