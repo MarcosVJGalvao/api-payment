@@ -75,4 +75,9 @@ export class BackofficeUserService {
     await this.repository.update(id, { password: hashedPassword });
     this.logger.log(`Password updated for user ${id}`, this.context);
   }
+
+  async remove(id: string): Promise<void> {
+    await this.repository.softDelete(id);
+    this.logger.log(`User ${id} soft deleted`, this.context);
+  }
 }

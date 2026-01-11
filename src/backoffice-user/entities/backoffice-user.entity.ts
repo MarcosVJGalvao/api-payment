@@ -40,10 +40,12 @@ export class BackofficeUser {
   })
   status: BackofficeUserStatus;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  secretQuestion: string;
-
-  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    name: 'secret_answer',
+  })
   @Exclude({ toPlainOnly: true })
   secretAnswer: string;
 
