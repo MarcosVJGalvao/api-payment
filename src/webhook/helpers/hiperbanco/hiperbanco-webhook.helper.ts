@@ -110,6 +110,7 @@ export class HiperbancoWebhookHelper {
   ): Promise<void> {
     await this.hiperbancoHttp.delete(
       `${HiperbancoEndpoint.WEBHOOK_DELETE}/${webhookId}`,
+      undefined,
       {
         headers: {
           Authorization: `Bearer ${session.hiperbancoToken}`,
