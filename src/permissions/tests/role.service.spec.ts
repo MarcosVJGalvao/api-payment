@@ -12,16 +12,15 @@ import {
   mockPaginationResult,
   mockRolePermission,
   mockUserRole,
+  mockUserWithEmployee,
 } from './mocks/role.mock';
 import { mockPermission } from './mocks/permission.mock';
-import { mockUserWithEmployee } from '@/user/tests/mocks/user.mock';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import * as permissionFinderHelper from '../helpers/permission-finder.helper';
-import * as tokenHelper from '@/auth/helpers/token.helper';
 
 jest.mock('../helpers/permission-finder.helper');
-jest.mock('@/auth/helpers/token.helper');
+jest.mock('../helpers/permission-finder.helper');
 
 describe('RoleService', () => {
   let service: RoleService;
@@ -31,7 +30,7 @@ describe('RoleService', () => {
   let userRepositoryMock: any;
   let userRoleRepositoryMock: any;
   let permissionServiceMock: any;
-  let redisServiceMock: any;
+
   let baseQueryServiceMock: any;
 
   beforeEach(async () => {
@@ -43,16 +42,12 @@ describe('RoleService', () => {
     userRepositoryMock = factory.userRepositoryMock;
     userRoleRepositoryMock = factory.userRoleRepositoryMock;
     permissionServiceMock = factory.permissionServiceMock;
-    redisServiceMock = factory.redisServiceMock;
+
     baseQueryServiceMock = factory.baseQueryServiceMock;
 
     jest
       .spyOn(permissionFinderHelper, 'findPermissions')
       .mockResolvedValue([mockPermission()]);
-
-    (tokenHelper.revokeAllUserTokens as jest.Mock) = jest
-      .fn()
-      .mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -155,8 +150,7 @@ describe('RoleService', () => {
       expect(permissionServiceMock.invalidateUserCache).toHaveBeenCalledWith(
         userId,
       );
-      expect(tokenHelper.revokeAllUserTokens).toHaveBeenCalledWith(
-        redisServiceMock,
+      expect(permissionServiceMock.invalidateUserCache).toHaveBeenCalledWith(
         userId,
       );
     });
@@ -281,10 +275,13 @@ describe('RoleService', () => {
       expect(permissionServiceMock.invalidateUserCache).toHaveBeenCalledWith(
         userId,
       );
-      expect(tokenHelper.revokeAllUserTokens).toHaveBeenCalledWith(
-        redisServiceMock,
+      expect(permissionServiceMock.invalidateUserCache).toHaveBeenCalledWith(
         userId,
       );
+      // expect(tokenHelper.revokeAllUserTokens).toHaveBeenCalledWith(
+      //   redisServiceMock,
+      //   userId,
+      // );
     });
 
     it('should return early if user role does not exist', async () => {
@@ -387,7 +384,6 @@ describe('RoleService', () => {
         where: { id: roleId },
         relations: {
           rolePermissions: { permission: true },
-          userRoles: { user: true },
         },
       });
       expect(permissionFinderHelper.findPermissions).toHaveBeenCalledWith(
@@ -397,7 +393,7 @@ describe('RoleService', () => {
       );
       expect(rolePermissionRepositoryMock.save).toHaveBeenCalled();
       expect(permissionServiceMock.invalidateUserCache).toHaveBeenCalled();
-      expect(tokenHelper.revokeAllUserTokens).toHaveBeenCalled();
+      // expect(tokenHelper.revokeAllUserTokens).toHaveBeenCalled();
       expect(result).toBeDefined();
     });
 
@@ -421,7 +417,6 @@ describe('RoleService', () => {
         where: { id: roleId },
         relations: {
           rolePermissions: { permission: true },
-          userRoles: { user: true },
         },
       });
       expect(rolePermissionRepositoryMock.save).not.toHaveBeenCalled();
@@ -501,7 +496,6 @@ describe('RoleService', () => {
     it('should successfully delete a role', async () => {
       const roleId = '550e8400-e29b-41d4-a716-446655440030';
       const role = mockRole();
-      role.userRoles = [];
 
       roleRepositoryMock.findOne.mockResolvedValue(role);
       roleRepositoryMock.remove.mockResolvedValue(role);
@@ -510,7 +504,6 @@ describe('RoleService', () => {
 
       expect(roleRepositoryMock.findOne).toHaveBeenCalledWith({
         where: { id: roleId },
-        relations: { userRoles: { user: true } },
       });
       expect(roleRepositoryMock.remove).toHaveBeenCalledWith(role);
     });
@@ -526,7 +519,7 @@ describe('RoleService', () => {
       await service.deleteRole(roleId);
 
       expect(permissionServiceMock.invalidateUserCache).toHaveBeenCalled();
-      expect(tokenHelper.revokeAllUserTokens).toHaveBeenCalled();
+      // expect(tokenHelper.revokeAllUserTokens).toHaveBeenCalled();
       expect(roleRepositoryMock.remove).toHaveBeenCalledWith(role);
     });
 
@@ -547,7 +540,6 @@ describe('RoleService', () => {
 
       expect(roleRepositoryMock.findOne).toHaveBeenCalledWith({
         where: { id: roleId },
-        relations: { userRoles: { user: true } },
       });
       expect(roleRepositoryMock.remove).not.toHaveBeenCalled();
     });

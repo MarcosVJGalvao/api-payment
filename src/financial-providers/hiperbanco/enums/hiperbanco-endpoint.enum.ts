@@ -44,4 +44,8 @@ export enum HiperbancoEndpoint {
   PIX_DELETE_KEY = '/pix/keys',
   /** Gerar código TOTP para validação de chaves EMAIL/PHONE */
   PIX_GENERATE_TOTP = '/totp-code',
+  /** Validar chave PIX (consulta DICT) */
+  PIX_VALIDATE_KEY = '/pix/validate',
+  /** Transferência PIX */
+  PIX_TRANSFER = '/pix/transfer',
 }

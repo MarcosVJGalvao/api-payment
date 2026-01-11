@@ -7,24 +7,17 @@ import { HiperbancoPixHelper } from './hiperbanco/hiperbanco-pix.helper';
 import {
   PixGetKeysResponse,
   PixRegisterKeyResponse,
+  PixValidateKeyResponse,
+  PixTransferResponse,
 } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { RegisterPixKeyDto } from '../dto/register-pix-key.dto';
 import { GenerateTotpDto } from '../dto/generate-totp.dto';
+import { TransferPayload } from '../interfaces/transfer-payload.interface';
 
-/**
- * Helper responsável por rotear requisições PIX para o provedor correto.
- */
 @Injectable()
 export class PixProviderHelper {
   constructor(private readonly hiperbancoHelper: HiperbancoPixHelper) {}
 
-  /**
-   * Consulta chaves PIX no provedor especificado.
-   * @param provider Provedor financeiro.
-   * @param accountNumber Número da conta.
-   * @param session Sessão autenticada do provedor.
-   * @returns Lista de chaves PIX.
-   */
   async getPixKeys(
     provider: FinancialProvider,
     accountNumber: string,
@@ -42,15 +35,6 @@ export class PixProviderHelper {
     }
   }
 
-  /**
-   * Registra uma chave PIX no provedor especificado.
-   * @param provider Provedor financeiro.
-   * @param dto Dados da chave a ser registrada.
-   * @param accountBranch Agência da conta.
-   * @param accountNumber Número da conta.
-   * @param session Sessão autenticada do provedor.
-   * @returns Resposta do registro.
-   */
   async registerPixKey(
     provider: FinancialProvider,
     dto: RegisterPixKeyDto,
@@ -75,12 +59,6 @@ export class PixProviderHelper {
     }
   }
 
-  /**
-   * Exclui uma chave PIX no provedor especificado.
-   * @param provider Provedor financeiro.
-   * @param addressKey Valor da chave a ser excluída.
-   * @param session Sessão autenticada do provedor.
-   */
   async deletePixKey(
     provider: FinancialProvider,
     addressKey: string,
@@ -98,12 +76,6 @@ export class PixProviderHelper {
     }
   }
 
-  /**
-   * Gera código TOTP no provedor especificado.
-   * @param provider Provedor financeiro.
-   * @param dto Dados para geração do TOTP.
-   * @param session Sessão autenticada do provedor.
-   */
   async generateTotpCode(
     provider: FinancialProvider,
     dto: GenerateTotpDto,
@@ -112,6 +84,41 @@ export class PixProviderHelper {
     switch (provider) {
       case FinancialProvider.HIPERBANCO:
         return this.hiperbancoHelper.generateTotpCode(dto, session);
+      default:
+        throw new CustomHttpException(
+          `Provider ${String(provider)} is not supported for PIX`,
+          HttpStatus.BAD_REQUEST,
+          ErrorCode.INVALID_INPUT,
+        );
+    }
+  }
+
+  async validatePixKey(
+    provider: FinancialProvider,
+    addressingKey: string,
+    session: ProviderSession,
+  ): Promise<PixValidateKeyResponse> {
+    switch (provider) {
+      case FinancialProvider.HIPERBANCO:
+        return this.hiperbancoHelper.validatePixKey(addressingKey, session);
+      default:
+        throw new CustomHttpException(
+          `Provider ${String(provider)} is not supported for PIX`,
+          HttpStatus.BAD_REQUEST,
+          ErrorCode.INVALID_INPUT,
+        );
+    }
+  }
+
+  async transfer(
+    provider: FinancialProvider,
+    payload: TransferPayload,
+    session: ProviderSession,
+    idempotencyKey?: string,
+  ): Promise<PixTransferResponse> {
+    switch (provider) {
+      case FinancialProvider.HIPERBANCO:
+        return this.hiperbancoHelper.transfer(payload, session, idempotencyKey);
       default:
         throw new CustomHttpException(
           `Provider ${String(provider)} is not supported for PIX`,

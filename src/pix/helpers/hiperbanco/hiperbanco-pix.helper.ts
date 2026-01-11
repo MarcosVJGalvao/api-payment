@@ -4,26 +4,20 @@ import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/pro
 import {
   PixGetKeysResponse,
   PixRegisterKeyResponse,
+  PixValidateKeyResponse,
+  PixTransferResponse,
 } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { HiperbancoEndpoint } from '@/financial-providers/hiperbanco/enums/hiperbanco-endpoint.enum';
 import { RegisterPixKeyDto } from '@/pix/dto/register-pix-key.dto';
 import { GenerateTotpDto } from '@/pix/dto/generate-totp.dto';
 import { PixKeyType } from '@/pix/enums/pix-key-type.enum';
 import { PixAccountType } from '@/pix/enums/pix-account-type.enum';
+import { TransferPayload } from '@/pix/interfaces/transfer-payload.interface';
 
-/**
- * Helper responsável pela comunicação com o Hiperbanco para operações PIX.
- */
 @Injectable()
 export class HiperbancoPixHelper {
   constructor(private readonly hiperbancoHttp: HiperbancoHttpService) {}
 
-  /**
-   * Consulta as chaves PIX vinculadas a uma conta.
-   * @param accountNumber Número da conta.
-   * @param session Sessão autenticada do provedor.
-   * @returns Lista de chaves PIX da conta.
-   */
   async getPixKeys(
     accountNumber: string,
     session: ProviderSession,
@@ -37,14 +31,6 @@ export class HiperbancoPixHelper {
     });
   }
 
-  /**
-   * Registra uma nova chave PIX no Hiperbanco.
-   * @param dto Dados da chave a ser registrada.
-   * @param accountBranch Agência da conta.
-   * @param accountNumber Número da conta.
-   * @param session Sessão autenticada do provedor.
-   * @returns Resposta do Hiperbanco com dados da chave registrada.
-   */
   async registerPixKey(
     dto: RegisterPixKeyDto,
     accountBranch: string,
@@ -68,11 +54,6 @@ export class HiperbancoPixHelper {
     );
   }
 
-  /**
-   * Exclui uma chave PIX.
-   * @param addressKey Valor da chave a ser excluída.
-   * @param session Sessão autenticada do provedor.
-   */
   async deletePixKey(
     addressKey: string,
     session: ProviderSession,
@@ -86,12 +67,6 @@ export class HiperbancoPixHelper {
     });
   }
 
-  /**
-   * Gera um código TOTP para validação de chave EMAIL ou PHONE.
-   * O código será enviado por SMS (PHONE) ou email (EMAIL).
-   * @param dto Dados para geração do TOTP.
-   * @param session Sessão autenticada do provedor.
-   */
   async generateTotpCode(
     dto: GenerateTotpDto,
     session: ProviderSession,
@@ -118,9 +93,40 @@ export class HiperbancoPixHelper {
     );
   }
 
-  /**
-   * Monta o payload para registro de chave PIX conforme o tipo.
-   */
+  async validatePixKey(
+    addressingKey: string,
+    session: ProviderSession,
+  ): Promise<PixValidateKeyResponse> {
+    const path = `${HiperbancoEndpoint.PIX_VALIDATE_KEY}/${encodeURIComponent(addressingKey)}`;
+
+    return this.hiperbancoHttp.get<PixValidateKeyResponse>(path, {
+      headers: {
+        Authorization: `Bearer ${session.hiperbancoToken}`,
+      },
+    });
+  }
+
+  async transfer(
+    payload: TransferPayload,
+    session: ProviderSession,
+    idempotencyKey?: string,
+  ): Promise<PixTransferResponse> {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${session.hiperbancoToken}`,
+      version: 'cutting-edge',
+    };
+
+    if (idempotencyKey) {
+      headers['Idempotency-Key'] = idempotencyKey;
+    }
+
+    return this.hiperbancoHttp.post<PixTransferResponse>(
+      HiperbancoEndpoint.PIX_TRANSFER,
+      payload,
+      { headers },
+    );
+  }
+
   private buildRegisterPayload(
     dto: RegisterPixKeyDto,
     accountBranch: string,
@@ -138,12 +144,8 @@ export class HiperbancoPixHelper {
       },
     };
 
-    // Para EMAIL e PHONE, adicionar totpCode
     if (dto.type === PixKeyType.EMAIL || dto.type === PixKeyType.PHONE) {
-      return {
-        ...basePayload,
-        totpCode: dto.totpCode,
-      };
+      return { ...basePayload, totpCode: dto.totpCode };
     }
 
     return basePayload;

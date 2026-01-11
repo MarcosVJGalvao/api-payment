@@ -1,4 +1,6 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { AppLoggerService } from '@/common/logger/logger.service';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
@@ -9,10 +11,18 @@ import { AccountService } from '@/account/account.service';
 import {
   PixGetKeysResponse,
   PixRegisterKeyResponse,
+  PixValidateKeyResponse,
 } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { RegisterPixKeyDto } from './dto/register-pix-key.dto';
 import { GenerateTotpDto } from './dto/generate-totp.dto';
+import { PixTransferDto } from './dto/pix-transfer.dto';
 import { PixKeyType } from './enums/pix-key-type.enum';
+import { PixTransfer } from './entities/pix-transfer.entity';
+import { PixTransferStatus } from './enums/pix-transfer-status.enum';
+import { PixInitializationType } from './enums/pix-initialization-type.enum';
+import { PixAccountType } from './enums/pix-account-type.enum';
+import { PixTransactionType } from './enums/pix-transaction-type.enum';
+import { OnboardingTypeAccount } from '@/onboarding/enums/onboarding-type-account.enum';
 
 @Injectable()
 export class PixService {
@@ -22,6 +32,8 @@ export class PixService {
     private readonly providerHelper: PixProviderHelper,
     private readonly accountService: AccountService,
     private readonly logger: AppLoggerService,
+    @InjectRepository(PixTransfer)
+    private readonly pixTransferRepository: Repository<PixTransfer>,
   ) {}
 
   async getPixKeys(
@@ -42,12 +54,10 @@ export class PixService {
         account.number,
         session,
       );
-
       this.logger.log(
         `Found ${keys.length} PIX keys for account ${account.number}`,
         this.context,
       );
-
       return keys;
     } catch (error) {
       this.logger.error(
@@ -55,11 +65,7 @@ export class PixService {
         error instanceof Error ? error.stack : undefined,
         this.context,
       );
-
-      if (error instanceof CustomHttpException) {
-        throw error;
-      }
-
+      if (error instanceof CustomHttpException) throw error;
       throw new CustomHttpException(
         'Failed to query PIX keys',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -76,7 +82,6 @@ export class PixService {
   ): Promise<PixRegisterKeyResponse> {
     const account = await this.getAccountData(accountId);
 
-    // Validar TOTP para EMAIL e PHONE
     if (
       (dto.type === PixKeyType.EMAIL || dto.type === PixKeyType.PHONE) &&
       !dto.totpCode
@@ -101,24 +106,18 @@ export class PixService {
         account.number,
         session,
       );
-
       this.logger.log(
-        `PIX key registered successfully type=${dto.type} for account ${account.number}`,
+        `PIX key registered successfully type=${dto.type}`,
         this.context,
       );
-
       return result;
     } catch (error) {
       this.logger.error(
-        `Failed to register PIX key type=${dto.type} for account ${account.number}`,
+        `Failed to register PIX key type=${dto.type}`,
         error instanceof Error ? error.stack : undefined,
         this.context,
       );
-
-      if (error instanceof CustomHttpException) {
-        throw error;
-      }
-
+      if (error instanceof CustomHttpException) throw error;
       throw new CustomHttpException(
         'Failed to register PIX key',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -136,7 +135,6 @@ export class PixService {
 
     try {
       await this.providerHelper.deletePixKey(provider, addressKey, session);
-
       this.logger.log(
         `PIX key deleted successfully: ${addressKey}`,
         this.context,
@@ -147,11 +145,7 @@ export class PixService {
         error instanceof Error ? error.stack : undefined,
         this.context,
       );
-
-      if (error instanceof CustomHttpException) {
-        throw error;
-      }
-
+      if (error instanceof CustomHttpException) throw error;
       throw new CustomHttpException(
         'Failed to delete PIX key',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -165,7 +159,6 @@ export class PixService {
     dto: GenerateTotpDto,
     session: ProviderSession,
   ): Promise<void> {
-    // Validar que o tipo é EMAIL ou PHONE
     if (dto.type !== PixKeyType.EMAIL && dto.type !== PixKeyType.PHONE) {
       throw new CustomHttpException(
         'TOTP generation is only available for EMAIL and PHONE key types',
@@ -181,7 +174,6 @@ export class PixService {
 
     try {
       await this.providerHelper.generateTotpCode(provider, dto, session);
-
       this.logger.log(
         `TOTP code generated and sent to ${dto.type}: ${dto.value}`,
         this.context,
@@ -192,11 +184,7 @@ export class PixService {
         error instanceof Error ? error.stack : undefined,
         this.context,
       );
-
-      if (error instanceof CustomHttpException) {
-        throw error;
-      }
-
+      if (error instanceof CustomHttpException) throw error;
       throw new CustomHttpException(
         'Failed to generate TOTP code',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -205,11 +193,148 @@ export class PixService {
     }
   }
 
-  /**
-   * Obtém os dados da conta pelo ID.
-   * @param accountId ID da conta.
-   * @returns Dados da conta.
-   */
+  async validatePixKey(
+    provider: FinancialProvider,
+    addressingKey: string,
+    session: ProviderSession,
+  ): Promise<PixValidateKeyResponse> {
+    this.logger.log(`Validating PIX key: ${addressingKey}`, this.context);
+
+    try {
+      const result = await this.providerHelper.validatePixKey(
+        provider,
+        addressingKey,
+        session,
+      );
+      this.logger.log(
+        `PIX key validated: endToEndId=${result.endToEndId}`,
+        this.context,
+      );
+      return result;
+    } catch (error) {
+      this.logger.error(
+        `Failed to validate PIX key: ${addressingKey}`,
+        error instanceof Error ? error.stack : undefined,
+        this.context,
+      );
+      if (error instanceof CustomHttpException) throw error;
+      throw new CustomHttpException(
+        'Failed to validate PIX key',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        ErrorCode.PIX_KEY_QUERY_FAILED,
+      );
+    }
+  }
+
+  async transfer(
+    provider: FinancialProvider,
+    dto: PixTransferDto,
+    accountId: string,
+    clientId: string,
+    session: ProviderSession,
+  ): Promise<PixTransfer> {
+    const account = await this.getAccountData(accountId);
+    const onboarding = account.onboarding;
+
+    if (!onboarding) {
+      throw new CustomHttpException(
+        'Account onboarding not found',
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.INVALID_INPUT,
+      );
+    }
+
+    const senderDocType =
+      onboarding.typeAccount === OnboardingTypeAccount.PF ? 'CPF' : 'CNPJ';
+
+    const payload = this.buildTransferPayload(
+      dto,
+      account,
+      onboarding,
+      senderDocType,
+    );
+
+    this.logger.log(
+      `Creating PIX transfer: type=${dto.initializationType} amount=${dto.amount}`,
+      this.context,
+    );
+
+    // Criar registro no banco antes de chamar provider
+    const pixTransfer = this.pixTransferRepository.create({
+      status: PixTransferStatus.CREATED,
+      amount: dto.amount,
+      description: dto.description,
+      initializationType: dto.initializationType,
+      endToEndId: dto.endToEndId,
+      pixKey: dto.pixKey,
+      idempotencyKey: dto.idempotencyKey,
+      senderDocumentType: senderDocType,
+      senderDocumentNumber: onboarding.documentNumber,
+      senderName: onboarding.registerName,
+      senderAccountBranch: account.branch,
+      senderAccountNumber: account.number,
+      senderAccountType: PixAccountType.CHECKING,
+      senderBankIspb: '13140088', // Hiperbanco ISPB
+      providerSlug: provider,
+      clientId,
+      accountId,
+    });
+
+    await this.pixTransferRepository.save(pixTransfer);
+
+    try {
+      const response = await this.providerHelper.transfer(
+        provider,
+        payload,
+        session,
+        dto.idempotencyKey,
+      );
+
+      // Atualizar com dados do response
+      pixTransfer.status =
+        (response.status as PixTransferStatus) || PixTransferStatus.DONE;
+      pixTransfer.transactionId = response.transactionId;
+      pixTransfer.authenticationCode = response.authenticationCode;
+      pixTransfer.correlationId = response.correlationId;
+      pixTransfer.channel = response.channel;
+      pixTransfer.type = this.mapTransactionType(response.type);
+      pixTransfer.recipientDocumentType = response.recipient.documentType;
+      pixTransfer.recipientDocumentNumber = response.recipient.documentNumber;
+      pixTransfer.recipientName = response.recipient.name;
+      pixTransfer.recipientAccountBranch = response.recipient.account.branch;
+      pixTransfer.recipientAccountNumber = response.recipient.account.number;
+      pixTransfer.recipientAccountType = response.recipient.account.type;
+      pixTransfer.recipientBankIspb = response.recipient.bank.ispb;
+      pixTransfer.recipientBankCompe = response.recipient.bank.compe;
+      pixTransfer.recipientBankName = response.recipient.bank.name;
+
+      await this.pixTransferRepository.save(pixTransfer);
+
+      this.logger.log(
+        `PIX transfer completed: id=${pixTransfer.id} transactionId=${response.transactionId}`,
+        this.context,
+      );
+
+      return pixTransfer;
+    } catch (error) {
+      pixTransfer.status = PixTransferStatus.REPROVED;
+      await this.pixTransferRepository.save(pixTransfer);
+
+      this.logger.error(
+        `PIX transfer failed: id=${pixTransfer.id}`,
+        error instanceof Error ? error.stack : undefined,
+        this.context,
+      );
+
+      if (error instanceof CustomHttpException) throw error;
+      throw new CustomHttpException(
+        'Failed to process PIX transfer',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        ErrorCode.PIX_TRANSFER_FAILED,
+      );
+    }
+  }
+
   private async getAccountData(accountId: string) {
     const account = await this.accountService.findById(accountId);
 
@@ -222,5 +347,67 @@ export class PixService {
     }
 
     return account;
+  }
+
+  private buildTransferPayload(
+    dto: PixTransferDto,
+    account: { branch: string; number: string },
+    onboarding: { documentNumber: string; registerName: string },
+    senderDocType: string,
+  ) {
+    const basePayload = {
+      sender: {
+        account: {
+          type: PixAccountType.CHECKING,
+          branch: account.branch,
+          number: account.number,
+        },
+        documentNumber: onboarding.documentNumber,
+        name: onboarding.registerName,
+      },
+      amount: dto.amount,
+      initializationType: dto.initializationType,
+      paymentDate: dto.paymentDate || '',
+    };
+
+    if (dto.initializationType === PixInitializationType.MANUAL) {
+      return {
+        ...basePayload,
+        transactionNotes: dto.description,
+        recipient: {
+          documentNumber: dto.recipient!.documentNumber,
+          name: dto.recipient!.name,
+          account: dto.recipient!.account,
+          bank: dto.recipient!.bank,
+        },
+      };
+    }
+
+    const keyPayload = {
+      ...basePayload,
+      description: dto.description,
+      endToEndId: dto.endToEndId,
+      pixKey: dto.pixKey,
+    };
+
+    if (dto.initializationType === PixInitializationType.STATIC_QR_CODE) {
+      return { ...keyPayload, conciliationId: dto.conciliationId };
+    }
+
+    if (dto.initializationType === PixInitializationType.DYNAMIC_QR_CODE) {
+      return {
+        ...keyPayload,
+        receiverReconciliationId: dto.receiverReconciliationId,
+      };
+    }
+
+    return keyPayload;
+  }
+
+  private mapTransactionType(type?: string): PixTransactionType | undefined {
+    if (!type) return undefined;
+    if (type === 'CASH_OUT') return PixTransactionType.DEBIT;
+    if (type === 'CASH_IN') return PixTransactionType.CREDIT;
+    return undefined;
   }
 }

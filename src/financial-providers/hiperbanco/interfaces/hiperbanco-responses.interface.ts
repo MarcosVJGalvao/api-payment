@@ -262,3 +262,70 @@ export interface PixRegisterKeyResponse extends Record<string, unknown> {
   };
   message?: string;
 }
+
+/** Resposta da validação de chave PIX (consulta DICT) */
+export interface PixValidateKeyResponse {
+  endToEndId: string;
+  addressingKey: {
+    type: string;
+    value: string;
+  };
+  account: {
+    bank: {
+      ispb: string;
+    };
+  };
+  holder: {
+    type: string;
+    name: string;
+    socialName?: string;
+    tradingName?: string;
+    document: {
+      value: string;
+      type: string;
+    };
+  };
+  status: string;
+  createdAt: string;
+  ownedAt: string;
+}
+
+/** Conta na resposta de transferência PIX */
+export interface PixTransferAccount {
+  branch: string;
+  number: string;
+  type: string;
+}
+
+/** Banco na resposta de transferência PIX */
+export interface PixTransferBank {
+  ispb: string;
+  compe?: string;
+  name?: string;
+}
+
+/** Participante (sender/recipient) na resposta de transferência PIX */
+export interface PixTransferParticipant {
+  documentType: string;
+  documentNumber: string;
+  name: string;
+  account: PixTransferAccount;
+  bank: PixTransferBank;
+}
+
+/** Resposta da transferência PIX */
+export interface PixTransferResponse {
+  amount: number;
+  withdrawalAmount?: number;
+  changeAmount?: number;
+  description?: string;
+  sender: PixTransferParticipant;
+  recipient: PixTransferParticipant;
+  authenticationCode: string;
+  requestDateTime: string;
+  transactionId: string;
+  correlationId?: string;
+  channel?: string;
+  status?: string;
+  type?: string;
+}

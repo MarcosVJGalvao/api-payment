@@ -15,6 +15,8 @@ import { PixService } from './pix.service';
 import { RegisterPixKeyDto } from './dto/register-pix-key.dto';
 import { GenerateTotpDto } from './dto/generate-totp.dto';
 import { DeletePixKeyParamsDto } from './dto/delete-pix-key-params.dto';
+import { ValidatePixKeyParamsDto } from './dto/validate-pix-key-params.dto';
+import { PixTransferDto } from './dto/pix-transfer.dto';
 import { ApiGetPixKeys } from './docs/api-get-pix-keys.decorator';
 import { ApiRegisterPixKey } from './docs/api-register-pix-key.decorator';
 import { ApiDeletePixKey } from './docs/api-delete-pix-key.decorator';
@@ -101,5 +103,39 @@ export class PixController {
     @Body() dto: GenerateTotpDto,
   ) {
     await this.pixService.generateTotpCode(provider, dto, req.providerSession);
+  }
+
+  @Get(':provider/validate/:addressingKey')
+  async validatePixKey(
+    @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
+    @Param() params: ValidatePixKeyParamsDto,
+    @Req() req: RequestWithSession,
+  ) {
+    return this.pixService.validatePixKey(
+      provider,
+      params.addressingKey,
+      req.providerSession,
+    );
+  }
+
+  @Post(':provider/transfer')
+  @Audit({
+    action: AuditAction.PIX_TRANSFER_CREATED,
+    entityType: 'PixTransfer',
+    description: 'Transferência PIX realizada',
+    captureNewValues: true,
+  })
+  async transfer(
+    @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
+    @Req() req: RequestWithSession,
+    @Body() dto: PixTransferDto,
+  ) {
+    return this.pixService.transfer(
+      provider,
+      dto,
+      req.accountId!,
+      req.clientId!,
+      req.providerSession,
+    );
   }
 }
