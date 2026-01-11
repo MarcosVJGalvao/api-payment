@@ -26,6 +26,8 @@ import {
 } from '@/common/errors/helpers/error.helpers';
 import { extractMessage } from '@/common/errors/helpers/message.helpers';
 
+import { Webhook } from '@/webhook/entities/webhook.entity';
+
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
   private readonly logger = new Logger(AuditInterceptor.name);
@@ -36,8 +38,7 @@ export class AuditInterceptor implements NestInterceptor {
   };
 
   private readonly entityClassMap: Record<string, any> = {
-    // Add entity classes here as you create modules
-    // User: User,
+    Webhook: Webhook,
   };
 
   private readonly entityRelationsMap: Record<string, string[]> = {
