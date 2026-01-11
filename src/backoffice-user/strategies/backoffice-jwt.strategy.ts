@@ -20,7 +20,7 @@ export class BackofficeJwtStrategy extends PassportStrategy(
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET') || 'secret', // Provide fallback or validation
+      secretOrKey: configService.get<string>('JWT_SECRET', 'secretKey'),
     });
   }
 

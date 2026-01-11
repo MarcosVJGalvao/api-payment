@@ -77,8 +77,8 @@ export class HiperbancoAuthService {
         payload,
       );
 
-      // Cache for 50 minutes (assuming 1h token life usually, being conservative)
-      await this.redisService.set(CACHE_KEY, response.access_token, 50 * 60);
+      // Cache for 29 minutes
+      await this.redisService.set(CACHE_KEY, response.access_token, 29 * 60);
 
       this.logger.log('Shared Backoffice login successful', this.context);
       return response.access_token;

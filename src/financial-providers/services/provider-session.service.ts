@@ -5,7 +5,7 @@ import { ProviderSession } from '../hiperbanco/interfaces/provider-session.inter
 import { v4 as uuidv4 } from 'uuid';
 
 const SESSION_PREFIX = 'provider_session:';
-const SESSION_TTL_SECONDS = 30 * 60; // 30 minutos
+const SESSION_TTL_SECONDS = 29 * 60; // 29 minutos
 
 @Injectable()
 export class ProviderSessionService {
