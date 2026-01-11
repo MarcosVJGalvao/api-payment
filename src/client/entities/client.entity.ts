@@ -31,6 +31,15 @@ export class Client {
   document: string;
 
   @Column({
+    type: 'varchar',
+    length: 50,
+    unique: true,
+    nullable: true,
+    comment: 'Alias do cliente para identificação em webhooks',
+  })
+  alias: string | null;
+
+  @Column({
     type: 'enum',
     enum: ClientStatus,
     default: ClientStatus.ACTIVE,

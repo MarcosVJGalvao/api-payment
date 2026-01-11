@@ -24,19 +24,15 @@ import { ApiDeleteWebhook } from './docs/api-delete-webhook.decorator';
 import { Audit } from '@/common/audit/decorators/audit.decorator';
 import { AuditAction } from '@/common/audit/enums/audit-action.enum';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import { ProviderAuthGuard } from '@/financial-providers/guards/provider-auth.guard';
-import { RequireLoginType } from '@/financial-providers/decorators/require-login-type.decorator';
-import { ProviderLoginType } from '@/financial-providers/enums/provider-login-type.enum';
+import { BackofficeAuthGuard } from '@/backoffice-user/guards/backoffice-auth.guard';
 import { FinancialProviderPipe } from '@/financial-providers/pipes/financial-provider.pipe';
 import { RequireClientPermission } from '@/common/decorators/require-client-permission.decorator';
-import type { RequestWithSession } from '@/financial-providers/hiperbanco/interfaces/request-with-session.interface';
 
 @ApiTags('Webhooks')
 @Controller('webhook')
 @ApiBearerAuth()
 @RequireClientPermission('integration:webhook')
-@UseGuards(ProviderAuthGuard)
-@RequireLoginType(ProviderLoginType.BACKOFFICE)
+@UseGuards(BackofficeAuthGuard)
 export class WebhookController {
   constructor(private readonly webhookService: WebhookService) {}
 
@@ -50,14 +46,14 @@ export class WebhookController {
   })
   async registerWebhook(
     @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
-    @Req() req: RequestWithSession,
+    @Req() req: any,
     @Body() dto: RegisterWebhookDto,
   ) {
     return this.webhookService.registerWebhook(
       provider,
       dto,
-      req.providerSession,
-      req.clientId!,
+      null, // Session not used in queue
+      String(req.user.clientId),
     );
   }
 
@@ -65,14 +61,14 @@ export class WebhookController {
   @ApiListWebhooks()
   async listWebhooks(
     @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
-    @Req() req: RequestWithSession,
+    @Req() req: any,
     @Query() query: ListWebhooksQueryDto,
   ) {
     return this.webhookService.listWebhooks(
       provider,
       query,
-      req.providerSession,
-      req.clientId!,
+      null,
+      String(req.user.clientId),
     );
   }
 
@@ -88,15 +84,15 @@ export class WebhookController {
   async updateWebhook(
     @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
     @Param('id') webhookId: string,
-    @Req() req: RequestWithSession,
+    @Req() req: any,
     @Body() dto: UpdateWebhookDto,
   ) {
     return this.webhookService.updateWebhook(
       provider,
       webhookId,
       dto,
-      req.providerSession,
-      req.clientId!,
+      null,
+      String(req.user.clientId),
     );
   }
 
@@ -112,13 +108,13 @@ export class WebhookController {
   async deleteWebhook(
     @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
     @Param('id') webhookId: string,
-    @Req() req: RequestWithSession,
+    @Req() req: any,
   ) {
     return this.webhookService.deleteWebhook(
       provider,
       webhookId,
-      req.providerSession,
-      req.clientId!,
+      null,
+      String(req.user.clientId),
     );
   }
 }
