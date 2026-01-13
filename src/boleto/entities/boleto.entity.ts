@@ -309,6 +309,16 @@ export class Boleto {
   })
   updatedAt: Date;
 
+  /** Motivo do cancelamento (webhook BOLETO_WAS_CANCELLED) */
+  @Column({
+    type: 'varchar',
+    length: 50,
+    name: 'cancel_reason',
+    nullable: true,
+    comment: 'Motivo: CancelledByRecipient, CancelledByDeadLine',
+  })
+  cancelReason?: string;
+
   @DeleteDateColumn({
     name: 'deleted_at',
     type: 'datetime',

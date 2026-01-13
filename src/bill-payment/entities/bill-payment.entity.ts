@@ -240,6 +240,50 @@ export class BillPayment {
   })
   updatedAt: Date;
 
+  // ========================================
+  // Campos de webhook (BILL_PAYMENT_*)
+  // ========================================
+
+  /** ID de confirmação (WAS_CREATED) */
+  @Column({
+    type: 'varchar',
+    length: 50,
+    name: 'confirmation_transaction_id',
+    nullable: true,
+    comment: 'ID de confirmação da transação',
+  })
+  confirmationTransactionId?: string;
+
+  /** Código de erro (HAS_FAILED) */
+  @Column({
+    type: 'varchar',
+    length: 20,
+    name: 'error_code',
+    nullable: true,
+    comment: 'Código de erro',
+  })
+  errorCode?: string;
+
+  /** Mensagem de erro (HAS_FAILED) */
+  @Column({
+    type: 'varchar',
+    length: 255,
+    name: 'error_message',
+    nullable: true,
+    comment: 'Mensagem de erro',
+  })
+  errorMessage?: string;
+
+  /** Motivo do cancelamento (WAS_CANCELLED) */
+  @Column({
+    type: 'varchar',
+    length: 255,
+    name: 'cancel_reason',
+    nullable: true,
+    comment: 'Motivo do cancelamento',
+  })
+  cancelReason?: string;
+
   @DeleteDateColumn({
     name: 'deleted_at',
     type: 'datetime',
