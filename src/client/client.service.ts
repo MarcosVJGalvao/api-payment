@@ -105,7 +105,6 @@ export class ClientService {
 
     const savedClient = await this.repository.save(client);
 
-    // Atualizar scopes se fornecidos
     if (scopes !== undefined) {
       await this.permissionService.updateClientPermissions(
         savedClient.id,
