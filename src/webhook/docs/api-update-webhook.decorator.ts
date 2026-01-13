@@ -1,6 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { UpdateWebhookDto } from '../dto/update-webhook.dto';
+import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiUpdateWebhook() {
   return applyDecorators(
@@ -11,8 +12,9 @@ export function ApiUpdateWebhook() {
     }),
     ApiParam({
       name: 'provider',
-      description: 'Slug do provedor financeiro (ex: hiperbanco)',
-      example: 'hiperbanco',
+      description: 'Provedor financeiro',
+      example: FinancialProvider.HIPERBANCO,
+      enum: FinancialProvider,
     }),
     ApiParam({
       name: 'id',
@@ -21,6 +23,14 @@ export function ApiUpdateWebhook() {
     }),
     ApiBody({
       type: UpdateWebhookDto,
+      examples: {
+        'Atualizar URI': {
+          summary: 'Atualizar URL do webhook',
+          value: {
+            uri: 'https://novourlwebhook.com/callback',
+          },
+        },
+      },
     }),
     ApiResponse({
       status: 200,

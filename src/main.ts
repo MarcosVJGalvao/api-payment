@@ -75,6 +75,7 @@ async function bootstrap() {
         'token',
         'apiKey',
         'api_key',
+        'secretAnswer',
       ]),
     );
 
@@ -97,6 +98,7 @@ async function bootstrap() {
     console.log(`📍  Server:     http://localhost:${port}`);
     console.log(`📚  Swagger UI: http://localhost:${port}/api`);
     console.log(`📄  OpenAPI:    http://localhost:${port}/api/openapi.json`);
+    console.log(`📊  Queues:     http://localhost:${port}/queues`);
     console.log(
       '\n═══════════════════════════════════════════════════════════\n',
     );

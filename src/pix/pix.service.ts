@@ -247,12 +247,7 @@ export class PixService {
     const senderDocType =
       onboarding.typeAccount === OnboardingTypeAccount.PF ? 'CPF' : 'CNPJ';
 
-    const payload = this.buildTransferPayload(
-      dto,
-      account,
-      onboarding,
-      senderDocType,
-    );
+    const payload = this.buildTransferPayload(dto, account, onboarding);
 
     this.logger.log(
       `Creating PIX transfer: type=${dto.initializationType} amount=${dto.amount}`,
@@ -353,7 +348,6 @@ export class PixService {
     dto: PixTransferDto,
     account: { branch: string; number: string },
     onboarding: { documentNumber: string; registerName: string },
-    senderDocType: string,
   ) {
     const basePayload = {
       sender: {

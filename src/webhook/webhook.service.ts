@@ -1,81 +1,78 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bull';
+import type { Queue } from 'bull';
 import { RegisterWebhookDto } from './dto/register-webhook.dto';
 import { UpdateWebhookDto } from './dto/update-webhook.dto';
 import { ListWebhooksQueryDto } from './dto/list-webhooks-query.dto';
 import {
-  RegisterWebhookResponse,
   ListWebhooksResponse,
   UpdateWebhookResponse,
 } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { WebhookProviderHelper } from './helpers/webhook-provider.helper';
 import { WebhookRepository } from './repositories/webhook.repository';
+import { Webhook } from './entities/webhook.entity';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { AppLoggerService } from '@/common/logger/logger.service';
+import { ProviderSessionHelper } from './helpers/provider-session.helper';
 
 @Injectable()
 export class WebhookService {
   private readonly context = WebhookService.name;
 
   constructor(
+    @InjectQueue('webhook') private readonly webhookQueue: Queue,
     private readonly providerHelper: WebhookProviderHelper,
     private readonly webhookRepository: WebhookRepository,
     private readonly logger: AppLoggerService,
+    private readonly providerSessionHelper: ProviderSessionHelper,
   ) {}
 
   async registerWebhook(
     provider: FinancialProvider,
     dto: RegisterWebhookDto,
-    session: ProviderSession,
     clientId: string,
-  ): Promise<RegisterWebhookResponse> {
-    const response = await this.providerHelper.register(provider, dto, session);
-    await this.webhookRepository.saveWebhook(provider, dto, response, clientId);
-    return response;
+  ): Promise<{ message: string; status: string }> {
+    await this.webhookQueue.add({
+      provider,
+      dto,
+      clientId,
+    });
+
+    this.logger.log(
+      `Webhook registration queued for client ${clientId}`,
+      this.context,
+    );
+
+    return {
+      message: 'Webhook registration queued',
+      status: 'PROCESSING',
+    };
   }
 
   async listWebhooks(
     provider: FinancialProvider,
-    query: ListWebhooksQueryDto,
-    session: ProviderSession,
     clientId: string,
+  ): Promise<Webhook[]> {
+    return this.webhookRepository.findByClientIdAndProvider(clientId, provider);
+  }
+
+  async listWebhooksFromProvider(
+    provider: FinancialProvider,
+    query: ListWebhooksQueryDto,
   ): Promise<ListWebhooksResponse> {
-    // Filtrar webhooks do provedor que pertencem ao clientId
-    const allWebhooks = await this.providerHelper.list(
-      provider,
-      query,
-      session,
+    return this.providerSessionHelper.executeWithRetry(provider, (session) =>
+      this.providerHelper.list(provider, query, session),
     );
-
-    // Filtrar localmente por clientId
-    const localWebhooks = await this.webhookRepository.findByClientId(clientId);
-    const localExternalIds = new Set(localWebhooks.map((w) => w.externalId));
-
-    // Filtrar apenas webhooks que existem localmente e pertencem ao client
-    const filteredData = allWebhooks.data.filter((wh) =>
-      localExternalIds.has(wh.id),
-    );
-
-    return {
-      ...allWebhooks,
-      data: filteredData,
-      meta: {
-        ...allWebhooks.meta,
-        total: filteredData.length,
-      },
-    };
   }
 
   async updateWebhook(
     provider: FinancialProvider,
     webhookId: string,
     dto: UpdateWebhookDto,
-    session: ProviderSession,
     clientId: string,
   ): Promise<UpdateWebhookResponse> {
-    // Validar que webhook pertence ao clientId
     const webhook = await this.webhookRepository.findByExternalIdAndClient(
       webhookId,
       clientId,
@@ -88,11 +85,10 @@ export class WebhookService {
       );
     }
 
-    const response = await this.providerHelper.update(
+    const response = await this.providerSessionHelper.executeWithRetry(
       provider,
-      webhookId,
-      dto,
-      session,
+      (session) =>
+        this.providerHelper.update(provider, webhookId, dto, session),
     );
     await this.webhookRepository.updateWebhookUri(webhookId, dto.uri);
     return response;
@@ -101,10 +97,8 @@ export class WebhookService {
   async deleteWebhook(
     provider: FinancialProvider,
     webhookId: string,
-    session: ProviderSession,
     clientId: string,
   ): Promise<void> {
-    // Validar que webhook pertence ao clientId
     const webhook = await this.webhookRepository.findByExternalIdAndClient(
       webhookId,
       clientId,
@@ -117,7 +111,9 @@ export class WebhookService {
       );
     }
 
-    await this.providerHelper.delete(provider, webhookId, session);
+    await this.providerSessionHelper.executeWithRetry(provider, (session) =>
+      this.providerHelper.delete(provider, webhookId, session),
+    );
     await this.webhookRepository.softDelete(webhook.id);
   }
 }

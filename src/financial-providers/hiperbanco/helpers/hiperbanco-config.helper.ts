@@ -6,6 +6,8 @@ import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 export interface HiperbancoConfig {
   baseUrl: string;
   clientId: string;
+  backofficeUser: string;
+  backofficePass: string;
 }
 
 /**
@@ -17,22 +19,20 @@ export function getHiperbancoConfig(
 ): HiperbancoConfig {
   const baseUrl = configService.get<string>('HIPERBANCO_API_URL');
   const clientId = configService.get<string>('HIPERBANCO_CLIENT_ID');
+  const backofficeUser = configService.get<string>(
+    'HIPERBANCO_BACKOFFICE_USER',
+  );
+  const backofficePass = configService.get<string>(
+    'HIPERBANCO_BACKOFFICE_PASS',
+  );
 
-  if (!baseUrl) {
+  if (!baseUrl || !clientId || !backofficeUser || !backofficePass) {
     throw new CustomHttpException(
-      'HIPERBANCO_API_URL not set in environment variables.',
+      'Missing required HIPERBANCO environment variables.',
       HttpStatus.INTERNAL_SERVER_ERROR,
       ErrorCode.ENVIRONMENT_VARIABLE_MISSING,
     );
   }
 
-  if (!clientId) {
-    throw new CustomHttpException(
-      'HIPERBANCO_CLIENT_ID not set in environment variables.',
-      HttpStatus.INTERNAL_SERVER_ERROR,
-      ErrorCode.ENVIRONMENT_VARIABLE_MISSING,
-    );
-  }
-
-  return { baseUrl, clientId };
+  return { baseUrl, clientId, backofficeUser, backofficePass };
 }

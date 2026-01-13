@@ -4,7 +4,10 @@ import {
   NestModule,
   RequestMethod,
 } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { BullModule } from '@nestjs/bull';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { ExpressAdapter } from '@bull-board/express';
 import { LoggerModule } from './common/logger/logger.module';
 import { DocsModule } from './swagger/docs.module';
 import { BaseQueryModule } from './common/base-query/base-query.module';
@@ -22,6 +25,7 @@ import { InternalUserModule } from './internal-user/internal-user.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
+import { bullConfigFactory } from './config/bull.config';
 
 @Module({
   imports: [
@@ -35,6 +39,15 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
     RedisModule,
     PermissionsModule,
     AuditModule,
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: bullConfigFactory,
+      inject: [ConfigService],
+    }),
+    BullBoardModule.forRoot({
+      route: '/queues',
+      adapter: ExpressAdapter,
+    }),
     FinancialProvidersModule,
     WebhookModule,
     BoletoModule,

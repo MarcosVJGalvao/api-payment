@@ -2,6 +2,7 @@ import { applyDecorators } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiBody, ApiParam } from '@nestjs/swagger';
 import { CreateProviderCredentialDto } from '../dto/create-provider-credential.dto';
 import { ProviderCredential } from '../entities/provider-credential.entity';
+import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiConfigureProvider() {
   return applyDecorators(
@@ -14,11 +15,32 @@ export function ApiConfigureProvider() {
     }),
     ApiParam({
       name: 'provider',
-      description: 'Slug identificador do provedor financeiro',
-      example: 'hiperbanco',
+      description: 'Provedor financeiro',
+      example: FinancialProvider.HIPERBANCO,
+      enum: FinancialProvider,
       required: true,
     }),
-    ApiBody({ type: CreateProviderCredentialDto }),
+    ApiBody({
+      type: CreateProviderCredentialDto,
+      examples: {
+        'Credenciais de Backoffice': {
+          description: 'Login administrativo com email e senha',
+          value: {
+            loginType: 'backoffice',
+            login: 'admin@empresa.com.br',
+            password: 'SuperSecretPassword123!',
+          } as CreateProviderCredentialDto,
+        },
+        'Credenciais Bancárias (API)': {
+          description: 'Login de integração bancária com documento e senha',
+          value: {
+            loginType: 'bank',
+            login: '12345678000199',
+            password: 'BankApiPassword456!',
+          } as CreateProviderCredentialDto,
+        },
+      },
+    }),
     ApiResponse({
       status: 201,
       description: 'Credenciais salvas com sucesso',

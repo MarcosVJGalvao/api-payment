@@ -1,16 +1,10 @@
 import { applyDecorators } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiOperation,
-  ApiParam,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { ConfirmBillPaymentDto } from '../dto/confirm-bill-payment.dto';
+import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiConfirmBillPayment() {
   return applyDecorators(
-    ApiBearerAuth(),
     ApiOperation({
       summary: 'Confirmar pagamento de conta',
       description:
@@ -19,10 +13,25 @@ export function ApiConfirmBillPayment() {
     }),
     ApiParam({
       name: 'provider',
-      description: 'Provedor financeiro (ex: hiperbanco)',
-      example: 'hiperbanco',
+      description: 'Provedor financeiro',
+      example: FinancialProvider.HIPERBANCO,
+      enum: FinancialProvider,
     }),
-    ApiBody({ type: ConfirmBillPaymentDto }),
+    ApiBody({
+      type: ConfirmBillPaymentDto,
+      examples: {
+        'Pagamento Simples': {
+          summary: 'Confirmar pagamento de conta',
+          value: {
+            id: 'b985967b-a0ed-4810-addd-ec100b128171',
+            bankBranch: '0001',
+            bankAccount: '1104835921',
+            amount: 200.0,
+            description: 'Pagamento de conta de luz',
+          },
+        },
+      },
+    }),
     ApiResponse({
       status: 201,
       description: 'Pagamento confirmado com sucesso',

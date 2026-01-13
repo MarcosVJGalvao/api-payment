@@ -26,6 +26,8 @@ import {
 } from '@/common/errors/helpers/error.helpers';
 import { extractMessage } from '@/common/errors/helpers/message.helpers';
 
+import { Webhook } from '@/webhook/entities/webhook.entity';
+
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
   private readonly logger = new Logger(AuditInterceptor.name);
@@ -36,8 +38,7 @@ export class AuditInterceptor implements NestInterceptor {
   };
 
   private readonly entityClassMap: Record<string, any> = {
-    // Add entity classes here as you create modules
-    // User: User,
+    Webhook: Webhook,
   };
 
   private readonly entityRelationsMap: Record<string, string[]> = {
@@ -62,8 +63,9 @@ export class AuditInterceptor implements NestInterceptor {
     }
 
     const user = request.user as JwtPayload | undefined;
-    let userId = user?.userId;
-    let username = user?.username;
+    // Suporta tanto 'userId' (auth padrão) quanto 'sub' (backoffice JWT)
+    let userId = user?.userId || user?.sub;
+    let username = user?.username || user?.email;
 
     // Se não encontrou userId no request.user, tenta extrair do providerSession (para autenticação de provider)
     if (!userId && 'providerSession' in request && request.providerSession) {

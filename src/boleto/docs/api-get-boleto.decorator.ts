@@ -1,14 +1,8 @@
 import { applyDecorators } from '@nestjs/common';
-import {
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
 export function ApiGetBoleto() {
   return applyDecorators(
-    ApiBearerAuth(),
     ApiOperation({
       summary: 'Consultar boleto por ID',
       description: 'Retorna os dados completos de um boleto pelo seu ID.',

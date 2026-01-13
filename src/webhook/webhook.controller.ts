@@ -6,17 +6,15 @@ import {
   Post,
   Patch,
   Delete,
-  Query,
   UseGuards,
   Req,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
 import { WebhookService } from './webhook.service';
 import { RegisterWebhookDto } from './dto/register-webhook.dto';
 import { UpdateWebhookDto } from './dto/update-webhook.dto';
-import { ListWebhooksQueryDto } from './dto/list-webhooks-query.dto';
 import { ApiRegisterWebhook } from './docs/api-register-webhook.decorator';
 import { ApiListWebhooks } from './docs/api-list-webhooks.decorator';
 import { ApiUpdateWebhook } from './docs/api-update-webhook.decorator';
@@ -24,23 +22,26 @@ import { ApiDeleteWebhook } from './docs/api-delete-webhook.decorator';
 import { Audit } from '@/common/audit/decorators/audit.decorator';
 import { AuditAction } from '@/common/audit/enums/audit-action.enum';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import { ProviderAuthGuard } from '@/financial-providers/guards/provider-auth.guard';
-import { RequireLoginType } from '@/financial-providers/decorators/require-login-type.decorator';
-import { ProviderLoginType } from '@/financial-providers/enums/provider-login-type.enum';
+import { BackofficeAuthGuard } from '@/backoffice-user/guards/backoffice-auth.guard';
 import { FinancialProviderPipe } from '@/financial-providers/pipes/financial-provider.pipe';
 import { RequireClientPermission } from '@/common/decorators/require-client-permission.decorator';
-import type { RequestWithSession } from '@/financial-providers/hiperbanco/interfaces/request-with-session.interface';
 
 @ApiTags('Webhooks')
 @Controller('webhook')
-@ApiBearerAuth()
+@ApiBearerAuth('backoffice-auth')
+@ApiHeader({
+  name: 'X-Client-Id',
+  description: 'ID do cliente',
+  required: true,
+  schema: { type: 'string' },
+})
 @RequireClientPermission('integration:webhook')
-@UseGuards(ProviderAuthGuard)
-@RequireLoginType(ProviderLoginType.BACKOFFICE)
+@UseGuards(BackofficeAuthGuard)
 export class WebhookController {
   constructor(private readonly webhookService: WebhookService) {}
 
   @Post(':provider/register')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiRegisterWebhook()
   @Audit({
     action: AuditAction.WEBHOOK_REGISTERED,
@@ -50,14 +51,13 @@ export class WebhookController {
   })
   async registerWebhook(
     @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
-    @Req() req: RequestWithSession,
+    @Req() req: any,
     @Body() dto: RegisterWebhookDto,
   ) {
     return this.webhookService.registerWebhook(
       provider,
       dto,
-      req.providerSession,
-      req.clientId!,
+      String(req.user.clientId),
     );
   }
 
@@ -65,14 +65,11 @@ export class WebhookController {
   @ApiListWebhooks()
   async listWebhooks(
     @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
-    @Req() req: RequestWithSession,
-    @Query() query: ListWebhooksQueryDto,
+    @Req() req: any,
   ) {
     return this.webhookService.listWebhooks(
       provider,
-      query,
-      req.providerSession,
-      req.clientId!,
+      String(req.user.clientId),
     );
   }
 
@@ -88,15 +85,14 @@ export class WebhookController {
   async updateWebhook(
     @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
     @Param('id') webhookId: string,
-    @Req() req: RequestWithSession,
+    @Req() req: any,
     @Body() dto: UpdateWebhookDto,
   ) {
     return this.webhookService.updateWebhook(
       provider,
       webhookId,
       dto,
-      req.providerSession,
-      req.clientId!,
+      String(req.user.clientId),
     );
   }
 
@@ -112,13 +108,12 @@ export class WebhookController {
   async deleteWebhook(
     @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
     @Param('id') webhookId: string,
-    @Req() req: RequestWithSession,
+    @Req() req: any,
   ) {
     return this.webhookService.deleteWebhook(
       provider,
       webhookId,
-      req.providerSession,
-      req.clientId!,
+      String(req.user.clientId),
     );
   }
 }

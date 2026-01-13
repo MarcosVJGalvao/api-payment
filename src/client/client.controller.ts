@@ -20,6 +20,7 @@ import { ApiCreateClient } from './docs/api-create-client.decorator';
 import { ApiGetClient } from './docs/api-get-client.decorator';
 import { ApiListClients } from './docs/api-list-clients.decorator';
 import { ApiUpdateClient } from './docs/api-update-client.decorator';
+import { ApiDeleteClient } from './docs/api-delete-client.decorator';
 import { Audit } from '@/common/audit/decorators/audit.decorator';
 import { AuditAction } from '@/common/audit/enums/audit-action.enum';
 import { InternalAuthGuard } from '@/internal-user/guards/internal-auth.guard';
@@ -27,7 +28,7 @@ import { InternalAuthGuard } from '@/internal-user/guards/internal-auth.guard';
 @Controller('clients')
 @ApiTags('Clientes')
 @UseGuards(InternalAuthGuard)
-@ApiBearerAuth()
+@ApiBearerAuth('internal-auth')
 export class ClientController {
   constructor(private readonly clientService: ClientService) {}
 
@@ -74,6 +75,7 @@ export class ClientController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiDeleteClient()
   @Audit({
     action: AuditAction.CLIENT_DELETED,
     entityType: 'Client',

@@ -1,5 +1,6 @@
 import { applyDecorators } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiDeleteWebhook() {
   return applyDecorators(
@@ -10,8 +11,9 @@ export function ApiDeleteWebhook() {
     }),
     ApiParam({
       name: 'provider',
-      description: 'Slug do provedor financeiro (ex: hiperbanco)',
-      example: 'hiperbanco',
+      description: 'Provedor financeiro',
+      example: FinancialProvider.HIPERBANCO,
+      enum: FinancialProvider,
     }),
     ApiParam({
       name: 'id',

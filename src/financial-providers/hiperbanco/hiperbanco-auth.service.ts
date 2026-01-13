@@ -4,6 +4,7 @@ import { FinancialCredentialsService } from '../services/financial-credentials.s
 import { ProviderSessionService } from '../services/provider-session.service';
 import { ProviderJwtService } from '../services/provider-jwt.service';
 import { AppLoggerService } from '@/common/logger/logger.service';
+import { RedisService } from '@/common/redis/redis.service';
 import {
   BackofficeLoginResponse,
   BankLoginResponse,
@@ -48,7 +49,68 @@ export class HiperbancoAuthService {
     private readonly accountService: AccountService,
     private readonly onboardingService: OnboardingService,
     @Inject('HIPERBANCO_CONFIG') private readonly config: HiperbancoConfig,
+    private readonly redisService: RedisService,
   ) {}
+
+  private readonly CACHE_KEY = 'hiperbanco:shared_backoffice_token';
+
+  async getSharedBackofficeSession(): Promise<string> {
+    const cachedToken = await this.redisService.get(this.CACHE_KEY);
+
+    if (cachedToken) {
+      return cachedToken;
+    }
+
+    return this.refreshSharedBackofficeSession();
+  }
+
+  /**
+   * Invalida o token atual e obtém um novo token do provedor.
+   * Usado quando a sessão expira durante uma operação.
+   */
+  async refreshSharedBackofficeSession(): Promise<string> {
+    // Limpa o token antigo do Redis
+    await this.redisService.del(this.CACHE_KEY);
+
+    this.logger.log(
+      'Shared Backoffice session expired or not found. Logging in...',
+      this.context,
+    );
+
+    const payload = {
+      email: this.config.backofficeUser,
+      password: this.config.backofficePass,
+      client_id: this.config.clientId,
+    };
+
+    try {
+      const response = await this.http.post<BackofficeLoginResponse>(
+        HiperbancoEndpoint.LOGIN_BACKOFFICE,
+        payload,
+      );
+
+      // Cache for 29 minutes
+      await this.redisService.set(
+        this.CACHE_KEY,
+        response.access_token,
+        29 * 60,
+      );
+
+      this.logger.log('Shared Backoffice login successful', this.context);
+      return response.access_token;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
+      this.logger.error(
+        `Failed to login with shared backoffice credentials: ${errorMessage}`,
+        errorStack,
+        this.context,
+      );
+      throw error;
+    }
+  }
 
   async loginBackoffice(
     loginDto: BackofficeLoginDto,

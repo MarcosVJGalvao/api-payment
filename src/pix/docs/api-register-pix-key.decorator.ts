@@ -1,16 +1,10 @@
 import { applyDecorators } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiOperation,
-  ApiParam,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { RegisterPixKeyDto } from '../dto/register-pix-key.dto';
+import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiRegisterPixKey() {
   return applyDecorators(
-    ApiBearerAuth(),
     ApiOperation({
       summary: 'Cadastrar chave PIX',
       description:
@@ -20,10 +14,51 @@ export function ApiRegisterPixKey() {
     }),
     ApiParam({
       name: 'provider',
-      description: 'Provedor financeiro (ex: hiperbanco)',
-      example: 'hiperbanco',
+      description: 'Provedor financeiro',
+      example: FinancialProvider.HIPERBANCO,
+      enum: FinancialProvider,
     }),
-    ApiBody({ type: RegisterPixKeyDto }),
+    ApiBody({
+      type: RegisterPixKeyDto,
+      examples: {
+        'Chave CPF': {
+          summary: 'Cadastro de chave CPF',
+          value: {
+            type: 'CPF',
+            value: '47742663023',
+          },
+        },
+        'Chave CNPJ': {
+          summary: 'Cadastro de chave CNPJ',
+          value: {
+            type: 'CNPJ',
+            value: '12345678000190',
+          },
+        },
+        'Chave EMAIL (requer TOTP)': {
+          summary: 'Cadastro de chave Email - requer código TOTP',
+          value: {
+            type: 'EMAIL',
+            value: 'exemplo@email.com',
+            totpCode: '312210',
+          },
+        },
+        'Chave PHONE (requer TOTP)': {
+          summary: 'Cadastro de chave Telefone - requer código TOTP',
+          value: {
+            type: 'PHONE',
+            value: '+5511999887766',
+            totpCode: '654321',
+          },
+        },
+        'Chave Aleatória (EVP)': {
+          summary: 'Cadastro de chave aleatória - não requer value',
+          value: {
+            type: 'EVP',
+          },
+        },
+      },
+    }),
     ApiResponse({
       status: 201,
       description: 'Chave PIX cadastrada com sucesso',

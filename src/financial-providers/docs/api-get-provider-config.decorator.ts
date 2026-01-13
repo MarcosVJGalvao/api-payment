@@ -2,6 +2,7 @@ import { applyDecorators } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { ProviderCredential } from '../entities/provider-credential.entity';
 import { ProviderLoginType } from '../enums/provider-login-type.enum';
+import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiGetProviderConfig() {
   return applyDecorators(
@@ -13,8 +14,9 @@ export function ApiGetProviderConfig() {
     }),
     ApiParam({
       name: 'provider',
-      description: 'Slug identificador do provedor financeiro',
-      example: 'hiperbanco',
+      description: 'Provedor financeiro',
+      example: FinancialProvider.HIPERBANCO,
+      enum: FinancialProvider,
       required: true,
     }),
     ApiParam({

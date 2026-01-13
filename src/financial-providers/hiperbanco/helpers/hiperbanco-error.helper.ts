@@ -58,7 +58,12 @@ export function handleHiperbancoError(
         message = responseData.message;
       }
       if (responseData.errorCode) {
-        errorCode = responseData.errorCode;
+        // Normaliza erro de sessão expirada
+        if (responseData.errorCode === 'EXPIRED_SESSION') {
+          errorCode = ErrorCode.SESSION_EXPIRED;
+        } else {
+          errorCode = responseData.errorCode;
+        }
       }
       if (responseData.data) {
         errorData = responseData.data;
@@ -75,7 +80,7 @@ export function handleHiperbancoError(
   logCallback(status, responseData, message, stack);
 
   throw new CustomHttpException(
-    `Hiperbanco request failed: ${message}`,
+    `Provider request failed: ${message}`,
     status,
     errorCode || ErrorCode.EXTERNAL_SERVICE_ERROR,
     errorData,

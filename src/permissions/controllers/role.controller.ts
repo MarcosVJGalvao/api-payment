@@ -35,7 +35,7 @@ import { ApiUpdateRolePermissions } from '../docs/api-update-role-permissions.de
 @Controller('roles')
 @ApiTags('Roles')
 @UseGuards(PermissionsGuard)
-@ApiBearerAuth()
+@ApiBearerAuth('internal-auth')
 export class RoleController {
   constructor(private readonly roleService: RoleService) {}
 
