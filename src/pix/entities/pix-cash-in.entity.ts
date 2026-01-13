@@ -11,6 +11,8 @@ import {
 import { PixCashInStatus } from '../enums/pix-cash-in-status.enum';
 import { Client } from '@/client/entities/client.entity';
 import { Account } from '@/account/entities/account.entity';
+import { OneToMany } from 'typeorm';
+import { Transaction } from '@/transaction/entities/transaction.entity';
 
 /**
  * Entidade para armazenar PIX recebidos (cash-in).
@@ -411,4 +413,7 @@ export class PixCashIn {
     type: 'datetime',
   })
   updatedAt: Date;
+
+  @OneToMany(() => Transaction, (transaction) => transaction.pixCashIn)
+  transactions: Transaction[];
 }

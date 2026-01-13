@@ -10,6 +10,8 @@ import {
 } from 'typeorm';
 import { Client } from '@/client/entities/client.entity';
 import { Account } from '@/account/entities/account.entity';
+import { OneToMany } from 'typeorm';
+import { Transaction } from '@/transaction/entities/transaction.entity';
 
 /**
  * Enum de status de PIX Refund.
@@ -326,4 +328,7 @@ export class PixRefund {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'datetime' })
   updatedAt: Date;
+
+  @OneToMany(() => Transaction, (transaction) => transaction.pixRefund)
+  transactions: Transaction[];
 }

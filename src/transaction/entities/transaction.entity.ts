@@ -7,11 +7,17 @@ import {
   Index,
   ManyToOne,
   JoinColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import { TransactionType } from '../enums/transaction-type.enum';
 import { TransactionStatus } from '../enums/transaction-status.enum';
 import { Client } from '@/client/entities/client.entity';
 import { Account } from '@/account/entities/account.entity';
+import { PixCashIn } from '@/pix/entities/pix-cash-in.entity';
+import { PixTransfer } from '@/pix/entities/pix-transfer.entity';
+import { PixRefund } from '@/pix/entities/pix-refund.entity';
+import { Boleto } from '@/boleto/entities/boleto.entity';
+import { BillPayment } from '@/bill-payment/entities/bill-payment.entity';
 
 /**
  * Entidade centralizada de transações financeiras.
@@ -124,6 +130,10 @@ export class Transaction {
   })
   pixCashInId?: string;
 
+  @ManyToOne(() => PixCashIn, (pixCashIn) => pixCashIn.transactions)
+  @JoinColumn({ name: 'pix_cash_in_id' })
+  pixCashIn?: PixCashIn;
+
   /** FK para PixTransfer (quando type = PIX_CASH_OUT) */
   @Column({
     type: 'uuid',
@@ -132,6 +142,10 @@ export class Transaction {
     comment: 'Referência para PixTransfer',
   })
   pixTransferId?: string;
+
+  @ManyToOne(() => PixTransfer, (pixTransfer) => pixTransfer.transactions)
+  @JoinColumn({ name: 'pix_transfer_id' })
+  pixTransfer?: PixTransfer;
 
   /** FK para PixRefund (quando type = PIX_REFUND) */
   @Column({
@@ -142,6 +156,10 @@ export class Transaction {
   })
   pixRefundId?: string;
 
+  @ManyToOne(() => PixRefund, (pixRefund) => pixRefund.transactions)
+  @JoinColumn({ name: 'pix_refund_id' })
+  pixRefund?: PixRefund;
+
   /** FK para Boleto (quando type = BOLETO_CASH_IN) */
   @Column({
     type: 'uuid',
@@ -151,6 +169,10 @@ export class Transaction {
   })
   boletoId?: string;
 
+  @ManyToOne(() => Boleto, (boleto) => boleto.transactions)
+  @JoinColumn({ name: 'boleto_id' })
+  boleto?: Boleto;
+
   /** FK para BillPayment (quando type = BILL_PAYMENT) */
   @Column({
     type: 'uuid',
@@ -159,6 +181,10 @@ export class Transaction {
     comment: 'Referência para BillPayment',
   })
   billPaymentId?: string;
+
+  @ManyToOne(() => BillPayment, (billPayment) => billPayment.transactions)
+  @JoinColumn({ name: 'bill_payment_id' })
+  billPayment?: BillPayment;
 
   // ========================================
   // Relacionamentos com Account e Client
@@ -173,7 +199,7 @@ export class Transaction {
   })
   accountId?: string;
 
-  @ManyToOne(() => Account)
+  @ManyToOne(() => Account, (account) => account.transactions)
   @JoinColumn({ name: 'account_id' })
   account?: Account;
 
@@ -185,7 +211,7 @@ export class Transaction {
   })
   clientId: string;
 
-  @ManyToOne(() => Client)
+  @ManyToOne(() => Client, (client) => client.transactions)
   @JoinColumn({ name: 'client_id' })
   client: Client;
 
@@ -215,4 +241,11 @@ export class Transaction {
     comment: 'Data de atualização do registro',
   })
   updatedAt: Date;
+
+  @DeleteDateColumn({
+    name: 'deleted_at',
+    type: 'datetime',
+    comment: 'Data de exclusão do registro',
+  })
+  deletedAt?: Date;
 }

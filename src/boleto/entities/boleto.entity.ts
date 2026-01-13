@@ -18,6 +18,8 @@ import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { Client } from '@/client/entities/client.entity';
 import { Account } from '@/account/entities/account.entity';
 import { Exclude } from 'class-transformer';
+import { OneToMany } from 'typeorm';
+import { Transaction } from '@/transaction/entities/transaction.entity';
 
 @Entity('boleto')
 @Index(['status'])
@@ -324,4 +326,7 @@ export class Boleto {
     type: 'datetime',
   })
   deletedAt?: Date;
+
+  @OneToMany(() => Transaction, (transaction) => transaction.boleto)
+  transactions: Transaction[];
 }
