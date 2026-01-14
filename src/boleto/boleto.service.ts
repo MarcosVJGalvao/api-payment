@@ -5,7 +5,6 @@ import { AppLoggerService } from '@/common/logger/logger.service';
 import { BaseQueryService } from '@/common/base-query/service/base-query.service';
 import { Boleto } from './entities/boleto.entity';
 import { CreateBoletoDto } from './dto/create-boleto.dto';
-import { CancelBoletoDto } from './dto/cancel-boleto.dto';
 import { UpdateBoletoDto } from './dto/update-boleto.dto';
 import { QueryBoletoDto } from './dto/query-boleto.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
@@ -266,7 +265,6 @@ export class BoletoService {
    * Cancela um boleto no provedor financeiro.
    * @param id - ID interno do boleto
    * @param provider - Provedor financeiro
-   * @param dto - Dados para cancelamento (authenticationCode e account)
    * @param session - Sessão autenticada do provedor
    * @returns Resposta do provedor confirmando o cancelamento
    * @throws CustomHttpException se o boleto não for encontrado, não pertence à conta ou não pode ser cancelado
@@ -274,7 +272,6 @@ export class BoletoService {
   async cancelBoleto(
     id: string,
     provider: FinancialProvider,
-    dto: CancelBoletoDto,
     session: ProviderSession,
   ): Promise<BoletoCancelResponse> {
     this.logger.log(`Cancelling boleto: ${id}`, this.context);
@@ -302,10 +299,10 @@ export class BoletoService {
     }
 
     try {
-      // Cancela o boleto no provedor
+      // Cancela o boleto no provedor (cada provider extrai os campos que precisa)
       const response = await this.providerHelper.cancelBoleto(
         provider,
-        dto,
+        boleto,
         session,
       );
 

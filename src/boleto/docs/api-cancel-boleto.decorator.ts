@@ -1,6 +1,5 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
-import { CancelBoletoDto } from '../dto/cancel-boleto.dto';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 export function ApiCancelBoleto() {
   return applyDecorators(
@@ -8,22 +7,6 @@ export function ApiCancelBoleto() {
       summary: 'Cancelar boleto',
       description:
         'Cancela um boleto emitido no provedor financeiro especificado. O boleto não pode ser cancelado se já estiver pago ou cancelado.',
-    }),
-    ApiBody({
-      type: CancelBoletoDto,
-      examples: {
-        'Cancelar Boleto': {
-          summary: 'Cancelar um boleto existente',
-          value: {
-            authenticationCode: '5566165e-51fb-459b-a31c-1e996165280b',
-            account: {
-              branch: '0001',
-              number: '123456',
-              type: 'CHECKING',
-            },
-          },
-        },
-      },
     }),
     ApiResponse({
       status: 200,

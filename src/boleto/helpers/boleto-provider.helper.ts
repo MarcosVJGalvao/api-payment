@@ -1,6 +1,6 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateBoletoDto } from '../dto/create-boleto.dto';
-import { CancelBoletoDto } from '../dto/cancel-boleto.dto';
+import { Boleto } from '../entities/boleto.entity';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
@@ -36,7 +36,7 @@ export class BoletoProviderHelper {
         return this.hiperbancoHelper.emitBoleto(dto, session);
       default:
         throw new CustomHttpException(
-          `Provider ${provider} is not supported`,
+          `Provider ${String(provider)} is not supported`,
           HttpStatus.BAD_REQUEST,
           ErrorCode.INVALID_INPUT,
         );
@@ -69,7 +69,7 @@ export class BoletoProviderHelper {
         );
       default:
         throw new CustomHttpException(
-          `Provider ${provider} is not supported`,
+          `Provider ${String(provider)} is not supported`,
           HttpStatus.BAD_REQUEST,
           ErrorCode.INVALID_INPUT,
         );
@@ -79,21 +79,28 @@ export class BoletoProviderHelper {
   /**
    * Cancela um boleto no provedor especificado.
    * @param provider - Provedor financeiro
-   * @param dto - Dados do boleto a ser cancelado
+   * @param boleto - Entidade do boleto a ser cancelado
    * @param session - Sessão autenticada do provedor
    * @returns Resposta do cancelamento do boleto
    */
   async cancelBoleto(
     provider: FinancialProvider,
-    dto: CancelBoletoDto,
+    boleto: Boleto,
     session: ProviderSession,
   ): Promise<BoletoCancelResponse> {
     switch (provider) {
       case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.cancelBoleto(dto, session);
+        return this.hiperbancoHelper.cancelBoleto(
+          {
+            authenticationCode: boleto.authenticationCode!,
+            accountNumber: boleto.accountNumber,
+            accountBranch: boleto.accountBranch,
+          },
+          session,
+        );
       default:
         throw new CustomHttpException(
-          `Provider ${provider} is not supported`,
+          `Provider ${String(provider)} is not supported`,
           HttpStatus.BAD_REQUEST,
           ErrorCode.INVALID_INPUT,
         );
