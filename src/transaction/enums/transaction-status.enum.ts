@@ -19,4 +19,6 @@ export enum TransactionStatus {
   REFUND_PENDING = 'REFUND_PENDING',
   /** Devolução concluída */
   REFUNDED = 'REFUNDED',
+  /** Transação reprovada */
+  REPROVED = 'REPROVED',
 }

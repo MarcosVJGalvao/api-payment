@@ -14,6 +14,7 @@ import { FinancialProviderPipe } from '@/financial-providers/pipes/financial-pro
 import { ClientModule } from '../client/client.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { AccountModule } from '../account/account.module';
+import { TransactionModule } from '../transaction/transaction.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AccountModule } from '../account/account.module';
     ClientModule,
     PermissionsModule,
     AccountModule,
+    TransactionModule,
   ],
   controllers: [BillPaymentController],
   providers: [

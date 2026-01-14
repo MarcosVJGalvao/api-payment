@@ -8,6 +8,9 @@ import { TransactionType } from '@/transaction/enums/transaction-type.enum';
 import { WebhookPayload } from '../interfaces/webhook-base.interface';
 import { BillPaymentWebhookData } from '../interfaces/bill-payment-webhook.interface';
 import { mapWebhookEventToTransactionStatus } from '../helpers/transaction-status-mapper.helper';
+import { canProcessWebhook } from '../helpers/webhook-state-machine.helper';
+import { WebhookEventLogService } from './webhook-event-log.service';
+import { WebhookEvent } from '../enums/webhook-event.enum';
 
 @Injectable()
 export class BillPaymentWebhookService {
@@ -17,6 +20,7 @@ export class BillPaymentWebhookService {
     @InjectRepository(BillPayment)
     private readonly billPaymentRepository: Repository<BillPayment>,
     private readonly transactionService: TransactionService,
+    private readonly webhookEventLogService: WebhookEventLogService,
   ) {}
 
   async handleReceived(
@@ -66,6 +70,18 @@ export class BillPaymentWebhookService {
         providerTimestamp: new Date(event.timestamp),
       });
 
+      // Registra o evento no log
+      await this.webhookEventLogService.logEvent({
+        authenticationCode: data.authenticationCode,
+        entityType: 'BILL_PAYMENT',
+        entityId: billPayment.id,
+        eventName: WebhookEvent.BILL_PAYMENT_WAS_RECEIVED,
+        wasProcessed: true,
+        payload: event as unknown as Record<string, unknown>,
+        providerTimestamp: new Date(event.timestamp),
+        clientId,
+      });
+
       this.logger.log(
         `BILL_PAYMENT_WAS_RECEIVED processed: ${data.authenticationCode}`,
       );
@@ -74,6 +90,7 @@ export class BillPaymentWebhookService {
 
   async handleCreated(
     events: WebhookPayload<BillPaymentWebhookData>[],
+    clientId: string,
     validPublicKey: boolean,
   ): Promise<void> {
     if (!validPublicKey) {
@@ -93,6 +110,34 @@ export class BillPaymentWebhookService {
         continue;
       }
 
+      // Validar sequência de webhook
+      const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
+        data.authenticationCode,
+      );
+      const validation = canProcessWebhook(
+        lastEvent,
+        WebhookEvent.BILL_PAYMENT_WAS_CREATED,
+      );
+
+      if (!validation.canProcess) {
+        this.logger.warn(
+          `BILL_PAYMENT_WAS_CREATED: Out of sequence - ${validation.reason}`,
+          { authenticationCode: data.authenticationCode },
+        );
+        await this.webhookEventLogService.logEvent({
+          authenticationCode: data.authenticationCode,
+          entityType: 'BILL_PAYMENT',
+          entityId: billPayment.id,
+          eventName: WebhookEvent.BILL_PAYMENT_WAS_CREATED,
+          wasProcessed: false,
+          skipReason: validation.reason,
+          payload: event as unknown as Record<string, unknown>,
+          providerTimestamp: new Date(event.timestamp),
+          clientId,
+        });
+        continue;
+      }
+
       billPayment.status = BillPaymentStatus.CREATED;
       if (data.confirmationTransactionId) {
         billPayment.confirmationTransactionId = String(
@@ -101,6 +146,19 @@ export class BillPaymentWebhookService {
       }
 
       await this.billPaymentRepository.save(billPayment);
+
+      // Registra o evento como processado
+      await this.webhookEventLogService.logEvent({
+        authenticationCode: data.authenticationCode,
+        entityType: 'BILL_PAYMENT',
+        entityId: billPayment.id,
+        eventName: WebhookEvent.BILL_PAYMENT_WAS_CREATED,
+        wasProcessed: true,
+        payload: event as unknown as Record<string, unknown>,
+        providerTimestamp: new Date(event.timestamp),
+        clientId,
+      });
+
       this.logger.log(
         `BILL_PAYMENT_WAS_CREATED processed: ${data.authenticationCode}`,
       );
@@ -109,6 +167,7 @@ export class BillPaymentWebhookService {
 
   async handleConfirmed(
     events: WebhookPayload<BillPaymentWebhookData>[],
+    clientId: string,
     validPublicKey: boolean,
   ): Promise<void> {
     if (!validPublicKey) {
@@ -130,6 +189,34 @@ export class BillPaymentWebhookService {
         continue;
       }
 
+      // Validar sequência de webhook
+      const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
+        data.authenticationCode,
+      );
+      const validation = canProcessWebhook(
+        lastEvent,
+        WebhookEvent.BILL_PAYMENT_WAS_CONFIRMED,
+      );
+
+      if (!validation.canProcess) {
+        this.logger.warn(
+          `BILL_PAYMENT_WAS_CONFIRMED: Out of sequence - ${validation.reason}`,
+          { authenticationCode: data.authenticationCode },
+        );
+        await this.webhookEventLogService.logEvent({
+          authenticationCode: data.authenticationCode,
+          entityType: 'BILL_PAYMENT',
+          entityId: billPayment.id,
+          eventName: WebhookEvent.BILL_PAYMENT_WAS_CONFIRMED,
+          wasProcessed: false,
+          skipReason: validation.reason,
+          payload: event as unknown as Record<string, unknown>,
+          providerTimestamp: new Date(event.timestamp),
+          clientId,
+        });
+        continue;
+      }
+
       billPayment.status = BillPaymentStatus.CONFIRMED;
       if (data.confirmedAt)
         billPayment.confirmedAt = new Date(data.confirmedAt);
@@ -141,6 +228,18 @@ export class BillPaymentWebhookService {
         mapWebhookEventToTransactionStatus('BILL_PAYMENT_WAS_CONFIRMED'),
       );
 
+      // Registra o evento como processado
+      await this.webhookEventLogService.logEvent({
+        authenticationCode: data.authenticationCode,
+        entityType: 'BILL_PAYMENT',
+        entityId: billPayment.id,
+        eventName: WebhookEvent.BILL_PAYMENT_WAS_CONFIRMED,
+        wasProcessed: true,
+        payload: event as unknown as Record<string, unknown>,
+        providerTimestamp: new Date(event.timestamp),
+        clientId,
+      });
+
       this.logger.log(
         `BILL_PAYMENT_WAS_CONFIRMED processed: ${data.authenticationCode}`,
       );
@@ -149,6 +248,7 @@ export class BillPaymentWebhookService {
 
   async handleFailed(
     events: WebhookPayload<BillPaymentWebhookData>[],
+    clientId: string,
     validPublicKey: boolean,
   ): Promise<void> {
     if (!validPublicKey) {
@@ -168,6 +268,34 @@ export class BillPaymentWebhookService {
         continue;
       }
 
+      // Validar sequência de webhook
+      const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
+        data.authenticationCode,
+      );
+      const validation = canProcessWebhook(
+        lastEvent,
+        WebhookEvent.BILL_PAYMENT_HAS_FAILED,
+      );
+
+      if (!validation.canProcess) {
+        this.logger.warn(
+          `BILL_PAYMENT_HAS_FAILED: Out of sequence - ${validation.reason}`,
+          { authenticationCode: data.authenticationCode },
+        );
+        await this.webhookEventLogService.logEvent({
+          authenticationCode: data.authenticationCode,
+          entityType: 'BILL_PAYMENT',
+          entityId: billPayment.id,
+          eventName: WebhookEvent.BILL_PAYMENT_HAS_FAILED,
+          wasProcessed: false,
+          skipReason: validation.reason,
+          payload: event as unknown as Record<string, unknown>,
+          providerTimestamp: new Date(event.timestamp),
+          clientId,
+        });
+        continue;
+      }
+
       billPayment.status = BillPaymentStatus.CANCELLED;
       billPayment.errorCode = data.error?.code;
       billPayment.errorMessage = data.error?.message;
@@ -179,6 +307,18 @@ export class BillPaymentWebhookService {
         mapWebhookEventToTransactionStatus('BILL_PAYMENT_HAS_FAILED'),
       );
 
+      // Registra o evento como processado
+      await this.webhookEventLogService.logEvent({
+        authenticationCode: data.authenticationCode,
+        entityType: 'BILL_PAYMENT',
+        entityId: billPayment.id,
+        eventName: WebhookEvent.BILL_PAYMENT_HAS_FAILED,
+        wasProcessed: true,
+        payload: event as unknown as Record<string, unknown>,
+        providerTimestamp: new Date(event.timestamp),
+        clientId,
+      });
+
       this.logger.log(
         `BILL_PAYMENT_HAS_FAILED processed: ${data.authenticationCode}`,
       );
@@ -187,6 +327,7 @@ export class BillPaymentWebhookService {
 
   async handleCancelled(
     events: WebhookPayload<BillPaymentWebhookData>[],
+    clientId: string,
     validPublicKey: boolean,
   ): Promise<void> {
     if (!validPublicKey) {
@@ -208,6 +349,34 @@ export class BillPaymentWebhookService {
         continue;
       }
 
+      // Validar sequência de webhook
+      const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
+        data.authenticationCode,
+      );
+      const validation = canProcessWebhook(
+        lastEvent,
+        WebhookEvent.BILL_PAYMENT_WAS_CANCELLED,
+      );
+
+      if (!validation.canProcess) {
+        this.logger.warn(
+          `BILL_PAYMENT_WAS_CANCELLED: Out of sequence - ${validation.reason}`,
+          { authenticationCode: data.authenticationCode },
+        );
+        await this.webhookEventLogService.logEvent({
+          authenticationCode: data.authenticationCode,
+          entityType: 'BILL_PAYMENT',
+          entityId: billPayment.id,
+          eventName: WebhookEvent.BILL_PAYMENT_WAS_CANCELLED,
+          wasProcessed: false,
+          skipReason: validation.reason,
+          payload: event as unknown as Record<string, unknown>,
+          providerTimestamp: new Date(event.timestamp),
+          clientId,
+        });
+        continue;
+      }
+
       billPayment.status = BillPaymentStatus.CANCELLED;
       billPayment.cancelReason = data.reason;
 
@@ -218,6 +387,18 @@ export class BillPaymentWebhookService {
         mapWebhookEventToTransactionStatus('BILL_PAYMENT_WAS_CANCELLED'),
       );
 
+      // Registra o evento como processado
+      await this.webhookEventLogService.logEvent({
+        authenticationCode: data.authenticationCode,
+        entityType: 'BILL_PAYMENT',
+        entityId: billPayment.id,
+        eventName: WebhookEvent.BILL_PAYMENT_WAS_CANCELLED,
+        wasProcessed: true,
+        payload: event as unknown as Record<string, unknown>,
+        providerTimestamp: new Date(event.timestamp),
+        clientId,
+      });
+
       this.logger.log(
         `BILL_PAYMENT_WAS_CANCELLED processed: ${data.authenticationCode}`,
       );
@@ -226,6 +407,7 @@ export class BillPaymentWebhookService {
 
   async handleRefused(
     events: WebhookPayload<BillPaymentWebhookData>[],
+    clientId: string,
     validPublicKey: boolean,
   ): Promise<void> {
     if (!validPublicKey) {
@@ -245,6 +427,34 @@ export class BillPaymentWebhookService {
         continue;
       }
 
+      // Validar sequência de webhook
+      const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
+        data.authenticationCode,
+      );
+      const validation = canProcessWebhook(
+        lastEvent,
+        WebhookEvent.BILL_PAYMENT_WAS_REFUSED,
+      );
+
+      if (!validation.canProcess) {
+        this.logger.warn(
+          `BILL_PAYMENT_WAS_REFUSED: Out of sequence - ${validation.reason}`,
+          { authenticationCode: data.authenticationCode },
+        );
+        await this.webhookEventLogService.logEvent({
+          authenticationCode: data.authenticationCode,
+          entityType: 'BILL_PAYMENT',
+          entityId: billPayment.id,
+          eventName: WebhookEvent.BILL_PAYMENT_WAS_REFUSED,
+          wasProcessed: false,
+          skipReason: validation.reason,
+          payload: event as unknown as Record<string, unknown>,
+          providerTimestamp: new Date(event.timestamp),
+          clientId,
+        });
+        continue;
+      }
+
       billPayment.status = BillPaymentStatus.CANCELLED;
 
       await this.billPaymentRepository.save(billPayment);
@@ -253,6 +463,18 @@ export class BillPaymentWebhookService {
         data.authenticationCode,
         mapWebhookEventToTransactionStatus('BILL_PAYMENT_WAS_REFUSED'),
       );
+
+      // Registra o evento como processado
+      await this.webhookEventLogService.logEvent({
+        authenticationCode: data.authenticationCode,
+        entityType: 'BILL_PAYMENT',
+        entityId: billPayment.id,
+        eventName: WebhookEvent.BILL_PAYMENT_WAS_REFUSED,
+        wasProcessed: true,
+        payload: event as unknown as Record<string, unknown>,
+        providerTimestamp: new Date(event.timestamp),
+        clientId,
+      });
 
       this.logger.log(
         `BILL_PAYMENT_WAS_REFUSED processed: ${data.authenticationCode}`,

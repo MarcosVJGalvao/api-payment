@@ -9,6 +9,9 @@ import { BillPaymentProviderHelper } from './bill-payment-provider.helper';
 import { BillPaymentDetailResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { BillPaymentStatus } from '../enums/bill-payment-status.enum';
 import { sanitizeDocument } from './document-sanitizer.helper';
+import { TransactionService } from '@/transaction/transaction.service';
+import { TransactionType } from '@/transaction/enums/transaction-type.enum';
+import { mapBillPaymentStatusToTransactionStatus } from '@/common/helpers/status-mapper.helper';
 
 /**
  * Helper responsável pela sincronização de dados de pagamento de contas com provedores externos.
@@ -22,6 +25,7 @@ export class BillPaymentSyncHelper {
     private readonly repository: Repository<BillPayment>,
     private readonly providerHelper: BillPaymentProviderHelper,
     private readonly logger: AppLoggerService,
+    private readonly transactionService: TransactionService,
   ) {}
 
   /**
@@ -126,11 +130,18 @@ export class BillPaymentSyncHelper {
         const updatedPayment = await this.repository.findOne({
           where: { id: payment.id },
         });
+
         if (updatedPayment) {
           this.logger.log(
             `Bill payment data synced from Hiperbanco: ${payment.id}`,
             this.context,
           );
+
+          // Criar ou atualizar Transaction quando status mudar
+          if (updateData.status && updatedPayment.authenticationCode) {
+            await this.syncTransactionForPayment(updatedPayment);
+          }
+
           return updatedPayment;
         }
       }
@@ -143,6 +154,54 @@ export class BillPaymentSyncHelper {
     }
 
     return payment;
+  }
+
+  /**
+   * Cria ou atualiza uma Transaction para o pagamento.
+   */
+  private async syncTransactionForPayment(payment: BillPayment): Promise<void> {
+    try {
+      const transactionStatus = mapBillPaymentStatusToTransactionStatus(
+        payment.status,
+      );
+
+      const existingTx = await this.transactionService.findByAuthenticationCode(
+        payment.authenticationCode!,
+      );
+
+      if (!existingTx) {
+        await this.transactionService.createFromWebhook({
+          authenticationCode: payment.authenticationCode!,
+          type: TransactionType.BILL_PAYMENT,
+          status: transactionStatus,
+          amount: payment.amount,
+          clientId: payment.clientId,
+          accountId: payment.accountId,
+          billPaymentId: payment.id,
+        });
+
+        this.logger.log(
+          `Transaction created for bill payment: ${payment.id}`,
+          this.context,
+        );
+      } else {
+        await this.transactionService.updateStatus(
+          payment.authenticationCode!,
+          transactionStatus,
+        );
+
+        this.logger.log(
+          `Transaction status updated for bill payment: ${payment.id}`,
+          this.context,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to sync transaction for bill payment: ${error instanceof Error ? error.message : String(error)}`,
+        error instanceof Error ? error.stack : undefined,
+        this.context,
+      );
+    }
   }
 
   /**

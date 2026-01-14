@@ -1,0 +1,61 @@
+
+> api-payments@0.0.1 build
+> nest build
+
+src/bill-payment/helpers/bill-payment-sync.helper.ts:169:9 - error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+
+169         payment.authenticationCode,
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/bill-payment/helpers/bill-payment-sync.helper.ts:174:11 - error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+
+174           authenticationCode: payment.authenticationCode,
+              ~~~~~~~~~~~~~~~~~~
+
+  src/transaction/transaction.service.ts:11:3
+    11   authenticationCode: string;
+         ~~~~~~~~~~~~~~~~~~
+    The expected type comes from property 'authenticationCode' which is declared here on type 'CreateTransactionFromWebhook'
+src/bill-payment/helpers/bill-payment-sync.helper.ts:189:11 - error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+
+189           payment.authenticationCode,
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/boleto/helpers/boleto-sync.helper.ts:138:9 - error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+
+138         boleto.authenticationCode,
+            ~~~~~~~~~~~~~~~~~~~~~~~~~
+src/boleto/helpers/boleto-sync.helper.ts:143:11 - error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+
+143           authenticationCode: boleto.authenticationCode,
+              ~~~~~~~~~~~~~~~~~~
+
+  src/transaction/transaction.service.ts:11:3
+    11   authenticationCode: string;
+         ~~~~~~~~~~~~~~~~~~
+    The expected type comes from property 'authenticationCode' which is declared here on type 'CreateTransactionFromWebhook'
+src/common/helpers/status-mapper.helper.ts:49:9 - error TS2739: Type '{ CREATED: TransactionStatus.PENDING; DONE: TransactionStatus.DONE; CANCELED: TransactionStatus.CANCELED; UNDONE: TransactionStatus.UNDONE; REPROVED: TransactionStatus.REPROVED; }' is missing the following properties from type 'Record<PixTransferStatus, TransactionStatus>': IN_PROCESS, APPROVED
+
+49   const statusMap: Record<PixTransferStatus, TransactionStatus> = {
+           ~~~~~~~~~
+src/pix/pix.service.ts:431:9 - error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+
+431         pixTransfer.authenticationCode,
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/pix/pix.service.ts:436:11 - error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+
+436           authenticationCode: pixTransfer.authenticationCode,
+              ~~~~~~~~~~~~~~~~~~
+
+  src/transaction/transaction.service.ts:11:3
+    11   authenticationCode: string;
+         ~~~~~~~~~~~~~~~~~~
+    The expected type comes from property 'authenticationCode' which is declared here on type 'CreateTransactionFromWebhook'
+
+Found 8 error(s).
+

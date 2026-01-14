@@ -30,6 +30,7 @@ export class BoletoWebhookController {
   ): Promise<{ received: boolean }> {
     await this.boletoWebhookService.handleRegistered(
       events,
+      request.webhookClientId || '',
       request.validPublicKey || false,
     );
     return { received: true };
@@ -61,6 +62,7 @@ export class BoletoWebhookController {
   ): Promise<{ received: boolean }> {
     await this.boletoWebhookService.handleCashInCleared(
       events,
+      request.webhookClientId || '',
       request.validPublicKey || false,
     );
     return { received: true };
@@ -76,6 +78,7 @@ export class BoletoWebhookController {
   ): Promise<{ received: boolean }> {
     await this.boletoWebhookService.handleCancelled(
       events,
+      request.webhookClientId || '',
       request.validPublicKey || false,
     );
     return { received: true };

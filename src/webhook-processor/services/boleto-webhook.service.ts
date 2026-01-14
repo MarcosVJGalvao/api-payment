@@ -8,6 +8,9 @@ import { TransactionType } from '@/transaction/enums/transaction-type.enum';
 import { WebhookPayload } from '../interfaces/webhook-base.interface';
 import { BoletoWebhookData } from '../interfaces/boleto-webhook.interface';
 import { mapWebhookEventToTransactionStatus } from '../helpers/transaction-status-mapper.helper';
+import { canProcessWebhook } from '../helpers/webhook-state-machine.helper';
+import { WebhookEventLogService } from './webhook-event-log.service';
+import { WebhookEvent } from '../enums/webhook-event.enum';
 
 @Injectable()
 export class BoletoWebhookService {
@@ -17,10 +20,12 @@ export class BoletoWebhookService {
     @InjectRepository(Boleto)
     private readonly boletoRepository: Repository<Boleto>,
     private readonly transactionService: TransactionService,
+    private readonly webhookEventLogService: WebhookEventLogService,
   ) {}
 
   async handleRegistered(
     events: WebhookPayload<BoletoWebhookData>[],
+    clientId: string,
     validPublicKey: boolean,
   ): Promise<void> {
     if (!validPublicKey) {
@@ -44,9 +49,23 @@ export class BoletoWebhookService {
       boleto.authenticationCode = data.authenticationCode;
       boleto.barcode = data.barcode || boleto.barcode;
       boleto.digitable = data.digitable || boleto.digitable;
+      boleto.ourNumber = ourNumber || boleto.ourNumber;
       boleto.status = BoletoStatus.REGISTERED;
 
       await this.boletoRepository.save(boleto);
+
+      // Registra o evento no log
+      await this.webhookEventLogService.logEvent({
+        authenticationCode: data.authenticationCode,
+        entityType: 'BOLETO',
+        entityId: boleto.id,
+        eventName: WebhookEvent.BOLETO_WAS_REGISTERED,
+        wasProcessed: true,
+        payload: event as unknown as Record<string, unknown>,
+        providerTimestamp: new Date(event.timestamp),
+        clientId,
+      });
+
       this.logger.log(
         `BOLETO_WAS_REGISTERED processed: ${data.authenticationCode}`,
       );
@@ -80,6 +99,34 @@ export class BoletoWebhookService {
         continue;
       }
 
+      // Validar sequência de webhook
+      const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
+        data.authenticationCode,
+      );
+      const validation = canProcessWebhook(
+        lastEvent,
+        WebhookEvent.BOLETO_CASH_IN_WAS_RECEIVED,
+      );
+
+      if (!validation.canProcess) {
+        this.logger.warn(
+          `BOLETO_CASH_IN_WAS_RECEIVED: Out of sequence - ${validation.reason}`,
+          { authenticationCode: data.authenticationCode },
+        );
+        await this.webhookEventLogService.logEvent({
+          authenticationCode: data.authenticationCode,
+          entityType: 'BOLETO',
+          entityId: boleto.id,
+          eventName: WebhookEvent.BOLETO_CASH_IN_WAS_RECEIVED,
+          wasProcessed: false,
+          skipReason: validation.reason,
+          payload: event as unknown as Record<string, unknown>,
+          providerTimestamp: new Date(event.timestamp),
+          clientId,
+        });
+        continue;
+      }
+
       boleto.status = BoletoStatus.PROCESSING;
       await this.boletoRepository.save(boleto);
 
@@ -100,6 +147,18 @@ export class BoletoWebhookService {
         providerTimestamp: new Date(event.timestamp),
       });
 
+      // Registra o evento como processado
+      await this.webhookEventLogService.logEvent({
+        authenticationCode: data.authenticationCode,
+        entityType: 'BOLETO',
+        entityId: boleto.id,
+        eventName: WebhookEvent.BOLETO_CASH_IN_WAS_RECEIVED,
+        wasProcessed: true,
+        payload: event as unknown as Record<string, unknown>,
+        providerTimestamp: new Date(event.timestamp),
+        clientId,
+      });
+
       this.logger.log(
         `BOLETO_CASH_IN_WAS_RECEIVED processed: ${data.authenticationCode}`,
       );
@@ -108,6 +167,7 @@ export class BoletoWebhookService {
 
   async handleCashInCleared(
     events: WebhookPayload<BoletoWebhookData>[],
+    clientId: string,
     validPublicKey: boolean,
   ): Promise<void> {
     if (!validPublicKey) {
@@ -132,6 +192,34 @@ export class BoletoWebhookService {
         continue;
       }
 
+      // Validar sequência de webhook
+      const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
+        data.authenticationCode,
+      );
+      const validation = canProcessWebhook(
+        lastEvent,
+        WebhookEvent.BOLETO_CASH_IN_WAS_CLEARED,
+      );
+
+      if (!validation.canProcess) {
+        this.logger.warn(
+          `BOLETO_CASH_IN_WAS_CLEARED: Out of sequence - ${validation.reason}`,
+          { authenticationCode: data.authenticationCode },
+        );
+        await this.webhookEventLogService.logEvent({
+          authenticationCode: data.authenticationCode,
+          entityType: 'BOLETO',
+          entityId: boleto.id,
+          eventName: WebhookEvent.BOLETO_CASH_IN_WAS_CLEARED,
+          wasProcessed: false,
+          skipReason: validation.reason,
+          payload: event as unknown as Record<string, unknown>,
+          providerTimestamp: new Date(event.timestamp),
+          clientId,
+        });
+        continue;
+      }
+
       boleto.status = BoletoStatus.PAID;
       await this.boletoRepository.save(boleto);
 
@@ -139,6 +227,18 @@ export class BoletoWebhookService {
         data.authenticationCode,
         mapWebhookEventToTransactionStatus('BOLETO_CASH_IN_WAS_CLEARED'),
       );
+
+      // Registra o evento como processado
+      await this.webhookEventLogService.logEvent({
+        authenticationCode: data.authenticationCode,
+        entityType: 'BOLETO',
+        entityId: boleto.id,
+        eventName: WebhookEvent.BOLETO_CASH_IN_WAS_CLEARED,
+        wasProcessed: true,
+        payload: event as unknown as Record<string, unknown>,
+        providerTimestamp: new Date(event.timestamp),
+        clientId,
+      });
 
       this.logger.log(
         `BOLETO_CASH_IN_WAS_CLEARED processed: ${data.authenticationCode}`,
@@ -148,6 +248,7 @@ export class BoletoWebhookService {
 
   async handleCancelled(
     events: WebhookPayload<BoletoWebhookData>[],
+    clientId: string,
     validPublicKey: boolean,
   ): Promise<void> {
     if (!validPublicKey) {
@@ -170,6 +271,34 @@ export class BoletoWebhookService {
         continue;
       }
 
+      // Validar sequência de webhook
+      const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
+        data.authenticationCode,
+      );
+      const validation = canProcessWebhook(
+        lastEvent,
+        WebhookEvent.BOLETO_WAS_CANCELLED,
+      );
+
+      if (!validation.canProcess) {
+        this.logger.warn(
+          `BOLETO_WAS_CANCELLED: Out of sequence - ${validation.reason}`,
+          { authenticationCode: data.authenticationCode },
+        );
+        await this.webhookEventLogService.logEvent({
+          authenticationCode: data.authenticationCode,
+          entityType: 'BOLETO',
+          entityId: boleto.id,
+          eventName: WebhookEvent.BOLETO_WAS_CANCELLED,
+          wasProcessed: false,
+          skipReason: validation.reason,
+          payload: event as unknown as Record<string, unknown>,
+          providerTimestamp: new Date(event.timestamp),
+          clientId,
+        });
+        continue;
+      }
+
       boleto.status = BoletoStatus.CANCELLED;
       boleto.cancelReason = data.reason;
       await this.boletoRepository.save(boleto);
@@ -178,6 +307,18 @@ export class BoletoWebhookService {
         data.authenticationCode,
         mapWebhookEventToTransactionStatus('BOLETO_WAS_CANCELLED'),
       );
+
+      // Registra o evento como processado
+      await this.webhookEventLogService.logEvent({
+        authenticationCode: data.authenticationCode,
+        entityType: 'BOLETO',
+        entityId: boleto.id,
+        eventName: WebhookEvent.BOLETO_WAS_CANCELLED,
+        wasProcessed: true,
+        payload: event as unknown as Record<string, unknown>,
+        providerTimestamp: new Date(event.timestamp),
+        clientId,
+      });
 
       this.logger.log(
         `BOLETO_WAS_CANCELLED processed: ${data.authenticationCode}`,

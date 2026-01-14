@@ -51,6 +51,7 @@ export class PixWebhookController {
   ): Promise<{ received: boolean }> {
     await this.pixWebhookService.handleCashInCleared(
       events,
+      request.webhookClientId || '',
       request.validPublicKey || false,
     );
     return { received: true };
@@ -66,6 +67,7 @@ export class PixWebhookController {
   ): Promise<{ received: boolean }> {
     await this.pixWebhookService.handleCashOutCompleted(
       events,
+      request.webhookClientId || '',
       request.validPublicKey || false,
     );
     return { received: true };
@@ -81,6 +83,7 @@ export class PixWebhookController {
   ): Promise<{ received: boolean }> {
     await this.pixWebhookService.handleCashOutCanceled(
       events,
+      request.webhookClientId || '',
       request.validPublicKey || false,
     );
     return { received: true };
@@ -96,6 +99,7 @@ export class PixWebhookController {
   ): Promise<{ received: boolean }> {
     await this.pixWebhookService.handleCashOutUndone(
       events,
+      request.webhookClientId || '',
       request.validPublicKey || false,
     );
     return { received: true };
@@ -127,6 +131,7 @@ export class PixWebhookController {
   ): Promise<{ received: boolean }> {
     await this.pixWebhookService.handleRefundCleared(
       events,
+      request.webhookClientId || '',
       request.validPublicKey || false,
     );
     return { received: true };

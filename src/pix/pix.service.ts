@@ -23,6 +23,9 @@ import { PixInitializationType } from './enums/pix-initialization-type.enum';
 import { PixAccountType } from './enums/pix-account-type.enum';
 import { PixTransactionType } from './enums/pix-transaction-type.enum';
 import { OnboardingTypeAccount } from '@/onboarding/enums/onboarding-type-account.enum';
+import { TransactionService } from '@/transaction/transaction.service';
+import { TransactionType } from '@/transaction/enums/transaction-type.enum';
+import { mapPixTransferStatusToTransactionStatus } from '@/common/helpers/status-mapper.helper';
 
 @Injectable()
 export class PixService {
@@ -34,6 +37,7 @@ export class PixService {
     private readonly logger: AppLoggerService,
     @InjectRepository(PixTransfer)
     private readonly pixTransferRepository: Repository<PixTransfer>,
+    private readonly transactionService: TransactionService,
   ) {}
 
   async getPixKeys(
@@ -305,6 +309,15 @@ export class PixService {
 
       await this.pixTransferRepository.save(pixTransfer);
 
+      // Criar Transaction para o PIX transfer
+      if (pixTransfer.authenticationCode) {
+        await this.createTransactionForTransfer(
+          pixTransfer,
+          clientId,
+          accountId,
+        );
+      }
+
       this.logger.log(
         `PIX transfer completed: id=${pixTransfer.id} transactionId=${response.transactionId}`,
         this.context,
@@ -403,5 +416,43 @@ export class PixService {
     if (type === 'CASH_OUT') return PixTransactionType.DEBIT;
     if (type === 'CASH_IN') return PixTransactionType.CREDIT;
     return undefined;
+  }
+
+  /**
+   * Cria uma Transaction para o PIX transfer.
+   */
+  private async createTransactionForTransfer(
+    pixTransfer: PixTransfer,
+    clientId: string,
+    accountId: string,
+  ): Promise<void> {
+    try {
+      const existingTx = await this.transactionService.findByAuthenticationCode(
+        pixTransfer.authenticationCode!,
+      );
+
+      if (!existingTx) {
+        await this.transactionService.createFromWebhook({
+          authenticationCode: pixTransfer.authenticationCode!,
+          type: TransactionType.PIX_CASH_OUT,
+          status: mapPixTransferStatusToTransactionStatus(pixTransfer.status),
+          amount: pixTransfer.amount,
+          clientId,
+          accountId,
+          pixTransferId: pixTransfer.id,
+        });
+
+        this.logger.log(
+          `Transaction created for PIX transfer: ${pixTransfer.id}`,
+          this.context,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to create transaction for PIX transfer: ${error instanceof Error ? error.message : String(error)}`,
+        error instanceof Error ? error.stack : undefined,
+        this.context,
+      );
+    }
   }
 }
