@@ -1,16 +1,14 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
   Index,
-  ManyToOne,
+  OneToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
-import { Client } from '@/client/entities/client.entity';
-import { Account } from '@/account/entities/account.entity';
-import { OneToMany } from 'typeorm';
+import { BaseFinancialOperation } from '@/common/entities/base-financial-operation.entity';
+import { PaymentSender } from '@/common/entities/payment-sender.entity';
+import { PaymentRecipient } from '@/common/entities/payment-recipient.entity';
 import { Transaction } from '@/transaction/entities/transaction.entity';
 
 /**
@@ -31,14 +29,7 @@ export enum PixRefundStatus {
 @Index(['endToEndId'])
 @Index(['endToEndIdOriginal'])
 @Index(['status'])
-export class PixRefund {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  // ========================================
-  // Campos de controle do webhook
-  // ========================================
-
+export class PixRefund extends BaseFinancialOperation {
   @Column({
     type: 'varchar',
     length: 100,
@@ -77,35 +68,6 @@ export class PixRefund {
     default: PixRefundStatus.RECEIVED,
   })
   status: PixRefundStatus;
-
-  // ========================================
-  // Dados da transação
-  // ========================================
-
-  @Column({
-    type: 'decimal',
-    precision: 15,
-    scale: 2,
-  })
-  amount: number;
-
-  @Column({
-    type: 'varchar',
-    length: 3,
-    default: 'BRL',
-  })
-  currency: string;
-
-  @Column({
-    type: 'varchar',
-    length: 140,
-    nullable: true,
-  })
-  description?: string;
-
-  // ========================================
-  // Dados específicos de refund
-  // ========================================
 
   @Column({
     type: 'varchar',
@@ -152,10 +114,6 @@ export class PixRefund {
   })
   errorReason?: string;
 
-  // ========================================
-  // Relacionamentos com transação original
-  // ========================================
-
   @Column({
     type: 'uuid',
     name: 'related_pix_cash_in_id',
@@ -172,162 +130,16 @@ export class PixRefund {
   })
   relatedPixTransferId?: string;
 
-  // ========================================
-  // Dados do pagador (Sender)
-  // ========================================
+  @OneToOne(() => PaymentSender, { cascade: true, eager: true })
+  @JoinColumn({ name: 'sender_id' })
+  sender: PaymentSender;
 
-  @Column({
-    type: 'varchar',
-    length: 10,
-    name: 'sender_document_type',
-    nullable: true,
-  })
-  senderDocumentType?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'sender_document_number',
-    nullable: true,
-  })
-  senderDocumentNumber?: string;
-
-  @Column({ type: 'varchar', length: 255, name: 'sender_name', nullable: true })
-  senderName?: string;
-
-  @Column({ type: 'varchar', length: 20, name: 'sender_type', nullable: true })
-  senderType?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 10,
-    name: 'sender_account_branch',
-    nullable: true,
-  })
-  senderAccountBranch?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'sender_account_number',
-    nullable: true,
-  })
-  senderAccountNumber?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'sender_account_type',
-    nullable: true,
-  })
-  senderAccountType?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'sender_bank_ispb',
-    nullable: true,
-  })
-  senderBankIspb?: string;
-
-  // ========================================
-  // Dados do recebedor (Recipient)
-  // ========================================
-
-  @Column({
-    type: 'varchar',
-    length: 10,
-    name: 'recipient_document_type',
-    nullable: true,
-  })
-  recipientDocumentType?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'recipient_document_number',
-    nullable: true,
-  })
-  recipientDocumentNumber?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 255,
-    name: 'recipient_name',
-    nullable: true,
-  })
-  recipientName?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'recipient_type',
-    nullable: true,
-  })
-  recipientType?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 10,
-    name: 'recipient_account_branch',
-    nullable: true,
-  })
-  recipientAccountBranch?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'recipient_account_number',
-    nullable: true,
-  })
-  recipientAccountNumber?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'recipient_account_type',
-    nullable: true,
-  })
-  recipientAccountType?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'recipient_bank_ispb',
-    nullable: true,
-  })
-  recipientBankIspb?: string;
-
-  // ========================================
-  // Relacionamentos
-  // ========================================
-
-  @Column({ type: 'uuid', name: 'account_id', nullable: true })
-  accountId?: string;
-
-  @ManyToOne(() => Account)
-  @JoinColumn({ name: 'account_id' })
-  account?: Account;
-
-  @Column({ type: 'uuid', name: 'client_id' })
-  clientId: string;
-
-  @ManyToOne(() => Client)
-  @JoinColumn({ name: 'client_id' })
-  client: Client;
-
-  // ========================================
-  // Datas
-  // ========================================
+  @OneToOne(() => PaymentRecipient, { cascade: true, eager: true })
+  @JoinColumn({ name: 'recipient_id' })
+  recipient: PaymentRecipient;
 
   @Column({ type: 'datetime', name: 'provider_created_at', nullable: true })
   providerCreatedAt?: Date;
-
-  @CreateDateColumn({ name: 'created_at', type: 'datetime' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ name: 'updated_at', type: 'datetime' })
-  updatedAt: Date;
 
   @OneToMany(() => Transaction, (transaction) => transaction.pixRefund)
   transactions: Transaction[];

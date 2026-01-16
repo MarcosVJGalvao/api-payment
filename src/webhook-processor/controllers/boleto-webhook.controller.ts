@@ -17,10 +17,6 @@ import { BoletoWebhookData } from '../interfaces/boleto-webhook.interface';
 import type { BoletoWebhookJob } from '../processors/boleto-webhook.processor';
 import { enqueueWebhookEvent } from '../helpers/enqueue-webhook.helper';
 
-/**
- * Controller que recebe webhooks de boleto e os enfileira para processamento assíncrono.
- * Responde 202 Accepted imediatamente após enfileirar.
- */
 @ApiTags('Webhooks - Boleto')
 @Controller('webhook/:provider/boleto')
 @UseGuards(WebhookPublicKeyGuard)

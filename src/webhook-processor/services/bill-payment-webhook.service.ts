@@ -54,7 +54,6 @@ export class BillPaymentWebhookService {
 
       billPayment.status = BillPaymentStatus.CREATED;
 
-      // Campos básicos
       if (data.transactionId)
         billPayment.transactionId = String(data.transactionId);
       if (data.settleDate) billPayment.settleDate = new Date(data.settleDate);
@@ -64,27 +63,23 @@ export class BillPaymentWebhookService {
       if (data.digitable) billPayment.digitable = data.digitable;
       if (data.description) billPayment.description = data.description;
 
-      // Cedente/Assignor
       if (data.assignor) billPayment.assignor = data.assignor;
 
-      // Beneficiário/Recipient
       if (data.recipient) {
+        billPayment.recipient = billPayment.recipient || ({} as any);
         if (data.recipient.name)
-          billPayment.recipientName = data.recipient.name;
+          billPayment.recipient.name = data.recipient.name;
         if (data.recipient.document?.value) {
-          billPayment.recipientDocument = data.recipient.document.value.replace(
-            /[.\-/]/g,
-            '',
-          );
+          billPayment.recipient.documentNumber =
+            data.recipient.document.value.replace(/[.\-/]/g, '');
+          billPayment.recipient.documentType = data.recipient.document.type;
         }
       }
 
-      // Valores
       if (data.amount?.value) billPayment.amount = data.amount.value;
       if (data.originalAmount?.value)
         billPayment.originalAmount = data.originalAmount.value;
 
-      // Encargos
       if (data.charges) {
         if (data.charges.interestAmountCalculated?.value)
           billPayment.interestAmount =
@@ -112,7 +107,6 @@ export class BillPaymentWebhookService {
         providerTimestamp: new Date(event.timestamp),
       });
 
-      // Registra o evento no log
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'BILL_PAYMENT',
@@ -155,7 +149,6 @@ export class BillPaymentWebhookService {
         );
       }
 
-      // Validar sequência de webhook
       const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
         data.authenticationCode,
       );
@@ -185,7 +178,6 @@ export class BillPaymentWebhookService {
 
       await this.billPaymentRepository.save(billPayment);
 
-      // Registra o evento como processado
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'BILL_PAYMENT',
@@ -230,7 +222,6 @@ export class BillPaymentWebhookService {
         );
       }
 
-      // Validar sequência de webhook
       const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
         data.authenticationCode,
       );
@@ -262,7 +253,6 @@ export class BillPaymentWebhookService {
         mapWebhookEventToTransactionStatus('BILL_PAYMENT_WAS_CONFIRMED'),
       );
 
-      // Registra o evento como processado
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'BILL_PAYMENT',
@@ -305,7 +295,6 @@ export class BillPaymentWebhookService {
         );
       }
 
-      // Validar sequência de webhook
       const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
         data.authenticationCode,
       );
@@ -337,7 +326,6 @@ export class BillPaymentWebhookService {
         mapWebhookEventToTransactionStatus('BILL_PAYMENT_HAS_FAILED'),
       );
 
-      // Registra o evento como processado
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'BILL_PAYMENT',
@@ -382,7 +370,6 @@ export class BillPaymentWebhookService {
         );
       }
 
-      // Validar sequência de webhook
       const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
         data.authenticationCode,
       );
@@ -413,7 +400,6 @@ export class BillPaymentWebhookService {
         mapWebhookEventToTransactionStatus('BILL_PAYMENT_WAS_CANCELLED'),
       );
 
-      // Registra o evento como processado
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'BILL_PAYMENT',
@@ -456,7 +442,6 @@ export class BillPaymentWebhookService {
         );
       }
 
-      // Validar sequência de webhook
       const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
         data.authenticationCode,
       );
@@ -486,7 +471,6 @@ export class BillPaymentWebhookService {
         mapWebhookEventToTransactionStatus('BILL_PAYMENT_WAS_REFUSED'),
       );
 
-      // Registra o evento como processado
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'BILL_PAYMENT',

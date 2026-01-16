@@ -261,7 +261,6 @@ export class PixService {
       this.context,
     );
 
-    // Criar registro no banco antes de chamar provider
     const pixTransfer = this.pixTransferRepository.create({
       status: PixTransferStatus.CREATED,
       amount: dto.amount,
@@ -270,16 +269,18 @@ export class PixService {
       endToEndId: dto.endToEndId,
       pixKey: dto.pixKey,
       idempotencyKey: dto.idempotencyKey,
-      senderDocumentType: senderDocType,
-      senderDocumentNumber: onboarding.documentNumber,
-      senderName: onboarding.registerName,
-      senderAccountBranch: account.branch,
-      senderAccountNumber: account.number,
-      senderAccountType: PixAccountType.CHECKING,
-      senderBankIspb: '13140088', // Hiperbanco ISPB
       providerSlug: provider,
       clientId,
       accountId,
+      sender: {
+        documentType: senderDocType,
+        documentNumber: onboarding.documentNumber,
+        name: onboarding.registerName,
+        accountBranch: account.branch,
+        accountNumber: account.number,
+        accountType: PixAccountType.CHECKING,
+        bankIspb: '13140088', // Hiperbanco ISPB
+      },
     });
 
     await this.pixTransferRepository.save(pixTransfer);
@@ -292,7 +293,6 @@ export class PixService {
         dto.idempotencyKey,
       );
 
-      // Atualizar com dados do response
       pixTransfer.status = mapPixTransferStatus(
         response.status,
         PixTransferStatus.CREATED,
@@ -302,19 +302,22 @@ export class PixService {
       pixTransfer.correlationId = response.correlationId;
       pixTransfer.channel = response.channel;
       pixTransfer.type = mapTransactionType(response.type);
-      pixTransfer.recipientDocumentType = response.recipient.documentType;
-      pixTransfer.recipientDocumentNumber = response.recipient.documentNumber;
-      pixTransfer.recipientName = response.recipient.name;
-      pixTransfer.recipientAccountBranch = response.recipient.account.branch;
-      pixTransfer.recipientAccountNumber = response.recipient.account.number;
-      pixTransfer.recipientAccountType = response.recipient.account.type;
-      pixTransfer.recipientBankIspb = response.recipient.bank.ispb;
-      pixTransfer.recipientBankCompe = response.recipient.bank.compe;
-      pixTransfer.recipientBankName = response.recipient.bank.name;
+
+      pixTransfer.recipient = {
+        documentType: response.recipient.documentType,
+        documentNumber: response.recipient.documentNumber,
+        name: response.recipient.name,
+        accountBranch: response.recipient.account.branch,
+        accountNumber: response.recipient.account.number,
+        accountType: response.recipient.account.type,
+        bankIspb: response.recipient.bank.ispb,
+        bankCompe: response.recipient.bank.compe,
+        bankName: response.recipient.bank.name,
+        // Assuming id, createdAt, updatedAt handled by TypeORM or new
+      } as any;
 
       await this.pixTransferRepository.save(pixTransfer);
 
-      // Criar Transaction para o PIX transfer
       if (pixTransfer.authenticationCode) {
         await this.createTransactionForTransfer(
           pixTransfer,

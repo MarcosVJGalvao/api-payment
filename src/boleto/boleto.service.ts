@@ -39,14 +39,6 @@ export class BoletoService {
     private readonly logger: AppLoggerService,
   ) {}
 
-  /**
-   * Cria e emite um novo boleto no provedor financeiro especificado.
-   * @param provider - Provedor financeiro
-   * @param dto - Dados do boleto a ser criado
-   * @param session - Sessão autenticada do provedor
-   * @returns Resposta do provedor com dados do boleto emitido mais o campo internalId (ID gerado pelo banco de dados)
-   * @throws CustomHttpException se validação falhar ou emissão falhar
-   */
   async createBoleto(
     provider: FinancialProvider,
     dto: CreateBoletoDto,
@@ -54,15 +46,11 @@ export class BoletoService {
   ): Promise<BoletoEmissionResponse> {
     this.logger.log(`Creating boleto for provider: ${provider}`, this.context);
 
-    // Valida regras de negócio relacionadas a datas
     validateBoletoDates(dto);
 
     try {
-      // Emite o boleto no provedor
       const response: BoletoEmissionResponse =
         await this.providerHelper.emitBoleto(provider, dto, session);
-
-      // Salva no banco de dados (para rastreamento interno, mas retorna a resposta do provedor)
       const boleto = this.repository.create({
         alias: dto.alias,
         type: dto.type,
@@ -75,10 +63,12 @@ export class BoletoService {
         documentNumber: dto.documentNumber,
         accountNumber: dto.account.number,
         accountBranch: dto.account.branch,
-        payerDocument: dto.payer?.document,
-        payerName: dto.payer?.name,
-        payerTradeName: dto.payer?.tradeName,
-        payerAddress: dto.payer?.address,
+        payer: {
+          document: dto.payer?.document,
+          name: dto.payer?.name,
+          tradeName: dto.payer?.tradeName,
+          address: dto.payer?.address,
+        },
         interestStartDate: dto.interest?.startDate
           ? parseDateOnly(dto.interest.startDate)
           : undefined,
@@ -108,7 +98,6 @@ export class BoletoService {
         this.context,
       );
 
-      // Retorna a resposta do provedor adicionando o ID gerado pelo banco de dados
       return {
         ...response,
         internalId: savedBoleto.id,
@@ -120,12 +109,10 @@ export class BoletoService {
         this.context,
       );
 
-      // Se já for uma CustomHttpException (tratada pelo handleHiperbancoError), apenas propaga
       if (error instanceof CustomHttpException) {
         throw error;
       }
 
-      // Para erros inesperados não tratados, usar Internal Server Error
       throw new CustomHttpException(
         'Failed to emit boleto in financial provider',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -134,15 +121,6 @@ export class BoletoService {
     }
   }
 
-  /**
-   * Busca um boleto por ID.
-   * @param id - ID do boleto
-   * @param clientId - ID do cliente (para validação de isolamento)
-   * @param accountId - ID da conta (para validação de isolamento)
-   * @param session - Sessão do provedor (opcional, usada para buscar detalhes atualizados do Hiperbanco)
-   * @returns Boleto encontrado
-   * @throws CustomHttpException se o boleto não for encontrado ou não pertence à conta
-   */
   async findById(
     id: string,
     clientId: string,
@@ -176,15 +154,6 @@ export class BoletoService {
     return boleto;
   }
 
-  /**
-   * Atualiza um boleto.
-   * @param id - ID do boleto
-   * @param dto - Dados para atualização
-   * @param clientId - ID do cliente (para validação de isolamento)
-   * @param accountId - ID da conta (para validação de isolamento)
-   * @returns Boleto atualizado
-   * @throws CustomHttpException se o boleto não for encontrado ou não pertence à conta
-   */
   async updateBoleto(
     id: string,
     dto: UpdateBoletoDto,
@@ -214,13 +183,6 @@ export class BoletoService {
     return updatedBoleto;
   }
 
-  /**
-   * Lista boletos com paginação, filtros e busca.
-   * @param query - Parâmetros de query
-   * @param clientId - ID do cliente (para isolamento)
-   * @param accountId - ID da conta (para isolamento - cada conta só vê seus próprios boletos)
-   * @returns Resultado paginado de boletos
-   */
   async listBoletos(
     query: QueryBoletoDto,
     clientId: string,
@@ -243,7 +205,6 @@ export class BoletoService {
       },
     );
 
-    // Adicionar filtros de isolamento manualmente (clientId e accountId são obrigatórios)
     queryOptions.filters = queryOptions.filters || [];
     queryOptions.filters.push(
       {
@@ -261,14 +222,6 @@ export class BoletoService {
     return this.baseQueryService.findAll(this.repository, queryOptions);
   }
 
-  /**
-   * Cancela um boleto no provedor financeiro.
-   * @param id - ID interno do boleto
-   * @param provider - Provedor financeiro
-   * @param session - Sessão autenticada do provedor
-   * @returns Resposta do provedor confirmando o cancelamento
-   * @throws CustomHttpException se o boleto não for encontrado, não pertence à conta ou não pode ser cancelado
-   */
   async cancelBoleto(
     id: string,
     provider: FinancialProvider,
@@ -285,10 +238,8 @@ export class BoletoService {
       );
     }
 
-    // Busca o boleto para validar existência e permissões
     const boleto = await this.findById(id, session.clientId, session.accountId);
 
-    // Valida se o boleto pode ser cancelado (não pode se já estiver pago ou cancelado)
     const nonCancellableStatuses = [BoletoStatus.PAID, BoletoStatus.CANCELLED];
     if (nonCancellableStatuses.includes(boleto.status)) {
       throw new CustomHttpException(
@@ -299,14 +250,12 @@ export class BoletoService {
     }
 
     try {
-      // Cancela o boleto no provedor (cada provider extrai os campos que precisa)
       const response = await this.providerHelper.cancelBoleto(
         provider,
         boleto,
         session,
       );
 
-      // Atualiza o status no banco de dados
       boleto.status = BoletoStatus.CANCELLED;
       await this.repository.save(boleto);
 
@@ -320,12 +269,10 @@ export class BoletoService {
         this.context,
       );
 
-      // Se já for uma CustomHttpException (tratada pelo handleHiperbancoError), apenas propaga
       if (error instanceof CustomHttpException) {
         throw error;
       }
 
-      // Para erros inesperados não tratados, usar Internal Server Error
       throw new CustomHttpException(
         'Failed to cancel boleto in financial provider',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -334,11 +281,6 @@ export class BoletoService {
     }
   }
 
-  /**
-   * Processa atualização recebida via webhook.
-   * @param payload - Payload recebido do webhook
-   * @returns Boleto atualizado
-   */
   async processWebhookUpdate(
     payload: BoletoWebhookPayload,
   ): Promise<Boleto | null> {
@@ -348,8 +290,6 @@ export class BoletoService {
     );
 
     try {
-      // Identificar o boleto pelo authenticationCode, barcode ou digitable que são únicos
-      // O provider envia esses campos no webhook que foram salvos na emissão
       let boleto: Boleto | null = null;
 
       if (payload.authenticationCode) {
@@ -374,7 +314,6 @@ export class BoletoService {
         return null;
       }
 
-      // Atualiza campos recebidos
       if (payload.status) {
         boleto.status = parseBoletoStatus(payload.status);
       }
@@ -398,7 +337,6 @@ export class BoletoService {
         error instanceof Error ? error.stack : undefined,
         this.context,
       );
-      // Não lança exceção para não fazer o Hiperbanco retentar
       return null;
     }
   }

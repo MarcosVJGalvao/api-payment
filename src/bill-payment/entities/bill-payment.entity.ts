@@ -1,30 +1,21 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  DeleteDateColumn,
   Index,
-  ManyToOne,
+  OneToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { BillPaymentStatus } from '../enums/bill-payment-status.enum';
-import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import { Client } from '@/client/entities/client.entity';
-import { Account } from '@/account/entities/account.entity';
-import { Exclude } from 'class-transformer';
-import { OneToMany } from 'typeorm';
+import { BaseFinancialOperation } from '@/common/entities/base-financial-operation.entity';
+import { PaymentRecipient } from '@/common/entities/payment-recipient.entity';
 import { Transaction } from '@/transaction/entities/transaction.entity';
 
 @Entity('bill_payment')
 @Index(['status'])
 @Index(['dueDate'])
 @Index(['providerSlug'])
-export class BillPayment {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
+export class BillPayment extends BaseFinancialOperation {
   @Column({
     type: 'enum',
     enum: BillPaymentStatus,
@@ -75,23 +66,9 @@ export class BillPayment {
   })
   assignor?: string;
 
-  @Column({
-    type: 'varchar',
-    length: 255,
-    name: 'recipient_name',
-    nullable: true,
-    comment: 'Nome do beneficiário',
-  })
-  recipientName?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'recipient_document',
-    nullable: true,
-    comment: 'CNPJ/CPF do beneficiário',
-  })
-  recipientDocument?: string;
+  @OneToOne(() => PaymentRecipient, { cascade: true, eager: true })
+  @JoinColumn({ name: 'recipient_id' })
+  recipient: PaymentRecipient;
 
   @Column({
     type: 'decimal',
@@ -101,14 +78,6 @@ export class BillPayment {
     comment: 'Valor original do título',
   })
   originalAmount: number;
-
-  @Column({
-    type: 'decimal',
-    precision: 10,
-    scale: 2,
-    comment: 'Valor efetivamente pago',
-  })
-  amount: number;
 
   @Column({
     type: 'decimal',
@@ -193,62 +162,6 @@ export class BillPayment {
 
   @Column({
     type: 'varchar',
-    length: 255,
-    nullable: true,
-    comment: 'Descrição opcional',
-  })
-  description?: string;
-
-  @Column({
-    type: 'enum',
-    enum: FinancialProvider,
-    name: 'provider_slug',
-    comment: 'Identificador do provedor financeiro',
-  })
-  providerSlug: FinancialProvider;
-
-  @Column({
-    type: 'uuid',
-    name: 'client_id',
-    comment: 'ID do cliente',
-  })
-  @Exclude()
-  clientId: string;
-
-  @ManyToOne(() => Client)
-  @JoinColumn({ name: 'client_id' })
-  client: Client;
-
-  @Column({
-    type: 'uuid',
-    name: 'account_id',
-    comment: 'ID da conta que realizou o pagamento',
-  })
-  accountId: string;
-
-  @ManyToOne(() => Account)
-  @JoinColumn({ name: 'account_id' })
-  account: Account;
-
-  @CreateDateColumn({
-    name: 'created_at',
-    type: 'datetime',
-  })
-  createdAt: Date;
-
-  @UpdateDateColumn({
-    name: 'updated_at',
-    type: 'datetime',
-  })
-  updatedAt: Date;
-
-  // ========================================
-  // Campos de webhook (BILL_PAYMENT_*)
-  // ========================================
-
-  /** ID de confirmação (WAS_CREATED) */
-  @Column({
-    type: 'varchar',
     length: 50,
     name: 'confirmation_transaction_id',
     nullable: true,
@@ -256,7 +169,6 @@ export class BillPayment {
   })
   confirmationTransactionId?: string;
 
-  /** Código de erro (HAS_FAILED) */
   @Column({
     type: 'varchar',
     length: 20,
@@ -266,7 +178,6 @@ export class BillPayment {
   })
   errorCode?: string;
 
-  /** Mensagem de erro (HAS_FAILED) */
   @Column({
     type: 'varchar',
     length: 255,
@@ -276,7 +187,6 @@ export class BillPayment {
   })
   errorMessage?: string;
 
-  /** Motivo do cancelamento (WAS_CANCELLED) */
   @Column({
     type: 'varchar',
     length: 255,
@@ -285,12 +195,6 @@ export class BillPayment {
     comment: 'Motivo do cancelamento',
   })
   cancelReason?: string;
-
-  @DeleteDateColumn({
-    name: 'deleted_at',
-    type: 'datetime',
-  })
-  deletedAt?: Date;
 
   @OneToMany(() => Transaction, (transaction) => transaction.billPayment)
   transactions: Transaction[];

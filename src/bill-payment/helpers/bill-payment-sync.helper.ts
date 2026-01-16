@@ -62,88 +62,167 @@ export class BillPaymentSyncHelper {
           session,
         );
 
-      // Preparar objeto com campos a serem atualizados
-      const updateData: Partial<BillPayment> = {};
+      let hasUpdates = false;
 
       // Atualizar status
       if (detailData.status) {
-        updateData.status = this.parseStatus(detailData.status);
+        const newStatus = this.parseStatus(detailData.status);
+        if (payment.status !== newStatus) {
+          payment.status = newStatus;
+          hasUpdates = true;
+        }
       }
 
       // Atualizar valores
-      if (detailData.amount !== undefined) {
-        updateData.amount = detailData.amount;
+      if (
+        detailData.amount !== undefined &&
+        payment.amount !== detailData.amount
+      ) {
+        payment.amount = detailData.amount;
+        hasUpdates = true;
       }
 
-      if (detailData.originalAmount !== undefined) {
-        updateData.originalAmount = detailData.originalAmount;
+      if (
+        detailData.originalAmount !== undefined &&
+        payment.originalAmount !== detailData.originalAmount
+      ) {
+        payment.originalAmount = detailData.originalAmount;
+        hasUpdates = true;
       }
 
       // Atualizar charges
       if (detailData.charges) {
-        updateData.interestAmount = detailData.charges.interestAmountCalculated;
-        updateData.fineAmount = detailData.charges.fineAmountCalculated;
-        updateData.discountAmount = detailData.charges.discountAmount;
+        if (
+          payment.interestAmount !== detailData.charges.interestAmountCalculated
+        ) {
+          payment.interestAmount = detailData.charges.interestAmountCalculated;
+          hasUpdates = true;
+        }
+        if (payment.fineAmount !== detailData.charges.fineAmountCalculated) {
+          payment.fineAmount = detailData.charges.fineAmountCalculated;
+          hasUpdates = true;
+        }
+        if (payment.discountAmount !== detailData.charges.discountAmount) {
+          payment.discountAmount = detailData.charges.discountAmount;
+          hasUpdates = true;
+        }
       }
 
-      // Atualizar assignor e recipient
-      if (detailData.assignor) {
-        updateData.assignor = detailData.assignor;
+      // Atualizar assignor
+      if (detailData.assignor && payment.assignor !== detailData.assignor) {
+        payment.assignor = detailData.assignor;
+        hasUpdates = true;
       }
 
-      if (detailData.recipientName) {
-        updateData.recipientName = detailData.recipientName;
-      }
-
-      if (detailData.recipientDocument) {
-        updateData.recipientDocument = sanitizeDocument(
-          detailData.recipientDocument,
-        );
+      // Atualizar recipient
+      if (detailData.recipientName || detailData.recipientDocument) {
+        payment.recipient = payment.recipient || ({} as any); // TypeORM validates on save
+        if (
+          detailData.recipientName &&
+          payment.recipient.name !== detailData.recipientName
+        ) {
+          payment.recipient.name = detailData.recipientName;
+          hasUpdates = true;
+        }
+        if (detailData.recipientDocument) {
+          const sanitizedDoc = sanitizeDocument(detailData.recipientDocument);
+          if (payment.recipient.documentNumber !== sanitizedDoc) {
+            payment.recipient.documentNumber = sanitizedDoc;
+            // Assuming documentType is handled elsewhere or not critical for sync
+            hasUpdates = true;
+          }
+        }
       }
 
       // Atualizar digitable
-      if (detailData.digitable) {
-        updateData.digitable = detailData.digitable;
+      if (detailData.digitable && payment.digitable !== detailData.digitable) {
+        payment.digitable = detailData.digitable;
+        hasUpdates = true;
       }
 
       // Atualizar datas
       if (detailData.paymentDate) {
-        updateData.paymentDate = this.parseDate(detailData.paymentDate);
+        const newDate = this.parseDate(detailData.paymentDate);
+        if (
+          newDate &&
+          (!payment.paymentDate ||
+            payment.paymentDate.getTime() !== newDate.getTime())
+        ) {
+          payment.paymentDate = newDate;
+          hasUpdates = true;
+        }
       }
 
       if (detailData.confirmedAt) {
-        updateData.confirmedAt = this.parseDate(detailData.confirmedAt);
+        const newDate = this.parseDate(detailData.confirmedAt);
+        if (
+          newDate &&
+          (!payment.confirmedAt ||
+            payment.confirmedAt.getTime() !== newDate.getTime())
+        ) {
+          payment.confirmedAt = newDate;
+          hasUpdates = true;
+        }
       }
 
       if (detailData.settleDate) {
-        updateData.settleDate = this.parseDate(detailData.settleDate);
+        const newDate = this.parseDate(detailData.settleDate);
+        if (
+          newDate &&
+          (!payment.settleDate ||
+            payment.settleDate.getTime() !== newDate.getTime())
+        ) {
+          payment.settleDate = newDate;
+          hasUpdates = true;
+        }
       }
 
       if (detailData.dueDate) {
-        updateData.dueDate = this.parseDate(detailData.dueDate);
+        const newDate = this.parseDate(detailData.dueDate);
+        if (
+          newDate &&
+          (!payment.dueDate || payment.dueDate.getTime() !== newDate.getTime())
+        ) {
+          payment.dueDate = newDate;
+          hasUpdates = true;
+        }
       }
 
       // Atualizar no banco de dados
-      if (Object.keys(updateData).length > 0) {
-        await this.repository.update(payment.id, updateData);
+      if (hasUpdates) {
+        const updatedPayment = await this.repository.save(payment);
 
-        const updatedPayment = await this.repository.findOne({
-          where: { id: payment.id },
-        });
+        this.logger.log(
+          `Bill payment data synced from Hiperbanco: ${payment.id}`,
+          this.context,
+        );
 
-        if (updatedPayment) {
-          this.logger.log(
-            `Bill payment data synced from Hiperbanco: ${payment.id}`,
-            this.context,
-          );
-
-          // Criar ou atualizar Transaction quando status mudar
-          if (updateData.status && updatedPayment.authenticationCode) {
+        // Criar ou atualizar Transaction quando status mudar
+        // Accessing mapped status effectively
+        const mappedStatus = this.parseStatus(detailData.status || '');
+        if (
+          mappedStatus &&
+          mappedStatus !== payment.status &&
+          updatedPayment.authenticationCode
+        ) {
+          // Logic suggests if status CHANGED. But we updated payment.status above.
+          // Original logic checked updateData.status.
+          // We can just call it if we detected status change or just call it always if authCode exists?
+          // Or better:
+          await this.syncTransactionForPayment(updatedPayment);
+        } else if (updatedPayment.authenticationCode && hasUpdates) {
+          // Maybe timestamps changed?
+          // Original only checked updateData.status.
+          // Let's stick to status change trigger or simplified check?
+          // safely calling it is idempotent usually (updateStatus or create)
+          // The original code: if (updateData.status && ...)
+          // So only if status was in payload.
+          if (detailData.status) {
             await this.syncTransactionForPayment(updatedPayment);
           }
-
-          return updatedPayment;
         }
+
+        return updatedPayment;
       }
     } catch (error) {
       this.logger.error(

@@ -9,6 +9,7 @@ import { PixCashInStatus } from '@/pix/enums/pix-cash-in-status.enum';
 import { TransactionService } from '@/transaction/transaction.service';
 import { TransactionType } from '@/transaction/enums/transaction-type.enum';
 import { AccountService } from '@/account/account.service';
+import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { WebhookPayload } from '../interfaces/webhook-base.interface';
 import {
   PixCashInReceivedData,
@@ -38,10 +39,6 @@ export class PixWebhookService {
     private readonly webhookEventLogService: WebhookEventLogService,
     private readonly accountService: AccountService,
   ) {}
-
-  // ========================================
-  // PIX Cash-In
-  // ========================================
 
   async handleCashInReceived(
     events: WebhookPayload<PixCashInReceivedData>[],
@@ -93,6 +90,7 @@ export class PixWebhookService {
         idempotencyKey: event.idempotencyKey,
         entityId: event.entityId,
         status: PixCashInStatus.RECEIVED,
+        providerSlug: FinancialProvider.HIPERBANCO,
         amount: data.amount?.value,
         currency: data.amount?.currency || 'BRL',
         description: data.description,
@@ -104,23 +102,27 @@ export class PixWebhookService {
         paymentPurpose: data.channel?.pixPaymentPurpose,
         addressingKeyValue: data.addressingKey?.value,
         addressingKeyType: data.addressingKey?.type,
-        senderDocumentType: data.channel?.sender?.document?.type,
-        senderDocumentNumber: data.channel?.sender?.document?.value,
-        senderName: data.channel?.sender?.name,
-        senderType: data.channel?.sender?.type,
-        senderAccountBranch: data.channel?.sender?.account?.branch,
-        senderAccountNumber: data.channel?.sender?.account?.number,
-        senderAccountType: data.channel?.sender?.account?.type,
-        senderBankIspb: data.channel?.sender?.account?.bank?.ispb,
-        senderBankName: data.channel?.sender?.account?.bank?.name,
-        recipientDocumentType: data.recipient?.document?.type,
-        recipientDocumentNumber: data.recipient?.document?.value,
-        recipientName: data.recipient?.name,
-        recipientType: data.recipient?.type,
-        recipientAccountBranch: data.recipient?.account?.branch,
-        recipientAccountNumber: data.recipient?.account?.number,
-        recipientAccountType: data.recipient?.account?.type,
-        recipientBankIspb: data.recipient?.account?.bank?.ispb,
+        sender: {
+          type: data.channel?.sender?.type,
+          documentType: data.channel?.sender?.document?.type,
+          documentNumber: data.channel?.sender?.document?.value,
+          name: data.channel?.sender?.name,
+          accountBranch: data.channel?.sender?.account?.branch,
+          accountNumber: data.channel?.sender?.account?.number,
+          accountType: data.channel?.sender?.account?.type,
+          bankIspb: data.channel?.sender?.account?.bank?.ispb,
+          bankName: data.channel?.sender?.account?.bank?.name,
+        },
+        recipient: {
+          type: data.recipient?.type,
+          documentType: data.recipient?.document?.type,
+          documentNumber: data.recipient?.document?.value,
+          name: data.recipient?.name,
+          accountBranch: data.recipient?.account?.branch,
+          accountNumber: data.recipient?.account?.number,
+          accountType: data.recipient?.account?.type,
+          bankIspb: data.recipient?.account?.bank?.ispb,
+        },
         clientId,
         accountId,
         providerCreatedAt: data.createdAt
@@ -146,7 +148,6 @@ export class PixWebhookService {
         providerTimestamp: new Date(event.timestamp),
       });
 
-      // Registra o evento no log
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'PIX_CASH_IN',
@@ -200,7 +201,6 @@ export class PixWebhookService {
         );
       }
 
-      // Validar sequência de webhook
       const lastEvent =
         await this.webhookEventLogService.getLastProcessedEvent(
           authenticationCode,
@@ -235,7 +235,6 @@ export class PixWebhookService {
         providerTimestamp: new Date(event.timestamp),
       });
 
-      // Registra o evento como processado
       await this.webhookEventLogService.logEvent({
         authenticationCode,
         entityType: 'PIX_CASH_IN',
@@ -324,7 +323,6 @@ export class PixWebhookService {
         );
       }
 
-      // Validar sequência de webhook
       const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
         data.authenticationCode,
       );
@@ -368,7 +366,6 @@ export class PixWebhookService {
         providerTimestamp: new Date(event.timestamp),
       });
 
-      // Registra o evento como processado
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'PIX_TRANSFER',
@@ -427,6 +424,7 @@ export class PixWebhookService {
         idempotencyKey: event.idempotencyKey,
         entityId: event.entityId,
         status: PixRefundStatus.RECEIVED,
+        providerSlug: FinancialProvider.HIPERBANCO,
         amount: data.amount?.value,
         currency: data.amount?.currency || 'BRL',
         description: data.description,
@@ -435,13 +433,17 @@ export class PixWebhookService {
         refundReason: data.channel?.refundReason,
         errorCode: data.channel?.errorCode,
         errorReason: data.channel?.errorReason,
-        senderDocumentType: data.channel?.sender?.document?.type,
-        senderDocumentNumber: data.channel?.sender?.document?.value,
-        senderName: data.channel?.sender?.name,
-        senderType: data.channel?.sender?.type,
-        recipientDocumentType: data.recipient?.document?.type,
-        recipientDocumentNumber: data.recipient?.document?.value,
-        recipientType: data.recipient?.type,
+        sender: {
+          type: data.channel?.sender?.type,
+          documentType: data.channel?.sender?.document?.type,
+          documentNumber: data.channel?.sender?.document?.value,
+          name: data.channel?.sender?.name,
+        },
+        recipient: {
+          type: data.recipient?.type,
+          documentType: data.recipient?.document?.type,
+          documentNumber: data.recipient?.document?.value,
+        },
         relatedPixCashInId,
         relatedPixTransferId,
         clientId,
@@ -467,7 +469,6 @@ export class PixWebhookService {
         providerTimestamp: new Date(event.timestamp),
       });
 
-      // Registra o evento no log
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'PIX_REFUND',
@@ -512,7 +513,6 @@ export class PixWebhookService {
         );
       }
 
-      // Validar sequência de webhook
       const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
         data.authenticationCode,
       );
@@ -546,7 +546,6 @@ export class PixWebhookService {
         providerTimestamp: new Date(event.timestamp),
       });
 
-      // Registra o evento como processado
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'PIX_REFUND',

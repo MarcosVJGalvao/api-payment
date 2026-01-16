@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Boleto } from './entities/boleto.entity';
+import { BoletoPayer } from './entities/boleto-payer.entity';
 import { BoletoService } from './boleto.service';
 import { BoletoController } from './boleto.controller';
 import { FinancialProvidersModule } from '../financial-providers/financial-providers.module';
@@ -18,7 +19,7 @@ import { TransactionModule } from '../transaction/transaction.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Boleto]),
+    TypeOrmModule.forFeature([Boleto, BoletoPayer]),
     FinancialProvidersModule,
     BaseQueryModule,
     AuditModule,

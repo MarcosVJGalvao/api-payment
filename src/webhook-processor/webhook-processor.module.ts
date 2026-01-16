@@ -21,6 +21,9 @@ import { Boleto } from '@/boleto/entities/boleto.entity';
 import { BillPayment } from '@/bill-payment/entities/bill-payment.entity';
 import { Webhook } from '@/webhook/entities/webhook.entity';
 import { WebhookEventLog } from './entities/webhook-event-log.entity';
+import { PaymentSender } from '@/common/entities/payment-sender.entity';
+import { PaymentRecipient } from '@/common/entities/payment-recipient.entity';
+import { BoletoPayer } from '@/boleto/entities/boleto-payer.entity';
 import { TransactionModule } from '@/transaction/transaction.module';
 import { AccountModule } from '@/account/account.module';
 
@@ -51,6 +54,9 @@ const WEBHOOK_QUEUE_DEFAULT_OPTIONS = {
       BillPayment,
       Webhook,
       WebhookEventLog,
+      PaymentSender,
+      PaymentRecipient,
+      BoletoPayer,
     ]),
     TransactionModule,
     AccountModule,

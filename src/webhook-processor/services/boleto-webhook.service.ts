@@ -59,7 +59,6 @@ export class BoletoWebhookService {
 
       await this.boletoRepository.save(boleto);
 
-      // Registra o evento no log
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'BOLETO',
@@ -107,7 +106,6 @@ export class BoletoWebhookService {
         );
       }
 
-      // Validar sequência de webhook
       const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
         data.authenticationCode,
       );
@@ -148,7 +146,6 @@ export class BoletoWebhookService {
         providerTimestamp: new Date(event.timestamp),
       });
 
-      // Registra o evento como processado
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'BOLETO',
@@ -196,7 +193,6 @@ export class BoletoWebhookService {
         );
       }
 
-      // Validar sequência de webhook
       const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
         data.authenticationCode,
       );
@@ -225,7 +221,6 @@ export class BoletoWebhookService {
         mapWebhookEventToTransactionStatus('BOLETO_CASH_IN_WAS_CLEARED'),
       );
 
-      // Registra o evento como processado
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'BOLETO',
@@ -271,7 +266,6 @@ export class BoletoWebhookService {
         );
       }
 
-      // Validar sequência de webhook
       const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
         data.authenticationCode,
       );
@@ -301,7 +295,6 @@ export class BoletoWebhookService {
         mapWebhookEventToTransactionStatus('BOLETO_WAS_CANCELLED'),
       );
 
-      // Registra o evento como processado
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'BOLETO',
