@@ -19,10 +19,8 @@ import {
   PixCashOutData,
   PixRefundData,
 } from '../interfaces/pix-webhook.interface';
-import type {
-  PixWebhookJob,
-  PixWebhookEventType,
-} from '../processors/pix-webhook.processor';
+import type { PixWebhookJob } from '../processors/pix-webhook.processor';
+import { enqueueWebhookEvent } from '../helpers/enqueue-webhook.helper';
 
 /**
  * Controller que recebe webhooks de PIX e os enfileira para processamento assíncrono.
@@ -37,34 +35,6 @@ export class PixWebhookController {
     private readonly webhookQueue: Queue<PixWebhookJob>,
   ) {}
 
-  /**
-   * Enfileira um evento de webhook para processamento assíncrono.
-   */
-  private async enqueueEvent(
-    eventType: PixWebhookEventType,
-    events: unknown[],
-    request: Request,
-  ): Promise<{ received: boolean }> {
-    const clientId = request.webhookClientId || '';
-    const validPublicKey = request.validPublicKey || false;
-    const jobId =
-      events.length > 0
-        ? (events[0] as WebhookPayload<unknown>).idempotencyKey
-        : undefined;
-
-    await this.webhookQueue.add(
-      {
-        eventType,
-        events: events as PixWebhookJob['events'],
-        clientId,
-        validPublicKey,
-      },
-      { jobId },
-    );
-
-    return { received: true };
-  }
-
   @Post('cash-in/received')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'PIX_CASH_IN_WAS_RECEIVED' })
@@ -73,7 +43,12 @@ export class PixWebhookController {
     @Body() events: WebhookPayload<PixCashInReceivedData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    return this.enqueueEvent('CASH_IN_RECEIVED', events, request);
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'CASH_IN_RECEIVED',
+      events,
+      request,
+    );
   }
 
   @Post('cash-in/cleared')
@@ -84,7 +59,12 @@ export class PixWebhookController {
     @Body() events: WebhookPayload<PixCashInClearedData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    return this.enqueueEvent('CASH_IN_CLEARED', events, request);
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'CASH_IN_CLEARED',
+      events,
+      request,
+    );
   }
 
   @Post('cash-out/completed')
@@ -95,7 +75,12 @@ export class PixWebhookController {
     @Body() events: WebhookPayload<PixCashOutData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    return this.enqueueEvent('CASH_OUT_COMPLETED', events, request);
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'CASH_OUT_COMPLETED',
+      events,
+      request,
+    );
   }
 
   @Post('cash-out/canceled')
@@ -106,7 +91,12 @@ export class PixWebhookController {
     @Body() events: WebhookPayload<PixCashOutData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    return this.enqueueEvent('CASH_OUT_CANCELED', events, request);
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'CASH_OUT_CANCELED',
+      events,
+      request,
+    );
   }
 
   @Post('cash-out/undone')
@@ -117,7 +107,12 @@ export class PixWebhookController {
     @Body() events: WebhookPayload<PixCashOutData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    return this.enqueueEvent('CASH_OUT_UNDONE', events, request);
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'CASH_OUT_UNDONE',
+      events,
+      request,
+    );
   }
 
   @Post('refund/received')
@@ -128,7 +123,12 @@ export class PixWebhookController {
     @Body() events: WebhookPayload<PixRefundData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    return this.enqueueEvent('REFUND_RECEIVED', events, request);
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'REFUND_RECEIVED',
+      events,
+      request,
+    );
   }
 
   @Post('refund/cleared')
@@ -139,6 +139,11 @@ export class PixWebhookController {
     @Body() events: WebhookPayload<PixRefundData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    return this.enqueueEvent('REFUND_CLEARED', events, request);
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'REFUND_CLEARED',
+      events,
+      request,
+    );
   }
 }

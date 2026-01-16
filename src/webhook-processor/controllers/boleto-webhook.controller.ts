@@ -14,10 +14,8 @@ import type { Queue } from 'bull';
 import { WebhookPublicKeyGuard } from '../guards/webhook-public-key.guard';
 import { WebhookPayload } from '../interfaces/webhook-base.interface';
 import { BoletoWebhookData } from '../interfaces/boleto-webhook.interface';
-import type {
-  BoletoWebhookJob,
-  BoletoWebhookEventType,
-} from '../processors/boleto-webhook.processor';
+import type { BoletoWebhookJob } from '../processors/boleto-webhook.processor';
+import { enqueueWebhookEvent } from '../helpers/enqueue-webhook.helper';
 
 /**
  * Controller que recebe webhooks de boleto e os enfileira para processamento assíncrono.
@@ -32,31 +30,6 @@ export class BoletoWebhookController {
     private readonly webhookQueue: Queue<BoletoWebhookJob>,
   ) {}
 
-  /**
-   * Enfileira um evento de webhook para processamento assíncrono.
-   */
-  private async enqueueEvent(
-    eventType: BoletoWebhookEventType,
-    events: WebhookPayload<BoletoWebhookData>[],
-    request: Request,
-  ): Promise<{ received: boolean }> {
-    const clientId = request.webhookClientId || '';
-    const validPublicKey = request.validPublicKey || false;
-    const jobId = events.length > 0 ? events[0].idempotencyKey : undefined;
-
-    await this.webhookQueue.add(
-      {
-        eventType,
-        events,
-        clientId,
-        validPublicKey,
-      },
-      { jobId },
-    );
-
-    return { received: true };
-  }
-
   @Post('registered')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'BOLETO_WAS_REGISTERED' })
@@ -65,7 +38,12 @@ export class BoletoWebhookController {
     @Body() events: WebhookPayload<BoletoWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    return this.enqueueEvent('REGISTERED', events, request);
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'REGISTERED',
+      events,
+      request,
+    );
   }
 
   @Post('cash-in/received')
@@ -76,7 +54,12 @@ export class BoletoWebhookController {
     @Body() events: WebhookPayload<BoletoWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    return this.enqueueEvent('CASH_IN_RECEIVED', events, request);
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'CASH_IN_RECEIVED',
+      events,
+      request,
+    );
   }
 
   @Post('cash-in/cleared')
@@ -87,7 +70,12 @@ export class BoletoWebhookController {
     @Body() events: WebhookPayload<BoletoWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    return this.enqueueEvent('CASH_IN_CLEARED', events, request);
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'CASH_IN_CLEARED',
+      events,
+      request,
+    );
   }
 
   @Post('cancelled')
@@ -98,6 +86,11 @@ export class BoletoWebhookController {
     @Body() events: WebhookPayload<BoletoWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    return this.enqueueEvent('CANCELLED', events, request);
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'CANCELLED',
+      events,
+      request,
+    );
   }
 }

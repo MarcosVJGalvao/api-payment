@@ -14,10 +14,8 @@ import type { Queue } from 'bull';
 import { WebhookPublicKeyGuard } from '../guards/webhook-public-key.guard';
 import { WebhookPayload } from '../interfaces/webhook-base.interface';
 import { BillPaymentWebhookData } from '../interfaces/bill-payment-webhook.interface';
-import type {
-  BillPaymentWebhookJob,
-  BillPaymentWebhookEventType,
-} from '../processors/bill-payment-webhook.processor';
+import type { BillPaymentWebhookJob } from '../processors/bill-payment-webhook.processor';
+import { enqueueWebhookEvent } from '../helpers/enqueue-webhook.helper';
 
 /**
  * Controller que recebe webhooks de pagamento de contas e os enfileira para processamento assíncrono.
@@ -36,32 +34,6 @@ export class BillPaymentWebhookController {
    * Enfileira um evento de webhook para processamento assíncrono.
    * Usa o idempotencyKey do primeiro evento como jobId para deduplicação.
    */
-  private async enqueueEvent(
-    eventType: BillPaymentWebhookEventType,
-    events: WebhookPayload<BillPaymentWebhookData>[],
-    request: Request,
-  ): Promise<{ received: boolean }> {
-    const clientId = request.webhookClientId || '';
-    const validPublicKey = request.validPublicKey || false;
-
-    // Usar idempotencyKey do primeiro evento como jobId para deduplicação
-    const jobId = events.length > 0 ? events[0].idempotencyKey : undefined;
-
-    await this.webhookQueue.add(
-      {
-        eventType,
-        events,
-        clientId,
-        validPublicKey,
-      },
-      {
-        jobId, // Bull rejeita jobs com mesmo ID (deduplicação)
-      },
-    );
-
-    return { received: true };
-  }
-
   @Post('received')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'BILL_PAYMENT_WAS_RECEIVED' })
@@ -70,7 +42,12 @@ export class BillPaymentWebhookController {
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    return this.enqueueEvent('RECEIVED', events, request);
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'RECEIVED',
+      events,
+      request,
+    );
   }
 
   @Post('created')
@@ -81,7 +58,12 @@ export class BillPaymentWebhookController {
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    return this.enqueueEvent('CREATED', events, request);
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'CREATED',
+      events,
+      request,
+    );
   }
 
   @Post('confirmed')
@@ -92,7 +74,12 @@ export class BillPaymentWebhookController {
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    return this.enqueueEvent('CONFIRMED', events, request);
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'CONFIRMED',
+      events,
+      request,
+    );
   }
 
   @Post('failed')
@@ -103,7 +90,12 @@ export class BillPaymentWebhookController {
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    return this.enqueueEvent('FAILED', events, request);
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'FAILED',
+      events,
+      request,
+    );
   }
 
   @Post('cancelled')
@@ -114,7 +106,12 @@ export class BillPaymentWebhookController {
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    return this.enqueueEvent('CANCELLED', events, request);
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'CANCELLED',
+      events,
+      request,
+    );
   }
 
   @Post('refused')
@@ -125,6 +122,11 @@ export class BillPaymentWebhookController {
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    return this.enqueueEvent('REFUSED', events, request);
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'REFUSED',
+      events,
+      request,
+    );
   }
 }
