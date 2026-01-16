@@ -16,6 +16,8 @@ import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { Client } from '@/client/entities/client.entity';
 import { Account } from '@/account/entities/account.entity';
 import { Exclude } from 'class-transformer';
+import { OneToMany } from 'typeorm';
+import { Transaction } from '@/transaction/entities/transaction.entity';
 
 @Entity('pix_transfer')
 @Index(['status'])
@@ -311,9 +313,72 @@ export class PixTransfer {
   })
   updatedAt: Date;
 
+  // ========================================
+  // Campos de webhook (PIX_CASHOUT_WAS_*)
+  // ========================================
+
+  /** Data do pagamento retornada pelo webhook */
+  @Column({
+    type: 'datetime',
+    name: 'payment_date',
+    nullable: true,
+    comment: 'Data do pagamento (webhook)',
+  })
+  paymentDate?: Date;
+
+  /** Indica se é uma devolução (MED) */
+  @Column({
+    type: 'boolean',
+    name: 'is_refund',
+    default: false,
+    comment: 'Indica se é devolução (MED)',
+  })
+  isRefund: boolean;
+
+  /** EndToEndId da transação original (quando isRefund = true) */
+  @Column({
+    type: 'varchar',
+    length: 50,
+    name: 'end_to_end_id_original',
+    nullable: true,
+    comment: 'EndToEndId original (se devolução)',
+  })
+  endToEndIdOriginal?: string;
+
+  /** Motivo da recusa (CANCELED, UNDONE) */
+  @Column({
+    type: 'varchar',
+    length: 255,
+    name: 'refusal_reason',
+    nullable: true,
+    comment: 'Motivo da recusa',
+  })
+  refusalReason?: string;
+
+  /** Indica se ocorreu via Open Banking */
+  @Column({
+    type: 'boolean',
+    name: 'is_pix_open_banking',
+    default: false,
+    comment: 'Transação via Open Banking',
+  })
+  isPixOpenBanking: boolean;
+
+  /** Indica se é transação interna */
+  @Column({
+    type: 'boolean',
+    name: 'is_internal',
+    default: false,
+    comment: 'Transação interna',
+  })
+  isInternal: boolean;
+
   @DeleteDateColumn({
     name: 'deleted_at',
     type: 'datetime',
   })
   deletedAt?: Date;
+
+  @OneToMany(() => Transaction, (transaction) => transaction.pixTransfer)
+  transactions: Transaction[];
 }

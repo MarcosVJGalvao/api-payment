@@ -3,11 +3,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AppLoggerService } from '@/common/logger/logger.service';
 import { Boleto } from '../entities/boleto.entity';
+import { BoletoStatus } from '../enums/boleto-status.enum';
 import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { BoletoProviderHelper } from './boleto-provider.helper';
 import { BoletoGetDataResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { parseBoletoStatus } from './boleto-validation.helper';
+import { TransactionService } from '@/transaction/transaction.service';
+import { TransactionType } from '@/transaction/enums/transaction-type.enum';
+import { TransactionStatus } from '@/transaction/enums/transaction-status.enum';
 
 /**
  * Helper responsável pela sincronização de dados de boletos com provedores externos.
@@ -21,6 +25,7 @@ export class BoletoSyncHelper {
     private readonly repository: Repository<Boleto>,
     private readonly providerHelper: BoletoProviderHelper,
     private readonly logger: AppLoggerService,
+    private readonly transactionService: TransactionService,
   ) {}
 
   /**
@@ -94,11 +99,21 @@ export class BoletoSyncHelper {
         const updatedBoleto = await this.repository.findOne({
           where: { id: boleto.id },
         });
+
         if (updatedBoleto) {
           this.logger.log(
             `Boleto data persisted from Hiperbanco: ${boleto.id}`,
             this.context,
           );
+
+          // Criar Transaction quando status = PAID (boleto conciliado/liquidado)
+          if (
+            updateData.status === BoletoStatus.PAID &&
+            updatedBoleto.authenticationCode
+          ) {
+            await this.createTransactionForBoleto(updatedBoleto);
+          }
+
           return updatedBoleto;
         }
       }
@@ -112,5 +127,39 @@ export class BoletoSyncHelper {
     }
 
     return boleto;
+  }
+
+  /**
+   * Cria uma Transaction para o boleto quando ele é pago.
+   */
+  private async createTransactionForBoleto(boleto: Boleto): Promise<void> {
+    try {
+      const existingTx = await this.transactionService.findByAuthenticationCode(
+        boleto.authenticationCode!,
+      );
+
+      if (!existingTx) {
+        await this.transactionService.createFromWebhook({
+          authenticationCode: boleto.authenticationCode!,
+          type: TransactionType.BOLETO_CASH_IN,
+          status: TransactionStatus.DONE,
+          amount: boleto.amount,
+          clientId: boleto.clientId,
+          accountId: boleto.accountId,
+          boletoId: boleto.id,
+        });
+
+        this.logger.log(
+          `Transaction created for paid boleto: ${boleto.id}`,
+          this.context,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to create transaction for boleto: ${error instanceof Error ? error.message : String(error)}`,
+        error instanceof Error ? error.stack : undefined,
+        this.context,
+      );
+    }
   }
 }

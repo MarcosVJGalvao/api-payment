@@ -6,8 +6,10 @@ import {
   Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
 import { ClientStatus } from '../enums/client-status.enum';
+import { Transaction } from '@/transaction/entities/transaction.entity';
 
 @Entity('client')
 @Index(['document'], { unique: true })
@@ -64,4 +66,7 @@ export class Client {
     type: 'datetime',
   })
   deletedAt?: Date;
+
+  @OneToMany(() => Transaction, (transaction) => transaction.client)
+  transactions: Transaction[];
 }

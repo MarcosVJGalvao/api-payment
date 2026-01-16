@@ -19,10 +19,16 @@ import { PixTransferDto } from './dto/pix-transfer.dto';
 import { PixKeyType } from './enums/pix-key-type.enum';
 import { PixTransfer } from './entities/pix-transfer.entity';
 import { PixTransferStatus } from './enums/pix-transfer-status.enum';
-import { PixInitializationType } from './enums/pix-initialization-type.enum';
 import { PixAccountType } from './enums/pix-account-type.enum';
-import { PixTransactionType } from './enums/pix-transaction-type.enum';
 import { OnboardingTypeAccount } from '@/onboarding/enums/onboarding-type-account.enum';
+import { TransactionService } from '@/transaction/transaction.service';
+import { TransactionType } from '@/transaction/enums/transaction-type.enum';
+import { mapPixTransferStatusToTransactionStatus } from '@/common/helpers/status-mapper.helper';
+import {
+  buildTransferPayload,
+  mapTransactionType,
+  mapPixTransferStatus,
+} from './helpers/pix-transfer.helper';
 
 @Injectable()
 export class PixService {
@@ -34,6 +40,7 @@ export class PixService {
     private readonly logger: AppLoggerService,
     @InjectRepository(PixTransfer)
     private readonly pixTransferRepository: Repository<PixTransfer>,
+    private readonly transactionService: TransactionService,
   ) {}
 
   async getPixKeys(
@@ -240,14 +247,14 @@ export class PixService {
       throw new CustomHttpException(
         'Account onboarding not found',
         HttpStatus.BAD_REQUEST,
-        ErrorCode.INVALID_INPUT,
+        ErrorCode.ACCOUNT_NOT_FOUND,
       );
     }
 
     const senderDocType =
       onboarding.typeAccount === OnboardingTypeAccount.PF ? 'CPF' : 'CNPJ';
 
-    const payload = this.buildTransferPayload(dto, account, onboarding);
+    const payload = buildTransferPayload(dto, account, onboarding);
 
     this.logger.log(
       `Creating PIX transfer: type=${dto.initializationType} amount=${dto.amount}`,
@@ -286,13 +293,15 @@ export class PixService {
       );
 
       // Atualizar com dados do response
-      pixTransfer.status =
-        (response.status as PixTransferStatus) || PixTransferStatus.DONE;
+      pixTransfer.status = mapPixTransferStatus(
+        response.status,
+        PixTransferStatus.CREATED,
+      );
       pixTransfer.transactionId = response.transactionId;
       pixTransfer.authenticationCode = response.authenticationCode;
       pixTransfer.correlationId = response.correlationId;
       pixTransfer.channel = response.channel;
-      pixTransfer.type = this.mapTransactionType(response.type);
+      pixTransfer.type = mapTransactionType(response.type);
       pixTransfer.recipientDocumentType = response.recipient.documentType;
       pixTransfer.recipientDocumentNumber = response.recipient.documentNumber;
       pixTransfer.recipientName = response.recipient.name;
@@ -304,6 +313,15 @@ export class PixService {
       pixTransfer.recipientBankName = response.recipient.bank.name;
 
       await this.pixTransferRepository.save(pixTransfer);
+
+      // Criar Transaction para o PIX transfer
+      if (pixTransfer.authenticationCode) {
+        await this.createTransactionForTransfer(
+          pixTransfer,
+          clientId,
+          accountId,
+        );
+      }
 
       this.logger.log(
         `PIX transfer completed: id=${pixTransfer.id} transactionId=${response.transactionId}`,
@@ -344,64 +362,41 @@ export class PixService {
     return account;
   }
 
-  private buildTransferPayload(
-    dto: PixTransferDto,
-    account: { branch: string; number: string },
-    onboarding: { documentNumber: string; registerName: string },
-  ) {
-    const basePayload = {
-      sender: {
-        account: {
-          type: PixAccountType.CHECKING,
-          branch: account.branch,
-          number: account.number,
-        },
-        documentNumber: onboarding.documentNumber,
-        name: onboarding.registerName,
-      },
-      amount: dto.amount,
-      initializationType: dto.initializationType,
-      paymentDate: dto.paymentDate || '',
-    };
+  /**
+   * Cria uma Transaction para o PIX transfer.
+   */
+  private async createTransactionForTransfer(
+    pixTransfer: PixTransfer,
+    clientId: string,
+    accountId: string,
+  ): Promise<void> {
+    try {
+      const existingTx = await this.transactionService.findByAuthenticationCode(
+        pixTransfer.authenticationCode!,
+      );
 
-    if (dto.initializationType === PixInitializationType.MANUAL) {
-      return {
-        ...basePayload,
-        transactionNotes: dto.description,
-        recipient: {
-          documentNumber: dto.recipient!.documentNumber,
-          name: dto.recipient!.name,
-          account: dto.recipient!.account,
-          bank: dto.recipient!.bank,
-        },
-      };
+      if (!existingTx) {
+        await this.transactionService.createFromWebhook({
+          authenticationCode: pixTransfer.authenticationCode!,
+          type: TransactionType.PIX_CASH_OUT,
+          status: mapPixTransferStatusToTransactionStatus(pixTransfer.status),
+          amount: pixTransfer.amount,
+          clientId,
+          accountId,
+          pixTransferId: pixTransfer.id,
+        });
+
+        this.logger.log(
+          `Transaction created for PIX transfer: ${pixTransfer.id}`,
+          this.context,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to create transaction for PIX transfer: ${error instanceof Error ? error.message : String(error)}`,
+        error instanceof Error ? error.stack : undefined,
+        this.context,
+      );
     }
-
-    const keyPayload = {
-      ...basePayload,
-      description: dto.description,
-      endToEndId: dto.endToEndId,
-      pixKey: dto.pixKey,
-    };
-
-    if (dto.initializationType === PixInitializationType.STATIC_QR_CODE) {
-      return { ...keyPayload, conciliationId: dto.conciliationId };
-    }
-
-    if (dto.initializationType === PixInitializationType.DYNAMIC_QR_CODE) {
-      return {
-        ...keyPayload,
-        receiverReconciliationId: dto.receiverReconciliationId,
-      };
-    }
-
-    return keyPayload;
-  }
-
-  private mapTransactionType(type?: string): PixTransactionType | undefined {
-    if (!type) return undefined;
-    if (type === 'CASH_OUT') return PixTransactionType.DEBIT;
-    if (type === 'CASH_IN') return PixTransactionType.CREDIT;
-    return undefined;
   }
 }

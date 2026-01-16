@@ -1,6 +1,8 @@
-import { IAccount } from './account.interface';
-
-export interface ICancelBoleto {
+/**
+ * Dados mínimos necessários para cancelar um boleto no provedor.
+ */
+export interface IBoletoCancelData {
   authenticationCode: string;
-  account: IAccount;
+  accountNumber: string;
+  accountBranch: string;
 }

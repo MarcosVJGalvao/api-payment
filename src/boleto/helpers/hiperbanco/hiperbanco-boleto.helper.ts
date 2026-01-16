@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { HiperbancoHttpService } from '@/financial-providers/hiperbanco/hiperbanco-http.service';
 import { CreateBoletoDto } from '../../dto/create-boleto.dto';
-import { CancelBoletoDto } from '../../dto/cancel-boleto.dto';
+import { IBoletoCancelData } from '../../interfaces/cancel-boleto.interface';
 import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
 import {
   BoletoEmissionResponse,
@@ -66,19 +66,19 @@ export class HiperbancoBoletoHelper {
 
   /**
    * Cancela um boleto no Hiperbanco.
-   * @param dto Dados do boleto a ser cancelado.
+   * @param data Dados mínimos do boleto necessários para cancelamento.
    * @param session Sessão autenticada do provedor (já validada pelo guard).
    * @returns Resposta do Hiperbanco confirmando o cancelamento.
    */
   async cancelBoleto(
-    dto: CancelBoletoDto,
+    data: IBoletoCancelData,
     session: ProviderSession,
   ): Promise<BoletoCancelResponse> {
     const payload = {
-      authenticationCode: dto.authenticationCode,
+      authenticationCode: data.authenticationCode,
       account: {
-        number: dto.account.number,
-        branch: dto.account.branch,
+        number: data.accountNumber,
+        branch: data.accountBranch,
       },
     };
 

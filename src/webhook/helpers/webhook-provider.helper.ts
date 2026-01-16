@@ -33,7 +33,7 @@ export class WebhookProviderHelper {
         return this.hiperbancoHelper.registerWebhook(dto, session);
       default:
         throw new CustomHttpException(
-          `Provider ${provider} não suportado`,
+          `Provider ${String(provider)} não suportado`,
           HttpStatus.BAD_REQUEST,
           ErrorCode.INVALID_INPUT,
         );
@@ -53,7 +53,7 @@ export class WebhookProviderHelper {
         return this.hiperbancoHelper.listWebhooks(query, session);
       default:
         throw new CustomHttpException(
-          `Provider ${provider} não suportado`,
+          `Provider ${String(provider)} não suportado`,
           HttpStatus.BAD_REQUEST,
           ErrorCode.INVALID_INPUT,
         );
@@ -74,7 +74,7 @@ export class WebhookProviderHelper {
         return this.hiperbancoHelper.updateWebhook(webhookId, dto.uri, session);
       default:
         throw new CustomHttpException(
-          `Provider ${provider} não suportado`,
+          `Provider ${String(provider)} não suportado`,
           HttpStatus.BAD_REQUEST,
           ErrorCode.INVALID_INPUT,
         );
@@ -94,7 +94,7 @@ export class WebhookProviderHelper {
         return this.hiperbancoHelper.deleteWebhook(webhookId, session);
       default:
         throw new CustomHttpException(
-          `Provider ${provider} não suportado`,
+          `Provider ${String(provider)} não suportado`,
           HttpStatus.BAD_REQUEST,
           ErrorCode.INVALID_INPUT,
         );

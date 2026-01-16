@@ -11,6 +11,8 @@ import {
 } from 'typeorm';
 import { Client } from '@/client/entities/client.entity';
 import { Onboarding } from '@/onboarding/entities/onboarding.entity';
+import { OneToMany } from 'typeorm';
+import { Transaction } from '@/transaction/entities/transaction.entity';
 
 export enum AccountStatus {
   ACTIVE = 'ACTIVE',
@@ -108,4 +110,7 @@ export class Account {
     type: 'datetime',
   })
   deletedAt?: Date;
+
+  @OneToMany(() => Transaction, (transaction) => transaction.account)
+  transactions: Transaction[];
 }

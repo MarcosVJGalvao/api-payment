@@ -26,6 +26,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { bullConfigFactory } from './config/bull.config';
+import { TransactionModule } from './transaction/transaction.module';
+import { WebhookProcessorModule } from './webhook-processor/webhook-processor.module';
 
 @Module({
   imports: [
@@ -55,6 +57,8 @@ import { bullConfigFactory } from './config/bull.config';
     PixModule,
     ClientModule,
     InternalUserModule,
+    TransactionModule,
+    WebhookProcessorModule,
   ],
   controllers: [AppController],
   providers: [AppService],

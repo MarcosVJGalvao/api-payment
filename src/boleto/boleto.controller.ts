@@ -12,7 +12,6 @@ import {
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { BoletoService } from './boleto.service';
 import { CreateBoletoDto } from './dto/create-boleto.dto';
-import { CancelBoletoDto } from './dto/cancel-boleto.dto';
 import { QueryBoletoDto } from './dto/query-boleto.dto';
 import { ApiCreateBoleto } from './docs/api-create-boleto.decorator';
 import { ApiGetBoleto } from './docs/api-get-boleto.decorator';
@@ -85,13 +84,7 @@ export class BoletoController {
     @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
     @Param('id') id: string,
     @Req() req: RequestWithSession,
-    @Body() dto: CancelBoletoDto,
   ) {
-    return this.boletoService.cancelBoleto(
-      id,
-      provider,
-      dto,
-      req.providerSession,
-    );
+    return this.boletoService.cancelBoleto(id, provider, req.providerSession);
   }
 }

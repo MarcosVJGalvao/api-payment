@@ -9,6 +9,7 @@ import { AccountModule } from '@/account/account.module';
 import { PixTransfer } from './entities/pix-transfer.entity';
 import { ClientModule } from '@/client/client.module';
 import { PermissionsModule } from '@/permissions/permissions.module';
+import { TransactionModule } from '@/transaction/transaction.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { PermissionsModule } from '@/permissions/permissions.module';
     AccountModule,
     ClientModule,
     PermissionsModule,
+    TransactionModule,
   ],
   controllers: [PixController],
   providers: [PixService, PixProviderHelper, HiperbancoPixHelper],
