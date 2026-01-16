@@ -11,6 +11,8 @@ import { mapWebhookEventToTransactionStatus } from '../helpers/transaction-statu
 import { canProcessWebhook } from '../helpers/webhook-state-machine.helper';
 import { WebhookEventLogService } from './webhook-event-log.service';
 import { WebhookEvent } from '../enums/webhook-event.enum';
+import { TransactionNotFoundRetryableException } from '@/common/errors/exceptions/transaction-not-found-retryable.exception';
+import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
 
 @Injectable()
 export class BoletoWebhookService {
@@ -41,9 +43,12 @@ export class BoletoWebhookService {
 
       if (!boleto) {
         this.logger.warn(
-          `Boleto not found for REGISTERED: ${data.authenticationCode}`,
+          `Boleto not found for REGISTERED: ${data.authenticationCode} - will retry`,
         );
-        continue;
+        throw new TransactionNotFoundRetryableException(
+          data.authenticationCode,
+          'BOLETO_WAS_REGISTERED',
+        );
       }
 
       boleto.authenticationCode = data.authenticationCode;
@@ -94,9 +99,12 @@ export class BoletoWebhookService {
 
       if (!boleto) {
         this.logger.warn(
-          `Boleto not found for CASH_IN_RECEIVED: ${data.authenticationCode}`,
+          `Boleto not found for CASH_IN_RECEIVED: ${data.authenticationCode} - will retry`,
         );
-        continue;
+        throw new TransactionNotFoundRetryableException(
+          data.authenticationCode,
+          'BOLETO_CASH_IN_WAS_RECEIVED',
+        );
       }
 
       // Validar sequência de webhook
@@ -110,21 +118,14 @@ export class BoletoWebhookService {
 
       if (!validation.canProcess) {
         this.logger.warn(
-          `BOLETO_CASH_IN_WAS_RECEIVED: Out of sequence - ${validation.reason}`,
+          `BOLETO_CASH_IN_WAS_RECEIVED: Out of sequence - ${validation.reason} - will retry`,
           { authenticationCode: data.authenticationCode },
         );
-        await this.webhookEventLogService.logEvent({
-          authenticationCode: data.authenticationCode,
-          entityType: 'BOLETO',
-          entityId: boleto.id,
-          eventName: WebhookEvent.BOLETO_CASH_IN_WAS_RECEIVED,
-          wasProcessed: false,
-          skipReason: validation.reason,
-          payload: event as unknown as Record<string, unknown>,
-          providerTimestamp: new Date(event.timestamp),
-          clientId,
-        });
-        continue;
+        throw new WebhookOutOfSequenceRetryableException(
+          data.authenticationCode,
+          'BOLETO_CASH_IN_WAS_RECEIVED',
+          validation.reason || 'Unknown reason',
+        );
       }
 
       boleto.status = BoletoStatus.PROCESSING;
@@ -187,9 +188,12 @@ export class BoletoWebhookService {
 
       if (!boleto) {
         this.logger.warn(
-          `Boleto not found for CASH_IN_CLEARED: ${data.authenticationCode}`,
+          `Boleto not found for CASH_IN_CLEARED: ${data.authenticationCode} - will retry`,
         );
-        continue;
+        throw new TransactionNotFoundRetryableException(
+          data.authenticationCode,
+          'BOLETO_CASH_IN_WAS_CLEARED',
+        );
       }
 
       // Validar sequência de webhook
@@ -203,21 +207,14 @@ export class BoletoWebhookService {
 
       if (!validation.canProcess) {
         this.logger.warn(
-          `BOLETO_CASH_IN_WAS_CLEARED: Out of sequence - ${validation.reason}`,
+          `BOLETO_CASH_IN_WAS_CLEARED: Out of sequence - ${validation.reason} - will retry`,
           { authenticationCode: data.authenticationCode },
         );
-        await this.webhookEventLogService.logEvent({
-          authenticationCode: data.authenticationCode,
-          entityType: 'BOLETO',
-          entityId: boleto.id,
-          eventName: WebhookEvent.BOLETO_CASH_IN_WAS_CLEARED,
-          wasProcessed: false,
-          skipReason: validation.reason,
-          payload: event as unknown as Record<string, unknown>,
-          providerTimestamp: new Date(event.timestamp),
-          clientId,
-        });
-        continue;
+        throw new WebhookOutOfSequenceRetryableException(
+          data.authenticationCode,
+          'BOLETO_CASH_IN_WAS_CLEARED',
+          validation.reason || 'Unknown reason',
+        );
       }
 
       boleto.status = BoletoStatus.PAID;
@@ -266,9 +263,12 @@ export class BoletoWebhookService {
 
       if (!boleto) {
         this.logger.warn(
-          `Boleto not found for CANCELLED: ${data.authenticationCode}`,
+          `Boleto not found for CANCELLED: ${data.authenticationCode} - will retry`,
         );
-        continue;
+        throw new TransactionNotFoundRetryableException(
+          data.authenticationCode,
+          'BOLETO_WAS_CANCELLED',
+        );
       }
 
       // Validar sequência de webhook
@@ -282,21 +282,14 @@ export class BoletoWebhookService {
 
       if (!validation.canProcess) {
         this.logger.warn(
-          `BOLETO_WAS_CANCELLED: Out of sequence - ${validation.reason}`,
+          `BOLETO_WAS_CANCELLED: Out of sequence - ${validation.reason} - will retry`,
           { authenticationCode: data.authenticationCode },
         );
-        await this.webhookEventLogService.logEvent({
-          authenticationCode: data.authenticationCode,
-          entityType: 'BOLETO',
-          entityId: boleto.id,
-          eventName: WebhookEvent.BOLETO_WAS_CANCELLED,
-          wasProcessed: false,
-          skipReason: validation.reason,
-          payload: event as unknown as Record<string, unknown>,
-          providerTimestamp: new Date(event.timestamp),
-          clientId,
-        });
-        continue;
+        throw new WebhookOutOfSequenceRetryableException(
+          data.authenticationCode,
+          'BOLETO_WAS_CANCELLED',
+          validation.reason || 'Unknown reason',
+        );
       }
 
       boleto.status = BoletoStatus.CANCELLED;

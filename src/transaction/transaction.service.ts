@@ -29,6 +29,19 @@ export interface CreateTransactionFromWebhook {
 }
 
 /**
+ * Interface para atualização de transação via webhook.
+ */
+export interface UpdateTransactionFromWebhook {
+  authenticationCode: string;
+  status: TransactionStatus;
+  correlationId?: string;
+  idempotencyKey?: string;
+  entityId?: string;
+  description?: string;
+  providerTimestamp?: Date;
+}
+
+/**
  * Service para gerenciamento de transações.
  */
 @Injectable()
@@ -93,6 +106,42 @@ export class TransactionService {
     const updated = await this.transactionRepository.save(transaction);
 
     this.logger.log(`Updated transaction ${updated.id} status to: ${status}`);
+
+    return updated;
+  }
+
+  /**
+   * Atualiza uma transação existente com dados do webhook.
+   */
+  async updateFromWebhook(
+    data: UpdateTransactionFromWebhook,
+  ): Promise<Transaction | null> {
+    const transaction =
+      await this.transactionRepository.findByAuthenticationCode(
+        data.authenticationCode,
+      );
+
+    if (!transaction) {
+      this.logger.warn(
+        `Transaction not found for authenticationCode: ${data.authenticationCode}`,
+      );
+      return null;
+    }
+
+    transaction.status = data.status;
+
+    if (data.correlationId) transaction.correlationId = data.correlationId;
+    if (data.idempotencyKey) transaction.idempotencyKey = data.idempotencyKey;
+    if (data.entityId) transaction.entityId = data.entityId;
+    if (data.description) transaction.description = data.description;
+    if (data.providerTimestamp)
+      transaction.providerTimestamp = data.providerTimestamp;
+
+    const updated = await this.transactionRepository.save(transaction);
+
+    this.logger.log(
+      `Updated transaction ${updated.id} from webhook: status=${data.status}`,
+    );
 
     return updated;
   }

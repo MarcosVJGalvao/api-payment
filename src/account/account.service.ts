@@ -55,6 +55,17 @@ export class AccountService {
     });
   }
 
+  /**
+   * Finds an account by its account number.
+   * Used by webhook processing to identify the account from webhook data.
+   */
+  async findByNumber(number: string): Promise<Account | null> {
+    return this.repository.findOne({
+      where: { number },
+      relations: ['onboarding'],
+    });
+  }
+
   async validateAccountBelongsToClient(
     accountId: string,
     clientId: string,

@@ -9,112 +9,122 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
-import { BillPaymentWebhookService } from '../services/bill-payment-webhook.service';
+import { InjectQueue } from '@nestjs/bull';
+import type { Queue } from 'bull';
 import { WebhookPublicKeyGuard } from '../guards/webhook-public-key.guard';
 import { WebhookPayload } from '../interfaces/webhook-base.interface';
 import { BillPaymentWebhookData } from '../interfaces/bill-payment-webhook.interface';
+import type {
+  BillPaymentWebhookJob,
+  BillPaymentWebhookEventType,
+} from '../processors/bill-payment-webhook.processor';
 
+/**
+ * Controller que recebe webhooks de pagamento de contas e os enfileira para processamento assíncrono.
+ * Responde 202 Accepted imediatamente após enfileirar.
+ */
 @ApiTags('Webhooks - BillPayment')
 @Controller('webhook/:provider/payment')
 @UseGuards(WebhookPublicKeyGuard)
 export class BillPaymentWebhookController {
   constructor(
-    private readonly billPaymentWebhookService: BillPaymentWebhookService,
+    @InjectQueue('webhook-bill-payment')
+    private readonly webhookQueue: Queue<BillPaymentWebhookJob>,
   ) {}
 
+  /**
+   * Enfileira um evento de webhook para processamento assíncrono.
+   * Usa o idempotencyKey do primeiro evento como jobId para deduplicação.
+   */
+  private async enqueueEvent(
+    eventType: BillPaymentWebhookEventType,
+    events: WebhookPayload<BillPaymentWebhookData>[],
+    request: Request,
+  ): Promise<{ received: boolean }> {
+    const clientId = request.webhookClientId || '';
+    const validPublicKey = request.validPublicKey || false;
+
+    // Usar idempotencyKey do primeiro evento como jobId para deduplicação
+    const jobId = events.length > 0 ? events[0].idempotencyKey : undefined;
+
+    await this.webhookQueue.add(
+      {
+        eventType,
+        events,
+        clientId,
+        validPublicKey,
+      },
+      {
+        jobId, // Bull rejeita jobs com mesmo ID (deduplicação)
+      },
+    );
+
+    return { received: true };
+  }
+
   @Post('received')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'BILL_PAYMENT_WAS_RECEIVED' })
   @ApiParam({ name: 'provider', description: 'Provedor financeiro' })
   async handleReceived(
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    await this.billPaymentWebhookService.handleReceived(
-      events,
-      request.webhookClientId || '',
-      request.validPublicKey || false,
-    );
-    return { received: true };
+    return this.enqueueEvent('RECEIVED', events, request);
   }
 
   @Post('created')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'BILL_PAYMENT_WAS_CREATED' })
   @ApiParam({ name: 'provider', description: 'Provedor financeiro' })
   async handleCreated(
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    await this.billPaymentWebhookService.handleCreated(
-      events,
-      request.webhookClientId || '',
-      request.validPublicKey || false,
-    );
-    return { received: true };
+    return this.enqueueEvent('CREATED', events, request);
   }
 
   @Post('confirmed')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'BILL_PAYMENT_WAS_CONFIRMED' })
   @ApiParam({ name: 'provider', description: 'Provedor financeiro' })
   async handleConfirmed(
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    await this.billPaymentWebhookService.handleConfirmed(
-      events,
-      request.webhookClientId || '',
-      request.validPublicKey || false,
-    );
-    return { received: true };
+    return this.enqueueEvent('CONFIRMED', events, request);
   }
 
   @Post('failed')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'BILL_PAYMENT_HAS_FAILED' })
   @ApiParam({ name: 'provider', description: 'Provedor financeiro' })
   async handleFailed(
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    await this.billPaymentWebhookService.handleFailed(
-      events,
-      request.webhookClientId || '',
-      request.validPublicKey || false,
-    );
-    return { received: true };
+    return this.enqueueEvent('FAILED', events, request);
   }
 
   @Post('cancelled')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'BILL_PAYMENT_WAS_CANCELLED' })
   @ApiParam({ name: 'provider', description: 'Provedor financeiro' })
   async handleCancelled(
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    await this.billPaymentWebhookService.handleCancelled(
-      events,
-      request.webhookClientId || '',
-      request.validPublicKey || false,
-    );
-    return { received: true };
+    return this.enqueueEvent('CANCELLED', events, request);
   }
 
   @Post('refused')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'BILL_PAYMENT_WAS_REFUSED' })
   @ApiParam({ name: 'provider', description: 'Provedor financeiro' })
   async handleRefused(
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
-    await this.billPaymentWebhookService.handleRefused(
-      events,
-      request.webhookClientId || '',
-      request.validPublicKey || false,
-    );
-    return { received: true };
+    return this.enqueueEvent('REFUSED', events, request);
   }
 }

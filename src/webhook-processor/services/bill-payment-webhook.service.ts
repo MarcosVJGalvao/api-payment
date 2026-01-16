@@ -11,6 +11,8 @@ import { mapWebhookEventToTransactionStatus } from '../helpers/transaction-statu
 import { canProcessWebhook } from '../helpers/webhook-state-machine.helper';
 import { WebhookEventLogService } from './webhook-event-log.service';
 import { WebhookEvent } from '../enums/webhook-event.enum';
+import { TransactionNotFoundRetryableException } from '@/common/errors/exceptions/transaction-not-found-retryable.exception';
+import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
 
 @Injectable()
 export class BillPaymentWebhookService {
@@ -42,16 +44,56 @@ export class BillPaymentWebhookService {
 
       if (!billPayment) {
         this.logger.warn(
-          `BillPayment not found for RECEIVED: ${data.authenticationCode}`,
+          `BillPayment not found for RECEIVED: ${data.authenticationCode} - will retry`,
         );
-        continue;
+        throw new TransactionNotFoundRetryableException(
+          data.authenticationCode,
+          'BILL_PAYMENT_WAS_RECEIVED',
+        );
       }
 
       billPayment.status = BillPaymentStatus.CREATED;
-      if (data.transactionId) billPayment.transactionId = data.transactionId;
+
+      // Campos básicos
+      if (data.transactionId)
+        billPayment.transactionId = String(data.transactionId);
       if (data.settleDate) billPayment.settleDate = new Date(data.settleDate);
       if (data.paymentDate)
         billPayment.paymentDate = new Date(data.paymentDate);
+      if (data.dueDate) billPayment.dueDate = new Date(data.dueDate);
+      if (data.digitable) billPayment.digitable = data.digitable;
+      if (data.description) billPayment.description = data.description;
+
+      // Cedente/Assignor
+      if (data.assignor) billPayment.assignor = data.assignor;
+
+      // Beneficiário/Recipient
+      if (data.recipient) {
+        if (data.recipient.name)
+          billPayment.recipientName = data.recipient.name;
+        if (data.recipient.document?.value) {
+          billPayment.recipientDocument = data.recipient.document.value.replace(
+            /[.\-/]/g,
+            '',
+          );
+        }
+      }
+
+      // Valores
+      if (data.amount?.value) billPayment.amount = data.amount.value;
+      if (data.originalAmount?.value)
+        billPayment.originalAmount = data.originalAmount.value;
+
+      // Encargos
+      if (data.charges) {
+        if (data.charges.interestAmountCalculated?.value)
+          billPayment.interestAmount =
+            data.charges.interestAmountCalculated.value;
+        if (data.charges.fineAmountCalculated?.value)
+          billPayment.fineAmount = data.charges.fineAmountCalculated.value;
+        if (data.charges.discountAmount?.value)
+          billPayment.discountAmount = data.charges.discountAmount.value;
+      }
 
       await this.billPaymentRepository.save(billPayment);
 
@@ -105,9 +147,12 @@ export class BillPaymentWebhookService {
 
       if (!billPayment) {
         this.logger.warn(
-          `BillPayment not found for CREATED: ${data.authenticationCode}`,
+          `BillPayment not found for CREATED: ${data.authenticationCode} - will retry`,
         );
-        continue;
+        throw new TransactionNotFoundRetryableException(
+          data.authenticationCode,
+          'BILL_PAYMENT_WAS_CREATED',
+        );
       }
 
       // Validar sequência de webhook
@@ -121,21 +166,14 @@ export class BillPaymentWebhookService {
 
       if (!validation.canProcess) {
         this.logger.warn(
-          `BILL_PAYMENT_WAS_CREATED: Out of sequence - ${validation.reason}`,
+          `BILL_PAYMENT_WAS_CREATED: Out of sequence - ${validation.reason} - will retry`,
           { authenticationCode: data.authenticationCode },
         );
-        await this.webhookEventLogService.logEvent({
-          authenticationCode: data.authenticationCode,
-          entityType: 'BILL_PAYMENT',
-          entityId: billPayment.id,
-          eventName: WebhookEvent.BILL_PAYMENT_WAS_CREATED,
-          wasProcessed: false,
-          skipReason: validation.reason,
-          payload: event as unknown as Record<string, unknown>,
-          providerTimestamp: new Date(event.timestamp),
-          clientId,
-        });
-        continue;
+        throw new WebhookOutOfSequenceRetryableException(
+          data.authenticationCode,
+          'BILL_PAYMENT_WAS_CREATED',
+          validation.reason || 'Unknown reason',
+        );
       }
 
       billPayment.status = BillPaymentStatus.CREATED;
@@ -184,9 +222,12 @@ export class BillPaymentWebhookService {
 
       if (!billPayment) {
         this.logger.warn(
-          `BillPayment not found for CONFIRMED: ${data.authenticationCode}`,
+          `BillPayment not found for CONFIRMED: ${data.authenticationCode} - will retry`,
         );
-        continue;
+        throw new TransactionNotFoundRetryableException(
+          data.authenticationCode,
+          'BILL_PAYMENT_WAS_CONFIRMED',
+        );
       }
 
       // Validar sequência de webhook
@@ -200,21 +241,14 @@ export class BillPaymentWebhookService {
 
       if (!validation.canProcess) {
         this.logger.warn(
-          `BILL_PAYMENT_WAS_CONFIRMED: Out of sequence - ${validation.reason}`,
+          `BILL_PAYMENT_WAS_CONFIRMED: Out of sequence - ${validation.reason} - will retry`,
           { authenticationCode: data.authenticationCode },
         );
-        await this.webhookEventLogService.logEvent({
-          authenticationCode: data.authenticationCode,
-          entityType: 'BILL_PAYMENT',
-          entityId: billPayment.id,
-          eventName: WebhookEvent.BILL_PAYMENT_WAS_CONFIRMED,
-          wasProcessed: false,
-          skipReason: validation.reason,
-          payload: event as unknown as Record<string, unknown>,
-          providerTimestamp: new Date(event.timestamp),
-          clientId,
-        });
-        continue;
+        throw new WebhookOutOfSequenceRetryableException(
+          data.authenticationCode,
+          'BILL_PAYMENT_WAS_CONFIRMED',
+          validation.reason || 'Unknown reason',
+        );
       }
 
       billPayment.status = BillPaymentStatus.CONFIRMED;
@@ -263,9 +297,12 @@ export class BillPaymentWebhookService {
 
       if (!billPayment) {
         this.logger.warn(
-          `BillPayment not found for FAILED: ${data.authenticationCode}`,
+          `BillPayment not found for FAILED: ${data.authenticationCode} - will retry`,
         );
-        continue;
+        throw new TransactionNotFoundRetryableException(
+          data.authenticationCode,
+          'BILL_PAYMENT_HAS_FAILED',
+        );
       }
 
       // Validar sequência de webhook
@@ -279,21 +316,14 @@ export class BillPaymentWebhookService {
 
       if (!validation.canProcess) {
         this.logger.warn(
-          `BILL_PAYMENT_HAS_FAILED: Out of sequence - ${validation.reason}`,
+          `BILL_PAYMENT_HAS_FAILED: Out of sequence - ${validation.reason} - will retry`,
           { authenticationCode: data.authenticationCode },
         );
-        await this.webhookEventLogService.logEvent({
-          authenticationCode: data.authenticationCode,
-          entityType: 'BILL_PAYMENT',
-          entityId: billPayment.id,
-          eventName: WebhookEvent.BILL_PAYMENT_HAS_FAILED,
-          wasProcessed: false,
-          skipReason: validation.reason,
-          payload: event as unknown as Record<string, unknown>,
-          providerTimestamp: new Date(event.timestamp),
-          clientId,
-        });
-        continue;
+        throw new WebhookOutOfSequenceRetryableException(
+          data.authenticationCode,
+          'BILL_PAYMENT_HAS_FAILED',
+          validation.reason || 'Unknown reason',
+        );
       }
 
       billPayment.status = BillPaymentStatus.CANCELLED;
@@ -344,9 +374,12 @@ export class BillPaymentWebhookService {
 
       if (!billPayment) {
         this.logger.warn(
-          `BillPayment not found for CANCELLED: ${data.authenticationCode}`,
+          `BillPayment not found for CANCELLED: ${data.authenticationCode} - will retry`,
         );
-        continue;
+        throw new TransactionNotFoundRetryableException(
+          data.authenticationCode,
+          'BILL_PAYMENT_WAS_CANCELLED',
+        );
       }
 
       // Validar sequência de webhook
@@ -360,21 +393,14 @@ export class BillPaymentWebhookService {
 
       if (!validation.canProcess) {
         this.logger.warn(
-          `BILL_PAYMENT_WAS_CANCELLED: Out of sequence - ${validation.reason}`,
+          `BILL_PAYMENT_WAS_CANCELLED: Out of sequence - ${validation.reason} - will retry`,
           { authenticationCode: data.authenticationCode },
         );
-        await this.webhookEventLogService.logEvent({
-          authenticationCode: data.authenticationCode,
-          entityType: 'BILL_PAYMENT',
-          entityId: billPayment.id,
-          eventName: WebhookEvent.BILL_PAYMENT_WAS_CANCELLED,
-          wasProcessed: false,
-          skipReason: validation.reason,
-          payload: event as unknown as Record<string, unknown>,
-          providerTimestamp: new Date(event.timestamp),
-          clientId,
-        });
-        continue;
+        throw new WebhookOutOfSequenceRetryableException(
+          data.authenticationCode,
+          'BILL_PAYMENT_WAS_CANCELLED',
+          validation.reason || 'Unknown reason',
+        );
       }
 
       billPayment.status = BillPaymentStatus.CANCELLED;
@@ -422,9 +448,12 @@ export class BillPaymentWebhookService {
 
       if (!billPayment) {
         this.logger.warn(
-          `BillPayment not found for REFUSED: ${data.authenticationCode}`,
+          `BillPayment not found for REFUSED: ${data.authenticationCode} - will retry`,
         );
-        continue;
+        throw new TransactionNotFoundRetryableException(
+          data.authenticationCode,
+          'BILL_PAYMENT_WAS_REFUSED',
+        );
       }
 
       // Validar sequência de webhook
@@ -438,21 +467,14 @@ export class BillPaymentWebhookService {
 
       if (!validation.canProcess) {
         this.logger.warn(
-          `BILL_PAYMENT_WAS_REFUSED: Out of sequence - ${validation.reason}`,
+          `BILL_PAYMENT_WAS_REFUSED: Out of sequence - ${validation.reason} - will retry`,
           { authenticationCode: data.authenticationCode },
         );
-        await this.webhookEventLogService.logEvent({
-          authenticationCode: data.authenticationCode,
-          entityType: 'BILL_PAYMENT',
-          entityId: billPayment.id,
-          eventName: WebhookEvent.BILL_PAYMENT_WAS_REFUSED,
-          wasProcessed: false,
-          skipReason: validation.reason,
-          payload: event as unknown as Record<string, unknown>,
-          providerTimestamp: new Date(event.timestamp),
-          clientId,
-        });
-        continue;
+        throw new WebhookOutOfSequenceRetryableException(
+          data.authenticationCode,
+          'BILL_PAYMENT_WAS_REFUSED',
+          validation.reason || 'Unknown reason',
+        );
       }
 
       billPayment.status = BillPaymentStatus.CANCELLED;

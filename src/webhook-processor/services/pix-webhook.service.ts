@@ -8,6 +8,7 @@ import { PixTransferStatus } from '@/pix/enums/pix-transfer-status.enum';
 import { PixCashInStatus } from '@/pix/enums/pix-cash-in-status.enum';
 import { TransactionService } from '@/transaction/transaction.service';
 import { TransactionType } from '@/transaction/enums/transaction-type.enum';
+import { AccountService } from '@/account/account.service';
 import { WebhookPayload } from '../interfaces/webhook-base.interface';
 import {
   PixCashInReceivedData,
@@ -19,6 +20,8 @@ import { mapWebhookEventToTransactionStatus } from '../helpers/transaction-statu
 import { canProcessWebhook } from '../helpers/webhook-state-machine.helper';
 import { WebhookEventLogService } from './webhook-event-log.service';
 import { WebhookEvent } from '../enums/webhook-event.enum';
+import { TransactionNotFoundRetryableException } from '@/common/errors/exceptions/transaction-not-found-retryable.exception';
+import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
 
 @Injectable()
 export class PixWebhookService {
@@ -33,6 +36,7 @@ export class PixWebhookService {
     private readonly pixTransferRepository: Repository<PixTransfer>,
     private readonly transactionService: TransactionService,
     private readonly webhookEventLogService: WebhookEventLogService,
+    private readonly accountService: AccountService,
   ) {}
 
   // ========================================
@@ -41,7 +45,7 @@ export class PixWebhookService {
 
   async handleCashInReceived(
     events: WebhookPayload<PixCashInReceivedData>[],
-    clientId: string,
+    _clientId: string,
     validPublicKey: boolean,
   ): Promise<void> {
     if (!validPublicKey) {
@@ -60,6 +64,28 @@ export class PixWebhookService {
         this.logger.log(`PixCashIn already exists: ${data.authenticationCode}`);
         continue;
       }
+
+      // Find account by recipient.account.number to get clientId and accountId
+      const recipientAccountNumber = data.recipient?.account?.number;
+      if (!recipientAccountNumber) {
+        this.logger.warn(
+          `PIX_CASH_IN_WAS_RECEIVED: No recipient account number in payload: ${data.authenticationCode}`,
+        );
+        continue;
+      }
+
+      const account = await this.accountService.findByNumber(
+        recipientAccountNumber,
+      );
+      if (!account) {
+        this.logger.warn(
+          `PIX_CASH_IN_WAS_RECEIVED: Account not found for number ${recipientAccountNumber}: ${data.authenticationCode}`,
+        );
+        continue;
+      }
+
+      const clientId = account.clientId;
+      const accountId = account.id;
 
       const pixCashIn = this.pixCashInRepository.create({
         authenticationCode: data.authenticationCode,
@@ -96,6 +122,7 @@ export class PixWebhookService {
         recipientAccountType: data.recipient?.account?.type,
         recipientBankIspb: data.recipient?.account?.bank?.ispb,
         clientId,
+        accountId,
         providerCreatedAt: data.createdAt
           ? new Date(data.createdAt)
           : undefined,
@@ -114,6 +141,7 @@ export class PixWebhookService {
         currency: data.amount?.currency || 'BRL',
         description: data.description,
         clientId,
+        accountId,
         pixCashInId: saved.id,
         providerTimestamp: new Date(event.timestamp),
       });
@@ -131,7 +159,7 @@ export class PixWebhookService {
       });
 
       this.logger.log(
-        `PIX_CASH_IN_WAS_RECEIVED processed: ${data.authenticationCode}`,
+        `PIX_CASH_IN_WAS_RECEIVED processed: ${data.authenticationCode} (account: ${recipientAccountNumber}, clientId: ${clientId})`,
       );
     }
   }
@@ -148,22 +176,35 @@ export class PixWebhookService {
 
     for (const event of events) {
       const data = event.data;
+      // Use entityId from envelope as authenticationCode if not present in data
+      const authenticationCode = data.authenticationCode || event.entityId;
 
-      const pixCashIn = await this.pixCashInRepository.findOne({
-        where: { authenticationCode: data.authenticationCode },
-      });
-
-      if (!pixCashIn) {
+      if (!authenticationCode) {
         this.logger.warn(
-          `PixCashIn not found for CLEARED: ${data.authenticationCode}`,
+          'PIX_CASH_IN_WAS_CLEARED: No authenticationCode or entityId available',
         );
         continue;
       }
 
+      const pixCashIn = await this.pixCashInRepository.findOne({
+        where: { authenticationCode },
+      });
+
+      if (!pixCashIn) {
+        this.logger.warn(
+          `PixCashIn not found for CLEARED: ${authenticationCode} - will retry`,
+        );
+        throw new TransactionNotFoundRetryableException(
+          authenticationCode,
+          'PIX_CASH_IN_WAS_CLEARED',
+        );
+      }
+
       // Validar sequência de webhook
-      const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
-        data.authenticationCode,
-      );
+      const lastEvent =
+        await this.webhookEventLogService.getLastProcessedEvent(
+          authenticationCode,
+        );
       const validation = canProcessWebhook(
         lastEvent,
         WebhookEvent.PIX_CASH_IN_WAS_CLEARED,
@@ -171,35 +212,32 @@ export class PixWebhookService {
 
       if (!validation.canProcess) {
         this.logger.warn(
-          `PIX_CASH_IN_WAS_CLEARED: Out of sequence - ${validation.reason}`,
-          { authenticationCode: data.authenticationCode },
+          `PIX_CASH_IN_WAS_CLEARED: Out of sequence - ${validation.reason} - will retry`,
+          { authenticationCode },
         );
-        // Registra o evento como não processado
-        await this.webhookEventLogService.logEvent({
-          authenticationCode: data.authenticationCode,
-          entityType: 'PIX_CASH_IN',
-          entityId: pixCashIn.id,
-          eventName: WebhookEvent.PIX_CASH_IN_WAS_CLEARED,
-          wasProcessed: false,
-          skipReason: validation.reason,
-          payload: event as unknown as Record<string, unknown>,
-          providerTimestamp: new Date(event.timestamp),
-          clientId,
-        });
-        continue;
+        throw new WebhookOutOfSequenceRetryableException(
+          authenticationCode,
+          'PIX_CASH_IN_WAS_CLEARED',
+          validation.reason || 'Unknown reason',
+        );
       }
 
       pixCashIn.status = PixCashInStatus.CLEARED;
       await this.pixCashInRepository.save(pixCashIn);
 
-      await this.transactionService.updateStatus(
-        data.authenticationCode,
-        mapWebhookEventToTransactionStatus('PIX_CASH_IN_WAS_CLEARED'),
-      );
+      await this.transactionService.updateFromWebhook({
+        authenticationCode,
+        status: mapWebhookEventToTransactionStatus('PIX_CASH_IN_WAS_CLEARED'),
+        correlationId: event.correlationId,
+        idempotencyKey: event.idempotencyKey,
+        entityId: event.entityId,
+        description: data.description,
+        providerTimestamp: new Date(event.timestamp),
+      });
 
       // Registra o evento como processado
       await this.webhookEventLogService.logEvent({
-        authenticationCode: data.authenticationCode,
+        authenticationCode,
         entityType: 'PIX_CASH_IN',
         entityId: pixCashIn.id,
         eventName: WebhookEvent.PIX_CASH_IN_WAS_CLEARED,
@@ -210,7 +248,7 @@ export class PixWebhookService {
       });
 
       this.logger.log(
-        `PIX_CASH_IN_WAS_CLEARED processed: ${data.authenticationCode}`,
+        `PIX_CASH_IN_WAS_CLEARED processed: ${authenticationCode}`,
       );
     }
   }
@@ -277,8 +315,13 @@ export class PixWebhookService {
       });
 
       if (!pixTransfer) {
-        this.logger.warn(`PixTransfer not found: ${data.authenticationCode}`);
-        continue;
+        this.logger.warn(
+          `PixTransfer not found: ${data.authenticationCode} - will retry`,
+        );
+        throw new TransactionNotFoundRetryableException(
+          data.authenticationCode,
+          String(eventName),
+        );
       }
 
       // Validar sequência de webhook
@@ -289,21 +332,14 @@ export class PixWebhookService {
 
       if (!validation.canProcess) {
         this.logger.warn(
-          `${eventName}: Out of sequence - ${validation.reason}`,
+          `${eventName}: Out of sequence - ${validation.reason} - will retry`,
           { authenticationCode: data.authenticationCode },
         );
-        await this.webhookEventLogService.logEvent({
-          authenticationCode: data.authenticationCode,
-          entityType: 'PIX_TRANSFER',
-          entityId: pixTransfer.id,
-          eventName,
-          wasProcessed: false,
-          skipReason: validation.reason,
-          payload: event as unknown as Record<string, unknown>,
-          providerTimestamp: new Date(event.timestamp),
-          clientId,
-        });
-        continue;
+        throw new WebhookOutOfSequenceRetryableException(
+          data.authenticationCode,
+          String(eventName),
+          validation.reason || 'Unknown reason',
+        );
       }
 
       pixTransfer.status = status;
@@ -322,10 +358,15 @@ export class PixWebhookService {
 
       await this.pixTransferRepository.save(pixTransfer);
 
-      await this.transactionService.updateStatus(
-        data.authenticationCode,
-        mapWebhookEventToTransactionStatus(eventName),
-      );
+      await this.transactionService.updateFromWebhook({
+        authenticationCode: data.authenticationCode,
+        status: mapWebhookEventToTransactionStatus(eventName),
+        correlationId: event.correlationId,
+        idempotencyKey: event.idempotencyKey,
+        entityId: event.entityId,
+        description: data.description,
+        providerTimestamp: new Date(event.timestamp),
+      });
 
       // Registra o evento como processado
       await this.webhookEventLogService.logEvent({
@@ -463,9 +504,12 @@ export class PixWebhookService {
 
       if (!pixRefund) {
         this.logger.warn(
-          `PixRefund not found for CLEARED: ${data.authenticationCode}`,
+          `PixRefund not found for CLEARED: ${data.authenticationCode} - will retry`,
         );
-        continue;
+        throw new TransactionNotFoundRetryableException(
+          data.authenticationCode,
+          'PIX_REFUND_WAS_CLEARED',
+        );
       }
 
       // Validar sequência de webhook
@@ -479,30 +523,28 @@ export class PixWebhookService {
 
       if (!validation.canProcess) {
         this.logger.warn(
-          `PIX_REFUND_WAS_CLEARED: Out of sequence - ${validation.reason}`,
+          `PIX_REFUND_WAS_CLEARED: Out of sequence - ${validation.reason} - will retry`,
           { authenticationCode: data.authenticationCode },
         );
-        await this.webhookEventLogService.logEvent({
-          authenticationCode: data.authenticationCode,
-          entityType: 'PIX_REFUND',
-          entityId: pixRefund.id,
-          eventName: WebhookEvent.PIX_REFUND_WAS_CLEARED,
-          wasProcessed: false,
-          skipReason: validation.reason,
-          payload: event as unknown as Record<string, unknown>,
-          providerTimestamp: new Date(event.timestamp),
-          clientId,
-        });
-        continue;
+        throw new WebhookOutOfSequenceRetryableException(
+          data.authenticationCode,
+          'PIX_REFUND_WAS_CLEARED',
+          validation.reason || 'Unknown reason',
+        );
       }
 
       pixRefund.status = PixRefundStatus.CLEARED;
       await this.pixRefundRepository.save(pixRefund);
 
-      await this.transactionService.updateStatus(
-        data.authenticationCode,
-        mapWebhookEventToTransactionStatus('PIX_REFUND_WAS_CLEARED'),
-      );
+      await this.transactionService.updateFromWebhook({
+        authenticationCode: data.authenticationCode,
+        status: mapWebhookEventToTransactionStatus('PIX_REFUND_WAS_CLEARED'),
+        correlationId: event.correlationId,
+        idempotencyKey: event.idempotencyKey,
+        entityId: event.entityId,
+        description: data.description,
+        providerTimestamp: new Date(event.timestamp),
+      });
 
       // Registra o evento como processado
       await this.webhookEventLogService.logEvent({

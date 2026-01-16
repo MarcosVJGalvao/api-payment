@@ -37,9 +37,10 @@ export interface PixCashInReceivedData {
 
 /**
  * Payload de PIX_CASH_IN_WAS_CLEARED.
+ * Note: authenticationCode may not be present in data, use entityId from envelope as fallback.
  */
 export interface PixCashInClearedData {
-  authenticationCode: string;
+  authenticationCode?: string;
   amount: AmountData;
   description?: string;
   recipient: ParticipantData;
