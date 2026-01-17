@@ -28,6 +28,7 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
 import { bullConfigFactory } from './config/bull.config';
 import { TransactionModule } from './transaction/transaction.module';
 import { WebhookProcessorModule } from './webhook-processor/webhook-processor.module';
+import { TedModule } from './ted/ted.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { WebhookProcessorModule } from './webhook-processor/webhook-processor.mo
     InternalUserModule,
     TransactionModule,
     WebhookProcessorModule,
+    TedModule,
   ],
   controllers: [AppController],
   providers: [AppService],
