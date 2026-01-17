@@ -17,12 +17,20 @@ import { GenerateTotpDto } from './dto/generate-totp.dto';
 import { DeletePixKeyParamsDto } from './dto/delete-pix-key-params.dto';
 import { ValidatePixKeyParamsDto } from './dto/validate-pix-key-params.dto';
 import { PixTransferDto } from './dto/pix-transfer.dto';
+import { GenerateStaticQrCodeDto } from './dto/generate-static-qr-code.dto';
+import { GenerateDynamicQrCodeDto } from './dto/generate-dynamic-qr-code.dto';
+import { DecodeQrCodeDto } from './dto/decode-qr-code.dto';
+import { DecodeBase64QrCodeDto } from './dto/decode-base64-qr-code.dto';
 import { ApiGetPixKeys } from './docs/api-get-pix-keys.decorator';
 import { ApiRegisterPixKey } from './docs/api-register-pix-key.decorator';
 import { ApiDeletePixKey } from './docs/api-delete-pix-key.decorator';
 import { ApiGenerateTotp } from './docs/api-generate-totp.decorator';
 import { ApiValidatePixKey } from './docs/api-validate-pix-key.decorator';
 import { ApiPixTransfer } from './docs/api-pix-transfer.decorator';
+import { ApiGenerateStaticQrCode } from './docs/api-generate-static-qrcode.decorator';
+import { ApiGenerateDynamicQrCode } from './docs/api-generate-dynamic-qrcode.decorator';
+import { ApiDecodeQrCode } from './docs/api-decode-qrcode.decorator';
+import { ApiDecodeBase64QrCode } from './docs/api-decode-base64-qrcode.decorator';
 import { Audit } from '@/common/audit/decorators/audit.decorator';
 import { AuditAction } from '@/common/audit/enums/audit-action.enum';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
@@ -142,5 +150,69 @@ export class PixController {
       req.clientId!,
       req.providerSession,
     );
+  }
+
+  @Post(':provider/qrcode/static')
+  @ApiGenerateStaticQrCode()
+  @Audit({
+    action: AuditAction.PIX_QRCODE_CREATED,
+    entityType: 'PixQrCode',
+    description: 'QR Code estático gerado',
+    captureNewValues: true,
+  })
+  async generateStaticQrCode(
+    @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
+    @Req() req: RequestWithSession,
+    @Body() dto: GenerateStaticQrCodeDto,
+  ) {
+    return this.pixService.generateStaticQrCode(
+      provider,
+      dto,
+      req.accountId!,
+      req.clientId!,
+      req.providerSession,
+    );
+  }
+
+  @Post(':provider/qrcode/dynamic')
+  @ApiGenerateDynamicQrCode()
+  @Audit({
+    action: AuditAction.PIX_QRCODE_CREATED,
+    entityType: 'PixQrCode',
+    description: 'QR Code dinâmico gerado',
+    captureNewValues: true,
+  })
+  async generateDynamicQrCode(
+    @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
+    @Req() req: RequestWithSession,
+    @Body() dto: GenerateDynamicQrCodeDto,
+  ) {
+    return this.pixService.generateDynamicQrCode(
+      provider,
+      dto,
+      req.accountId!,
+      req.clientId!,
+      req.providerSession,
+    );
+  }
+
+  @Post(':provider/qrcode/decode')
+  @ApiDecodeQrCode()
+  async decodeQrCode(
+    @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
+    @Req() req: RequestWithSession,
+    @Body() dto: DecodeQrCodeDto,
+  ) {
+    return this.pixService.decodeQrCode(
+      provider,
+      dto.code,
+      req.providerSession,
+    );
+  }
+
+  @Post('qrcode/decode-base64')
+  @ApiDecodeBase64QrCode()
+  decodeBase64QrCode(@Body() dto: DecodeBase64QrCodeDto) {
+    return this.pixService.decodeBase64QrCode(dto.encodedValue);
   }
 }

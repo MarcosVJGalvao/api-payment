@@ -4,15 +4,10 @@ import { Repository, LessThan } from 'typeorm';
 import { WebhookEventLog } from '../entities/webhook-event-log.entity';
 import { CreateWebhookEventLogDto } from '../dto/create-webhook-event-log.dto';
 
-/**
- * Serviço para gerenciar logs de eventos de webhook.
- * Suporta auditoria e validação de sequência.
- */
 @Injectable()
 export class WebhookEventLogService {
   private readonly logger = new Logger(WebhookEventLogService.name);
 
-  /** Período de retenção de logs em dias */
   private readonly RETENTION_DAYS = 60;
 
   constructor(
@@ -20,11 +15,6 @@ export class WebhookEventLogService {
     private readonly repository: Repository<WebhookEventLog>,
   ) {}
 
-  /**
-   * Busca o último evento processado para uma transação.
-   * @param authenticationCode - Código de autenticação da transação
-   * @returns Nome do último evento ou null se não houver
-   */
   async getLastProcessedEvent(
     authenticationCode: string,
   ): Promise<string | null> {
@@ -39,12 +29,6 @@ export class WebhookEventLogService {
     return lastLog?.eventName || null;
   }
 
-  /**
-   * Busca o último evento processado para uma transação de um cliente específico.
-   * @param authenticationCode - Código de autenticação da transação
-   * @param clientId - ID do cliente
-   * @returns Nome do último evento ou null se não houver
-   */
   async getLastProcessedEventByClient(
     authenticationCode: string,
     clientId: string,
@@ -61,11 +45,6 @@ export class WebhookEventLogService {
     return lastLog?.eventName || null;
   }
 
-  /**
-   * Registra um evento de webhook.
-   * @param data - Dados do evento
-   * @returns Log criado
-   */
   async logEvent(data: CreateWebhookEventLogDto): Promise<WebhookEventLog> {
     const log = this.repository.create(data);
     const saved = await this.repository.save(log);
@@ -83,12 +62,6 @@ export class WebhookEventLogService {
     return saved;
   }
 
-  /**
-   * Busca logs de um cliente específico.
-   * @param clientId - ID do cliente
-   * @param authenticationCode - Código de autenticação (opcional)
-   * @returns Lista de logs
-   */
   async findByClient(
     clientId: string,
     authenticationCode?: string,
@@ -105,11 +78,6 @@ export class WebhookEventLogService {
     });
   }
 
-  /**
-   * Limpa logs com mais de 60 dias.
-   * Deve ser chamado pelo scheduler.
-   * @returns Número de registros deletados
-   */
   async cleanupOldLogs(): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - this.RETENTION_DAYS);
@@ -121,11 +89,6 @@ export class WebhookEventLogService {
     return result.affected || 0;
   }
 
-  /**
-   * Verifica se existe algum log para um código de autenticação.
-   * @param authenticationCode - Código de autenticação
-   * @returns true se existir pelo menos um log
-   */
   async hasLogs(authenticationCode: string): Promise<boolean> {
     const count = await this.repository.count({
       where: { authenticationCode },

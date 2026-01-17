@@ -18,6 +18,7 @@ import { PixTransfer } from '@/pix/entities/pix-transfer.entity';
 import { PixRefund } from '@/pix/entities/pix-refund.entity';
 import { Boleto } from '@/boleto/entities/boleto.entity';
 import { BillPayment } from '@/bill-payment/entities/bill-payment.entity';
+import { PixQrCode } from '@/pix/entities/pix-qr-code.entity';
 
 /**
  * Entidade centralizada de transações financeiras.
@@ -185,6 +186,19 @@ export class Transaction {
   @ManyToOne(() => BillPayment, (billPayment) => billPayment.transactions)
   @JoinColumn({ name: 'bill_payment_id' })
   billPayment?: BillPayment;
+
+  /** FK para PixQrCode (quando pago via QR Code) */
+  @Column({
+    type: 'uuid',
+    name: 'pix_qr_code_id',
+    nullable: true,
+    comment: 'Referência para PixQrCode',
+  })
+  pixQrCodeId?: string;
+
+  @ManyToOne(() => PixQrCode, (pixQrCode) => pixQrCode.transactions)
+  @JoinColumn({ name: 'pix_qr_code_id' })
+  pixQrCode?: PixQrCode;
 
   // ========================================
   // Relacionamentos com Account e Client

@@ -6,10 +6,14 @@ import {
   PixRegisterKeyResponse,
   PixValidateKeyResponse,
   PixTransferResponse,
+  PixQrCodeGenerateResponse,
+  PixQrCodeDecodeResponse,
 } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { HiperbancoEndpoint } from '@/financial-providers/hiperbanco/enums/hiperbanco-endpoint.enum';
 import { RegisterPixKeyDto } from '@/pix/dto/register-pix-key.dto';
 import { GenerateTotpDto } from '@/pix/dto/generate-totp.dto';
+import { GenerateStaticQrCodeDto } from '@/pix/dto/generate-static-qr-code.dto';
+import { GenerateDynamicQrCodeDto } from '@/pix/dto/generate-dynamic-qr-code.dto';
 import { PixKeyType } from '@/pix/enums/pix-key-type.enum';
 import { PixAccountType } from '@/pix/enums/pix-account-type.enum';
 import { TransferPayload } from '@/pix/interfaces/transfer-payload.interface';
@@ -124,6 +128,92 @@ export class HiperbancoPixHelper {
       HiperbancoEndpoint.PIX_TRANSFER,
       payload,
       { headers },
+    );
+  }
+
+  async generateStaticQrCode(
+    dto: GenerateStaticQrCodeDto,
+    session: ProviderSession,
+  ): Promise<PixQrCodeGenerateResponse> {
+    const payload = {
+      addressingKey: {
+        type: dto.addressingKeyType,
+        value: dto.addressingKeyValue,
+      },
+      amount: dto.amount,
+      recipientName: dto.recipientName,
+      conciliationId: dto.conciliationId,
+      categoryCode: dto.categoryCode || '0000',
+      location: {
+        city: dto.locationCity,
+        zipCode: dto.locationZipCode,
+      },
+    };
+
+    return this.hiperbancoHttp.post<PixQrCodeGenerateResponse>(
+      HiperbancoEndpoint.PIX_GENERATE_QRCODE_STATIC,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${session.hiperbancoToken}`,
+        },
+      },
+    );
+  }
+
+  async generateDynamicQrCode(
+    dto: GenerateDynamicQrCodeDto,
+    session: ProviderSession,
+  ): Promise<PixQrCodeGenerateResponse> {
+    const payload = {
+      addressingKey: {
+        type: dto.addressingKeyType,
+        value: dto.addressingKeyValue,
+      },
+      conciliationId: dto.conciliationId,
+      singlePayment: dto.singlePayment,
+      recipientName: dto.recipientName,
+      expiresAt: dto.expiresAt,
+      payer: {
+        name: dto.payer.name,
+        documentNumber: dto.payer.documentNumber,
+        type: dto.payer.type,
+        address: {
+          addressLine: dto.payer.address.addressLine,
+          state: dto.payer.address.state,
+          city: dto.payer.address.city,
+          zipCode: dto.payer.address.zipCode,
+        },
+      },
+      changeAmountType: dto.changeAmountType,
+      amount: dto.amount,
+    };
+
+    return this.hiperbancoHttp.post<PixQrCodeGenerateResponse>(
+      HiperbancoEndpoint.PIX_GENERATE_QRCODE_DYNAMIC,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${session.hiperbancoToken}`,
+        },
+      },
+    );
+  }
+
+  async decodeQrCode(
+    code: string,
+    session: ProviderSession,
+  ): Promise<PixQrCodeDecodeResponse> {
+    const payload = { code };
+
+    return this.hiperbancoHttp.post<PixQrCodeDecodeResponse>(
+      HiperbancoEndpoint.PIX_DECODE_QRCODE,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${session.hiperbancoToken}`,
+        },
+      },
     );
   }
 

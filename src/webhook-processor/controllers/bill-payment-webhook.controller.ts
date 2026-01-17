@@ -17,10 +17,6 @@ import { BillPaymentWebhookData } from '../interfaces/bill-payment-webhook.inter
 import type { BillPaymentWebhookJob } from '../processors/bill-payment-webhook.processor';
 import { enqueueWebhookEvent } from '../helpers/enqueue-webhook.helper';
 
-/**
- * Controller que recebe webhooks de pagamento de contas e os enfileira para processamento assíncrono.
- * Responde 202 Accepted imediatamente após enfileirar.
- */
 @ApiTags('Webhooks - BillPayment')
 @Controller('webhook/:provider/payment')
 @UseGuards(WebhookPublicKeyGuard)
@@ -30,10 +26,6 @@ export class BillPaymentWebhookController {
     private readonly webhookQueue: Queue<BillPaymentWebhookJob>,
   ) {}
 
-  /**
-   * Enfileira um evento de webhook para processamento assíncrono.
-   * Usa o idempotencyKey do primeiro evento como jobId para deduplicação.
-   */
   @Post('received')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'BILL_PAYMENT_WAS_RECEIVED' })

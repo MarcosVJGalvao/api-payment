@@ -7,13 +7,21 @@ import { HiperbancoPixHelper } from './helpers/hiperbanco/hiperbanco-pix.helper'
 import { FinancialProvidersModule } from '@/financial-providers/financial-providers.module';
 import { AccountModule } from '@/account/account.module';
 import { PixTransfer } from './entities/pix-transfer.entity';
+import { PixQrCode } from './entities/pix-qr-code.entity';
+import { PaymentSender } from '@/common/entities/payment-sender.entity';
+import { PaymentRecipient } from '@/common/entities/payment-recipient.entity';
 import { ClientModule } from '@/client/client.module';
 import { PermissionsModule } from '@/permissions/permissions.module';
 import { TransactionModule } from '@/transaction/transaction.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([PixTransfer]),
+    TypeOrmModule.forFeature([
+      PixTransfer,
+      PixQrCode,
+      PaymentSender,
+      PaymentRecipient,
+    ]),
     FinancialProvidersModule,
     AccountModule,
     ClientModule,

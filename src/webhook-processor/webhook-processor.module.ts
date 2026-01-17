@@ -17,10 +17,14 @@ import { WebhookCleanupScheduler } from './schedulers/webhook-cleanup.scheduler'
 import { PixCashIn } from '@/pix/entities/pix-cash-in.entity';
 import { PixRefund } from '@/pix/entities/pix-refund.entity';
 import { PixTransfer } from '@/pix/entities/pix-transfer.entity';
+import { PixQrCode } from '@/pix/entities/pix-qr-code.entity';
 import { Boleto } from '@/boleto/entities/boleto.entity';
 import { BillPayment } from '@/bill-payment/entities/bill-payment.entity';
 import { Webhook } from '@/webhook/entities/webhook.entity';
 import { WebhookEventLog } from './entities/webhook-event-log.entity';
+import { PaymentSender } from '@/common/entities/payment-sender.entity';
+import { PaymentRecipient } from '@/common/entities/payment-recipient.entity';
+import { BoletoPayer } from '@/boleto/entities/boleto-payer.entity';
 import { TransactionModule } from '@/transaction/transaction.module';
 import { AccountModule } from '@/account/account.module';
 
@@ -47,10 +51,14 @@ const WEBHOOK_QUEUE_DEFAULT_OPTIONS = {
       PixCashIn,
       PixRefund,
       PixTransfer,
+      PixQrCode,
       Boleto,
       BillPayment,
       Webhook,
       WebhookEventLog,
+      PaymentSender,
+      PaymentRecipient,
+      BoletoPayer,
     ]),
     TransactionModule,
     AccountModule,

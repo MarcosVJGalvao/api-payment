@@ -4,17 +4,23 @@ import { Repository } from 'typeorm';
 import { PixCashIn } from '@/pix/entities/pix-cash-in.entity';
 import { PixRefund, PixRefundStatus } from '@/pix/entities/pix-refund.entity';
 import { PixTransfer } from '@/pix/entities/pix-transfer.entity';
+import { PixQrCode } from '@/pix/entities/pix-qr-code.entity';
 import { PixTransferStatus } from '@/pix/enums/pix-transfer-status.enum';
 import { PixCashInStatus } from '@/pix/enums/pix-cash-in-status.enum';
+import { PixQrCodeType } from '@/pix/enums/pix-qr-code-type.enum';
+import { PixQrCodeStatus } from '@/pix/enums/pix-qr-code-status.enum';
+import { PixInitializationType } from '@/pix/enums/pix-initialization-type.enum';
 import { TransactionService } from '@/transaction/transaction.service';
 import { TransactionType } from '@/transaction/enums/transaction-type.enum';
 import { AccountService } from '@/account/account.service';
+import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { WebhookPayload } from '../interfaces/webhook-base.interface';
 import {
   PixCashInReceivedData,
   PixCashInClearedData,
   PixCashOutData,
   PixRefundData,
+  PixQrCodeCreatedData,
 } from '../interfaces/pix-webhook.interface';
 import { mapWebhookEventToTransactionStatus } from '../helpers/transaction-status-mapper.helper';
 import { canProcessWebhook } from '../helpers/webhook-state-machine.helper';
@@ -34,14 +40,12 @@ export class PixWebhookService {
     private readonly pixRefundRepository: Repository<PixRefund>,
     @InjectRepository(PixTransfer)
     private readonly pixTransferRepository: Repository<PixTransfer>,
+    @InjectRepository(PixQrCode)
+    private readonly pixQrCodeRepository: Repository<PixQrCode>,
     private readonly transactionService: TransactionService,
     private readonly webhookEventLogService: WebhookEventLogService,
     private readonly accountService: AccountService,
   ) {}
-
-  // ========================================
-  // PIX Cash-In
-  // ========================================
 
   async handleCashInReceived(
     events: WebhookPayload<PixCashInReceivedData>[],
@@ -93,6 +97,7 @@ export class PixWebhookService {
         idempotencyKey: event.idempotencyKey,
         entityId: event.entityId,
         status: PixCashInStatus.RECEIVED,
+        providerSlug: FinancialProvider.HIPERBANCO,
         amount: data.amount?.value,
         currency: data.amount?.currency || 'BRL',
         description: data.description,
@@ -104,23 +109,27 @@ export class PixWebhookService {
         paymentPurpose: data.channel?.pixPaymentPurpose,
         addressingKeyValue: data.addressingKey?.value,
         addressingKeyType: data.addressingKey?.type,
-        senderDocumentType: data.channel?.sender?.document?.type,
-        senderDocumentNumber: data.channel?.sender?.document?.value,
-        senderName: data.channel?.sender?.name,
-        senderType: data.channel?.sender?.type,
-        senderAccountBranch: data.channel?.sender?.account?.branch,
-        senderAccountNumber: data.channel?.sender?.account?.number,
-        senderAccountType: data.channel?.sender?.account?.type,
-        senderBankIspb: data.channel?.sender?.account?.bank?.ispb,
-        senderBankName: data.channel?.sender?.account?.bank?.name,
-        recipientDocumentType: data.recipient?.document?.type,
-        recipientDocumentNumber: data.recipient?.document?.value,
-        recipientName: data.recipient?.name,
-        recipientType: data.recipient?.type,
-        recipientAccountBranch: data.recipient?.account?.branch,
-        recipientAccountNumber: data.recipient?.account?.number,
-        recipientAccountType: data.recipient?.account?.type,
-        recipientBankIspb: data.recipient?.account?.bank?.ispb,
+        sender: {
+          type: data.channel?.sender?.type,
+          documentType: data.channel?.sender?.document?.type,
+          documentNumber: data.channel?.sender?.document?.value,
+          name: data.channel?.sender?.name,
+          accountBranch: data.channel?.sender?.account?.branch,
+          accountNumber: data.channel?.sender?.account?.number,
+          accountType: data.channel?.sender?.account?.type,
+          bankIspb: data.channel?.sender?.account?.bank?.ispb,
+          bankName: data.channel?.sender?.account?.bank?.name,
+        },
+        recipient: {
+          type: data.recipient?.type,
+          documentType: data.recipient?.document?.type,
+          documentNumber: data.recipient?.document?.value,
+          name: data.recipient?.name,
+          accountBranch: data.recipient?.account?.branch,
+          accountNumber: data.recipient?.account?.number,
+          accountType: data.recipient?.account?.type,
+          bankIspb: data.recipient?.account?.bank?.ispb,
+        },
         clientId,
         accountId,
         providerCreatedAt: data.createdAt
@@ -129,6 +138,33 @@ export class PixWebhookService {
       });
 
       const saved = await this.pixCashInRepository.save(pixCashIn);
+
+      let pixQrCodeId: string | undefined;
+      const conciliationId = data.channel?.receiverReconciliationId;
+      const initializationType = data.channel?.pixInitializationType;
+
+      const qrCodeTypes: string[] = [
+        PixInitializationType.STATIC_QR_CODE,
+        PixInitializationType.DYNAMIC_QR_CODE,
+      ];
+
+      if (
+        conciliationId &&
+        initializationType &&
+        qrCodeTypes.includes(initializationType)
+      ) {
+        const pixQrCode = await this.pixQrCodeRepository.findOne({
+          where: { conciliationId },
+        });
+
+        if (pixQrCode) {
+          pixQrCodeId = pixQrCode.id;
+          if (pixQrCode.status !== PixQrCodeStatus.PAID) {
+            pixQrCode.status = PixQrCodeStatus.PAID;
+            await this.pixQrCodeRepository.save(pixQrCode);
+          }
+        }
+      }
 
       await this.transactionService.createFromWebhook({
         authenticationCode: data.authenticationCode,
@@ -143,10 +179,10 @@ export class PixWebhookService {
         clientId,
         accountId,
         pixCashInId: saved.id,
+        pixQrCodeId,
         providerTimestamp: new Date(event.timestamp),
       });
 
-      // Registra o evento no log
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'PIX_CASH_IN',
@@ -200,7 +236,6 @@ export class PixWebhookService {
         );
       }
 
-      // Validar sequência de webhook
       const lastEvent =
         await this.webhookEventLogService.getLastProcessedEvent(
           authenticationCode,
@@ -235,7 +270,6 @@ export class PixWebhookService {
         providerTimestamp: new Date(event.timestamp),
       });
 
-      // Registra o evento como processado
       await this.webhookEventLogService.logEvent({
         authenticationCode,
         entityType: 'PIX_CASH_IN',
@@ -324,7 +358,6 @@ export class PixWebhookService {
         );
       }
 
-      // Validar sequência de webhook
       const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
         data.authenticationCode,
       );
@@ -368,7 +401,6 @@ export class PixWebhookService {
         providerTimestamp: new Date(event.timestamp),
       });
 
-      // Registra o evento como processado
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'PIX_TRANSFER',
@@ -427,6 +459,7 @@ export class PixWebhookService {
         idempotencyKey: event.idempotencyKey,
         entityId: event.entityId,
         status: PixRefundStatus.RECEIVED,
+        providerSlug: FinancialProvider.HIPERBANCO,
         amount: data.amount?.value,
         currency: data.amount?.currency || 'BRL',
         description: data.description,
@@ -435,13 +468,17 @@ export class PixWebhookService {
         refundReason: data.channel?.refundReason,
         errorCode: data.channel?.errorCode,
         errorReason: data.channel?.errorReason,
-        senderDocumentType: data.channel?.sender?.document?.type,
-        senderDocumentNumber: data.channel?.sender?.document?.value,
-        senderName: data.channel?.sender?.name,
-        senderType: data.channel?.sender?.type,
-        recipientDocumentType: data.recipient?.document?.type,
-        recipientDocumentNumber: data.recipient?.document?.value,
-        recipientType: data.recipient?.type,
+        sender: {
+          type: data.channel?.sender?.type,
+          documentType: data.channel?.sender?.document?.type,
+          documentNumber: data.channel?.sender?.document?.value,
+          name: data.channel?.sender?.name,
+        },
+        recipient: {
+          type: data.recipient?.type,
+          documentType: data.recipient?.document?.type,
+          documentNumber: data.recipient?.document?.value,
+        },
         relatedPixCashInId,
         relatedPixTransferId,
         clientId,
@@ -467,7 +504,6 @@ export class PixWebhookService {
         providerTimestamp: new Date(event.timestamp),
       });
 
-      // Registra o evento no log
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'PIX_REFUND',
@@ -512,7 +548,6 @@ export class PixWebhookService {
         );
       }
 
-      // Validar sequência de webhook
       const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
         data.authenticationCode,
       );
@@ -546,7 +581,6 @@ export class PixWebhookService {
         providerTimestamp: new Date(event.timestamp),
       });
 
-      // Registra o evento como processado
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
         entityType: 'PIX_REFUND',
@@ -561,6 +595,94 @@ export class PixWebhookService {
       this.logger.log(
         `PIX_REFUND_WAS_CLEARED processed: ${data.authenticationCode}`,
       );
+    }
+  }
+
+  /**
+   * Processa evento PIX_QRCODE_WAS_CREATED.
+   * Atualiza o PixQrCode existente ou cria novo registro com dados do webhook.
+   */
+  async handleQrCodeCreated(
+    events: WebhookPayload<PixQrCodeCreatedData>[],
+    clientId: string,
+    validPublicKey: boolean,
+  ): Promise<void> {
+    if (!validPublicKey) {
+      this.logger.warn('PIX_QRCODE_WAS_CREATED: Invalid publicKey, skipping');
+      return;
+    }
+
+    for (const event of events) {
+      const data = event.data;
+
+      // Verificar se já existe pelo conciliationId
+      let pixQrCode = await this.pixQrCodeRepository.findOne({
+        where: { conciliationId: data.conciliationId },
+      });
+
+      if (pixQrCode) {
+        // Atualizar registro existente com dados do webhook
+        pixQrCode.encodedValue = data.encodedValue;
+        pixQrCode.status = PixQrCodeStatus.CREATED;
+        if (data.expiresAt) {
+          pixQrCode.expiresAt = new Date(data.expiresAt);
+        }
+        await this.pixQrCodeRepository.save(pixQrCode);
+
+        this.logger.log(
+          `PIX_QRCODE_WAS_CREATED updated existing: ${data.conciliationId}`,
+        );
+      } else {
+        // Buscar conta pelo recipient para obter clientId e accountId
+        const account = await this.accountService.findByOnboardingDocument(
+          data.recipient.documentNumber,
+        );
+
+        if (!account) {
+          this.logger.warn(
+            `PIX_QRCODE_WAS_CREATED: Account not found for document ${data.recipient.documentNumber}`,
+          );
+          continue;
+        }
+
+        // Criar novo registro
+        pixQrCode = this.pixQrCodeRepository.create({
+          conciliationId: data.conciliationId,
+          encodedValue: data.encodedValue,
+          type:
+            data.type === 'STATIC'
+              ? PixQrCodeType.STATIC
+              : PixQrCodeType.DYNAMIC,
+          status: PixQrCodeStatus.CREATED,
+          amount: data.amount,
+          addressingKeyType: data.addressingKey.type as any,
+          addressingKeyValue: data.addressingKey.value,
+          recipientName: data.recipient.name,
+          singlePayment: data.singlePayment,
+          changeAmountType: data.changeAmountType,
+          expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
+          providerSlug: FinancialProvider.HIPERBANCO,
+          clientId: account.clientId,
+          accountId: account.id,
+        });
+
+        const saved = await this.pixQrCodeRepository.save(pixQrCode);
+
+        this.logger.log(
+          `PIX_QRCODE_WAS_CREATED created new: ${data.conciliationId} (id: ${saved.id})`,
+        );
+      }
+
+      await this.webhookEventLogService.logEvent({
+        authenticationCode: data.conciliationId,
+        entityType: 'PIX_QR_CODE',
+        entityId: pixQrCode.id,
+        eventName: WebhookEvent.PIX_QRCODE_WAS_CREATED,
+        wasProcessed: true,
+        payload: event as unknown as Record<string, unknown>,
+        providerTimestamp: new Date(event.timestamp),
+        clientId,
+      });
     }
   }
 }

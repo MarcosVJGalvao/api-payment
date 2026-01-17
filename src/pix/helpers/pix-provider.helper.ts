@@ -9,9 +9,13 @@ import {
   PixRegisterKeyResponse,
   PixValidateKeyResponse,
   PixTransferResponse,
+  PixQrCodeGenerateResponse,
+  PixQrCodeDecodeResponse,
 } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { RegisterPixKeyDto } from '../dto/register-pix-key.dto';
 import { GenerateTotpDto } from '../dto/generate-totp.dto';
+import { GenerateStaticQrCodeDto } from '../dto/generate-static-qr-code.dto';
+import { GenerateDynamicQrCodeDto } from '../dto/generate-dynamic-qr-code.dto';
 import { TransferPayload } from '../interfaces/transfer-payload.interface';
 
 @Injectable()
@@ -122,6 +126,57 @@ export class PixProviderHelper {
       default:
         throw new CustomHttpException(
           `Provider ${String(provider)} is not supported for PIX`,
+          HttpStatus.BAD_REQUEST,
+          ErrorCode.INVALID_INPUT,
+        );
+    }
+  }
+
+  async generateStaticQrCode(
+    provider: FinancialProvider,
+    dto: GenerateStaticQrCodeDto,
+    session: ProviderSession,
+  ): Promise<PixQrCodeGenerateResponse> {
+    switch (provider) {
+      case FinancialProvider.HIPERBANCO:
+        return this.hiperbancoHelper.generateStaticQrCode(dto, session);
+      default:
+        throw new CustomHttpException(
+          `Provider ${String(provider)} is not supported for PIX QR Code`,
+          HttpStatus.BAD_REQUEST,
+          ErrorCode.INVALID_INPUT,
+        );
+    }
+  }
+
+  async generateDynamicQrCode(
+    provider: FinancialProvider,
+    dto: GenerateDynamicQrCodeDto,
+    session: ProviderSession,
+  ): Promise<PixQrCodeGenerateResponse> {
+    switch (provider) {
+      case FinancialProvider.HIPERBANCO:
+        return this.hiperbancoHelper.generateDynamicQrCode(dto, session);
+      default:
+        throw new CustomHttpException(
+          `Provider ${String(provider)} is not supported for PIX QR Code`,
+          HttpStatus.BAD_REQUEST,
+          ErrorCode.INVALID_INPUT,
+        );
+    }
+  }
+
+  async decodeQrCode(
+    provider: FinancialProvider,
+    code: string,
+    session: ProviderSession,
+  ): Promise<PixQrCodeDecodeResponse> {
+    switch (provider) {
+      case FinancialProvider.HIPERBANCO:
+        return this.hiperbancoHelper.decodeQrCode(code, session);
+      default:
+        throw new CustomHttpException(
+          `Provider ${String(provider)} is not supported for PIX QR Code`,
           HttpStatus.BAD_REQUEST,
           ErrorCode.INVALID_INPUT,
         );

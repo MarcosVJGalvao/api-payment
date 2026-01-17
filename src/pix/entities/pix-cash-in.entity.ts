@@ -1,17 +1,15 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
   Index,
-  ManyToOne,
+  OneToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { PixCashInStatus } from '../enums/pix-cash-in-status.enum';
-import { Client } from '@/client/entities/client.entity';
-import { Account } from '@/account/entities/account.entity';
-import { OneToMany } from 'typeorm';
+import { BaseFinancialOperation } from '@/common/entities/base-financial-operation.entity';
+import { PaymentSender } from '@/common/entities/payment-sender.entity';
+import { PaymentRecipient } from '@/common/entities/payment-recipient.entity';
 import { Transaction } from '@/transaction/entities/transaction.entity';
 
 /**
@@ -24,14 +22,7 @@ import { Transaction } from '@/transaction/entities/transaction.entity';
 @Index(['status'])
 @Index(['accountId'])
 @Index(['clientId'])
-export class PixCashIn {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  // ========================================
-  // Campos de controle do webhook
-  // ========================================
-
+export class PixCashIn extends BaseFinancialOperation {
   @Column({
     type: 'varchar',
     length: 100,
@@ -74,38 +65,6 @@ export class PixCashIn {
     comment: 'Status do PIX Cash-In',
   })
   status: PixCashInStatus;
-
-  // ========================================
-  // Dados da transação
-  // ========================================
-
-  @Column({
-    type: 'decimal',
-    precision: 15,
-    scale: 2,
-    comment: 'Valor da transação',
-  })
-  amount: number;
-
-  @Column({
-    type: 'varchar',
-    length: 3,
-    default: 'BRL',
-    comment: 'Moeda (ISO 4217)',
-  })
-  currency: string;
-
-  @Column({
-    type: 'varchar',
-    length: 140,
-    nullable: true,
-    comment: 'Descrição da transação',
-  })
-  description?: string;
-
-  // ========================================
-  // Dados do canal PIX
-  // ========================================
 
   @Column({
     type: 'varchar',
@@ -162,10 +121,6 @@ export class PixCashIn {
   })
   paymentPurpose?: string;
 
-  // ========================================
-  // Chave PIX de endereçamento
-  // ========================================
-
   @Column({
     type: 'varchar',
     length: 100,
@@ -184,215 +139,13 @@ export class PixCashIn {
   })
   addressingKeyType?: string;
 
-  // ========================================
-  // Dados do pagador (Sender)
-  // ========================================
+  @OneToOne(() => PaymentSender, { cascade: true, eager: true })
+  @JoinColumn({ name: 'sender_id' })
+  sender: PaymentSender;
 
-  @Column({
-    type: 'varchar',
-    length: 10,
-    name: 'sender_document_type',
-    nullable: true,
-    comment: 'Tipo de documento do pagador: CPF, CNPJ',
-  })
-  senderDocumentType?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'sender_document_number',
-    nullable: true,
-    comment: 'Número do documento do pagador',
-  })
-  senderDocumentNumber?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 255,
-    name: 'sender_name',
-    nullable: true,
-    comment: 'Nome do pagador',
-  })
-  senderName?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'sender_type',
-    nullable: true,
-    comment: 'Tipo: Customer, Business',
-  })
-  senderType?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 10,
-    name: 'sender_account_branch',
-    nullable: true,
-    comment: 'Agência do pagador',
-  })
-  senderAccountBranch?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'sender_account_number',
-    nullable: true,
-    comment: 'Conta do pagador',
-  })
-  senderAccountNumber?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'sender_account_type',
-    nullable: true,
-    comment: 'Tipo de conta: CHECKING, PAYMENT, SALARY, SAVINGS',
-  })
-  senderAccountType?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'sender_bank_ispb',
-    nullable: true,
-    comment: 'ISPB do banco do pagador',
-  })
-  senderBankIspb?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 255,
-    name: 'sender_bank_name',
-    nullable: true,
-    comment: 'Nome do banco do pagador',
-  })
-  senderBankName?: string;
-
-  // ========================================
-  // Dados do recebedor (Recipient)
-  // ========================================
-
-  @Column({
-    type: 'varchar',
-    length: 10,
-    name: 'recipient_document_type',
-    nullable: true,
-    comment: 'Tipo de documento do recebedor',
-  })
-  recipientDocumentType?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'recipient_document_number',
-    nullable: true,
-    comment: 'Número do documento do recebedor',
-  })
-  recipientDocumentNumber?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 255,
-    name: 'recipient_name',
-    nullable: true,
-    comment: 'Nome do recebedor',
-  })
-  recipientName?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'recipient_type',
-    nullable: true,
-    comment: 'Tipo: Customer, Business',
-  })
-  recipientType?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 10,
-    name: 'recipient_account_branch',
-    nullable: true,
-    comment: 'Agência do recebedor',
-  })
-  recipientAccountBranch?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'recipient_account_number',
-    nullable: true,
-    comment: 'Conta do recebedor',
-  })
-  recipientAccountNumber?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'recipient_account_type',
-    nullable: true,
-    comment: 'Tipo de conta',
-  })
-  recipientAccountType?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'recipient_bank_ispb',
-    nullable: true,
-    comment: 'ISPB do banco do recebedor',
-  })
-  recipientBankIspb?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'recipient_status',
-    nullable: true,
-    comment: 'Status do recebedor (CLEARED)',
-  })
-  recipientStatus?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'recipient_account_status',
-    nullable: true,
-    comment: 'Status da conta do recebedor (CLEARED)',
-  })
-  recipientAccountStatus?: string;
-
-  // ========================================
-  // Relacionamentos
-  // ========================================
-
-  @Column({
-    type: 'uuid',
-    name: 'account_id',
-    nullable: true,
-    comment: 'Conta do recebedor',
-  })
-  accountId?: string;
-
-  @ManyToOne(() => Account)
-  @JoinColumn({ name: 'account_id' })
-  account?: Account;
-
-  @Column({
-    type: 'uuid',
-    name: 'client_id',
-    comment: 'Cliente associado',
-  })
-  clientId: string;
-
-  @ManyToOne(() => Client)
-  @JoinColumn({ name: 'client_id' })
-  client: Client;
-
-  // ========================================
-  // Controle de datas
-  // ========================================
+  @OneToOne(() => PaymentRecipient, { cascade: true, eager: true })
+  @JoinColumn({ name: 'recipient_id' })
+  recipient: PaymentRecipient;
 
   @Column({
     type: 'datetime',
@@ -401,18 +154,6 @@ export class PixCashIn {
     comment: 'Data de criação no provedor',
   })
   providerCreatedAt?: Date;
-
-  @CreateDateColumn({
-    name: 'created_at',
-    type: 'datetime',
-  })
-  createdAt: Date;
-
-  @UpdateDateColumn({
-    name: 'updated_at',
-    type: 'datetime',
-  })
-  updatedAt: Date;
 
   @OneToMany(() => Transaction, (transaction) => transaction.pixCashIn)
   transactions: Transaction[];

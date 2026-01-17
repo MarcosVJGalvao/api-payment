@@ -18,14 +18,11 @@ import {
   PixCashInClearedData,
   PixCashOutData,
   PixRefundData,
+  PixQrCodeCreatedData,
 } from '../interfaces/pix-webhook.interface';
 import type { PixWebhookJob } from '../processors/pix-webhook.processor';
 import { enqueueWebhookEvent } from '../helpers/enqueue-webhook.helper';
 
-/**
- * Controller que recebe webhooks de PIX e os enfileira para processamento assíncrono.
- * Responde 202 Accepted imediatamente após enfileirar.
- */
 @ApiTags('Webhooks - PIX')
 @Controller('webhook/:provider/pix')
 @UseGuards(WebhookPublicKeyGuard)
@@ -142,6 +139,22 @@ export class PixWebhookController {
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'REFUND_CLEARED',
+      events,
+      request,
+    );
+  }
+
+  @Post('qrcode/created')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'PIX_QRCODE_WAS_CREATED' })
+  @ApiParam({ name: 'provider', description: 'Provedor financeiro' })
+  async handleQrCodeCreated(
+    @Body() events: WebhookPayload<PixQrCodeCreatedData>[],
+    @Req() request: Request,
+  ): Promise<{ received: boolean }> {
+    return await enqueueWebhookEvent(
+      this.webhookQueue,
+      'QRCODE_CREATED',
       events,
       request,
     );

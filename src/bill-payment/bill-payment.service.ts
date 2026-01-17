@@ -33,13 +33,6 @@ export class BillPaymentService {
     private readonly logger: AppLoggerService,
   ) {}
 
-  /**
-   * Valida um título pela linha digitável no provedor financeiro.
-   * @param provider - Provedor financeiro
-   * @param digitable - Linha digitável do título
-   * @param session - Sessão autenticada do provedor
-   * @returns Resposta da validação
-   */
   async validateBill(
     provider: FinancialProvider,
     digitable: string,
@@ -82,15 +75,6 @@ export class BillPaymentService {
     }
   }
 
-  /**
-   * Confirma um pagamento de conta.
-   * @param provider - Provedor financeiro
-   * @param dto - Dados para confirmação
-   * @param session - Sessão autenticada do provedor
-   * @param clientId - ID do cliente
-   * @param accountId - ID da conta
-   * @returns Resposta da confirmação com dados do pagamento persistido
-   */
   async confirmPayment(
     provider: FinancialProvider,
     dto: ConfirmBillPaymentDto,
@@ -110,7 +94,6 @@ export class BillPaymentService {
         session,
       );
 
-      // Persistir no banco de dados
       const payment = this.repository.create({
         status: BillPaymentStatus.CREATED,
         digitable: response.digitable || '',
@@ -160,14 +143,6 @@ export class BillPaymentService {
     }
   }
 
-  /**
-   * Busca um pagamento por ID.
-   * @param id - ID do pagamento
-   * @param clientId - ID do cliente (para validação de isolamento)
-   * @param accountId - ID da conta (para validação de isolamento)
-   * @param session - Sessão do provedor (opcional, usada para buscar detalhes atualizados)
-   * @returns Pagamento encontrado
-   */
   async findById(
     id: string,
     clientId: string,
@@ -201,13 +176,6 @@ export class BillPaymentService {
     return payment;
   }
 
-  /**
-   * Lista pagamentos com paginação, filtros e busca.
-   * @param query - Parâmetros de query
-   * @param clientId - ID do cliente (para isolamento)
-   * @param accountId - ID da conta (para isolamento)
-   * @returns Resultado paginado de pagamentos
-   */
   async listPayments(
     query: QueryBillPaymentDto,
     clientId: string,
@@ -222,15 +190,19 @@ export class BillPaymentService {
       this.repository,
       query,
       {
-        relations: [],
+        relations: ['recipient'],
         defaultSortBy: 'createdAt',
-        searchFields: ['digitable', 'assignor', 'recipientName', 'description'],
+        searchFields: [
+          'digitable',
+          'assignor',
+          'recipient.name',
+          'description',
+        ],
         dateField: 'createdAt',
         filters: [{ field: 'status' }],
       },
     );
 
-    // Adicionar filtros de isolamento manualmente (clientId e accountId são obrigatórios)
     queryOptions.filters = queryOptions.filters || [];
     queryOptions.filters.push(
       {

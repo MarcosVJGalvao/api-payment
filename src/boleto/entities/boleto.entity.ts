@@ -1,34 +1,25 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  DeleteDateColumn,
   Index,
-  ManyToOne,
+  OneToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { BoletoStatus } from '../enums/boleto-status.enum';
 import { BoletoType } from '../enums/boleto-type.enum';
 import { InterestType } from '../enums/interest-type.enum';
 import { FineType } from '../enums/fine-type.enum';
 import { DiscountType } from '../enums/discount-type.enum';
-import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import { Client } from '@/client/entities/client.entity';
-import { Account } from '@/account/entities/account.entity';
-import { Exclude } from 'class-transformer';
-import { OneToMany } from 'typeorm';
+import { BaseFinancialOperation } from '@/common/entities/base-financial-operation.entity';
+import { BoletoPayer } from '@/boleto/entities/boleto-payer.entity';
 import { Transaction } from '@/transaction/entities/transaction.entity';
 
 @Entity('boleto')
 @Index(['status'])
 @Index(['dueDate'])
 @Index(['providerSlug'])
-export class Boleto {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
+export class Boleto extends BaseFinancialOperation {
   @Column({
     type: 'varchar',
     length: 255,
@@ -51,14 +42,6 @@ export class Boleto {
     comment: 'Status atual do boleto',
   })
   status: BoletoStatus;
-
-  @Column({
-    type: 'decimal',
-    precision: 10,
-    scale: 2,
-    comment: 'Valor do boleto',
-  })
-  amount: number;
 
   @Column({
     type: 'date',
@@ -99,46 +82,9 @@ export class Boleto {
   })
   accountBranch: string;
 
-  @Column({
-    type: 'varchar',
-    length: 20,
-    name: 'payer_document',
-    nullable: true,
-    comment: 'Número do documento do pagador (CPF ou CNPJ)',
-  })
-  payerDocument?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 60,
-    name: 'payer_name',
-    nullable: true,
-    comment: 'Nome completo do pagador',
-  })
-  payerName?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 100,
-    name: 'payer_trade_name',
-    nullable: true,
-    comment: 'Nome fantasia ou comercial do pagador',
-  })
-  payerTradeName?: string;
-
-  @Column({
-    type: 'json',
-    name: 'payer_address',
-    nullable: true,
-    comment: 'Endereço completo do pagador (JSON)',
-  })
-  payerAddress?: {
-    zipCode: string;
-    addressLine: string;
-    neighborhood: string;
-    city: string;
-    state: string;
-  };
+  @OneToOne(() => BoletoPayer, { cascade: true, eager: true })
+  @JoinColumn({ name: 'payer_id' })
+  payer: BoletoPayer;
 
   @Column({
     type: 'date',
@@ -269,50 +215,6 @@ export class Boleto {
   }> | null;
 
   @Column({
-    type: 'enum',
-    enum: FinancialProvider,
-    name: 'provider_slug',
-    comment: 'Identificador do provedor financeiro',
-  })
-  providerSlug: FinancialProvider;
-
-  @Column({
-    type: 'uuid',
-    name: 'client_id',
-    comment: 'ID do cliente',
-  })
-  @Exclude()
-  clientId: string;
-
-  @ManyToOne(() => Client)
-  @JoinColumn({ name: 'client_id' })
-  client: Client;
-
-  @Column({
-    type: 'uuid',
-    name: 'account_id',
-    comment: 'ID da conta que emitiu o boleto',
-  })
-  accountId: string;
-
-  @ManyToOne(() => Account)
-  @JoinColumn({ name: 'account_id' })
-  account: Account;
-
-  @CreateDateColumn({
-    name: 'created_at',
-    type: 'datetime',
-  })
-  createdAt: Date;
-
-  @UpdateDateColumn({
-    name: 'updated_at',
-    type: 'datetime',
-  })
-  updatedAt: Date;
-
-  /** Motivo do cancelamento (webhook BOLETO_WAS_CANCELLED) */
-  @Column({
     type: 'varchar',
     length: 50,
     name: 'cancel_reason',
@@ -320,12 +222,6 @@ export class Boleto {
     comment: 'Motivo: CancelledByRecipient, CancelledByDeadLine',
   })
   cancelReason?: string;
-
-  @DeleteDateColumn({
-    name: 'deleted_at',
-    type: 'datetime',
-  })
-  deletedAt?: Date;
 
   @OneToMany(() => Transaction, (transaction) => transaction.boleto)
   transactions: Transaction[];

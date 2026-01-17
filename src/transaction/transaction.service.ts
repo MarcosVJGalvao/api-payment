@@ -4,9 +4,6 @@ import { Transaction } from './entities/transaction.entity';
 import { TransactionType } from './enums/transaction-type.enum';
 import { TransactionStatus } from './enums/transaction-status.enum';
 
-/**
- * Interface para criação de transação via webhook.
- */
 export interface CreateTransactionFromWebhook {
   authenticationCode: string;
   correlationId?: string;
@@ -20,17 +17,15 @@ export interface CreateTransactionFromWebhook {
   accountId?: string;
   clientId: string;
   providerTimestamp?: Date;
-  // FKs opcionais
+
   pixCashInId?: string;
   pixTransferId?: string;
   pixRefundId?: string;
+  pixQrCodeId?: string;
   boletoId?: string;
   billPaymentId?: string;
 }
 
-/**
- * Interface para atualização de transação via webhook.
- */
 export interface UpdateTransactionFromWebhook {
   authenticationCode: string;
   status: TransactionStatus;
@@ -41,23 +36,15 @@ export interface UpdateTransactionFromWebhook {
   providerTimestamp?: Date;
 }
 
-/**
- * Service para gerenciamento de transações.
- */
 @Injectable()
 export class TransactionService {
   private readonly logger = new Logger(TransactionService.name);
 
   constructor(private readonly transactionRepository: TransactionRepository) {}
 
-  /**
-   * Cria uma nova transação a partir de dados de webhook.
-   * Verifica idempotência pelo authenticationCode.
-   */
   async createFromWebhook(
     data: CreateTransactionFromWebhook,
   ): Promise<Transaction> {
-    // Verificar se já existe (idempotência)
     const existing = await this.transactionRepository.findByAuthenticationCode(
       data.authenticationCode,
     );
@@ -83,9 +70,6 @@ export class TransactionService {
     return saved;
   }
 
-  /**
-   * Atualiza o status de uma transação existente.
-   */
   async updateStatus(
     authenticationCode: string,
     status: TransactionStatus,
@@ -110,9 +94,6 @@ export class TransactionService {
     return updated;
   }
 
-  /**
-   * Atualiza uma transação existente com dados do webhook.
-   */
   async updateFromWebhook(
     data: UpdateTransactionFromWebhook,
   ): Promise<Transaction | null> {
@@ -146,9 +127,6 @@ export class TransactionService {
     return updated;
   }
 
-  /**
-   * Busca transação por authenticationCode.
-   */
   async findByAuthenticationCode(
     authenticationCode: string,
   ): Promise<Transaction | null> {
@@ -157,9 +135,6 @@ export class TransactionService {
     );
   }
 
-  /**
-   * Lista transações por conta (para extratos).
-   */
   async findByAccountId(accountId: string): Promise<Transaction[]> {
     return this.transactionRepository.findByAccountId(accountId);
   }

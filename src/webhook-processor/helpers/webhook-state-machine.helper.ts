@@ -29,7 +29,6 @@ interface StateConfig {
  * Define quais transições são válidas para cada tipo de operação.
  */
 const STATE_MACHINE: Record<string, StateConfig> = {
-  // PIX Cash-In
   [WebhookEvent.PIX_CASH_IN_WAS_RECEIVED]: {
     allowedPrevious: [],
     isTerminal: false,
@@ -39,21 +38,19 @@ const STATE_MACHINE: Record<string, StateConfig> = {
     isTerminal: true,
   },
 
-  // PIX Cash-Out
   [WebhookEvent.PIX_CASHOUT_WAS_COMPLETED]: {
     allowedPrevious: [],
     isTerminal: true,
   },
   [WebhookEvent.PIX_CASHOUT_WAS_CANCELED]: {
     allowedPrevious: [],
-    isTerminal: false, // Pode evoluir para UNDONE
+    isTerminal: false,
   },
   [WebhookEvent.PIX_CASHOUT_WAS_UNDONE]: {
     allowedPrevious: [WebhookEvent.PIX_CASHOUT_WAS_CANCELED],
     isTerminal: true,
   },
 
-  // PIX Refund
   [WebhookEvent.PIX_REFUND_WAS_RECEIVED]: {
     allowedPrevious: [],
     isTerminal: false,
@@ -63,13 +60,11 @@ const STATE_MACHINE: Record<string, StateConfig> = {
     isTerminal: true,
   },
 
-  // PIX QR Code
   [WebhookEvent.PIX_QRCODE_WAS_CREATED]: {
     allowedPrevious: [],
     isTerminal: true,
   },
 
-  // Boleto
   [WebhookEvent.BOLETO_WAS_REGISTERED]: {
     allowedPrevious: [],
     isTerminal: false,
@@ -90,7 +85,6 @@ const STATE_MACHINE: Record<string, StateConfig> = {
     isTerminal: true,
   },
 
-  // Bill Payment
   [WebhookEvent.BILL_PAYMENT_WAS_RECEIVED]: {
     allowedPrevious: [],
     isTerminal: false,
@@ -101,14 +95,14 @@ const STATE_MACHINE: Record<string, StateConfig> = {
   },
   [WebhookEvent.BILL_PAYMENT_WAS_CONFIRMED]: {
     allowedPrevious: [WebhookEvent.BILL_PAYMENT_WAS_CREATED],
-    isTerminal: false, // Pode evoluir para REFUSED
+    isTerminal: false,
   },
   [WebhookEvent.BILL_PAYMENT_HAS_FAILED]: {
     allowedPrevious: [
       WebhookEvent.BILL_PAYMENT_WAS_RECEIVED,
       WebhookEvent.BILL_PAYMENT_WAS_CREATED,
     ],
-    isTerminal: false, // Pode evoluir para CANCELLED
+    isTerminal: false,
   },
   [WebhookEvent.BILL_PAYMENT_WAS_CANCELLED]: {
     allowedPrevious: [WebhookEvent.BILL_PAYMENT_HAS_FAILED],
@@ -156,7 +150,6 @@ export function canProcessWebhook(
 ): WebhookValidationResult {
   const stateConfig = STATE_MACHINE[incomingEvent];
 
-  // Evento desconhecido - permitir por segurança
   if (!stateConfig) {
     return {
       canProcess: true,
@@ -165,7 +158,6 @@ export function canProcessWebhook(
     };
   }
 
-  // Se não há evento anterior, verificar se este pode ser inicial
   if (!currentEvent) {
     const canBeInitial = stateConfig.allowedPrevious.length === 0;
     return {
@@ -177,7 +169,6 @@ export function canProcessWebhook(
     };
   }
 
-  // Se o estado atual é terminal, não aceitar mais webhooks
   if (isTerminalEvent(currentEvent)) {
     return {
       canProcess: false,
@@ -187,7 +178,6 @@ export function canProcessWebhook(
     };
   }
 
-  // Verificar se a transição é válida
   const isValidTransition = stateConfig.allowedPrevious.includes(currentEvent);
 
   return {
