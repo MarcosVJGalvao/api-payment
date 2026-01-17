@@ -12,13 +12,19 @@ import {
   PixGetKeysResponse,
   PixRegisterKeyResponse,
   PixValidateKeyResponse,
+  PixQrCodeDecodeResponse,
 } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { RegisterPixKeyDto } from './dto/register-pix-key.dto';
 import { GenerateTotpDto } from './dto/generate-totp.dto';
 import { PixTransferDto } from './dto/pix-transfer.dto';
+import { GenerateStaticQrCodeDto } from './dto/generate-static-qr-code.dto';
+import { GenerateDynamicQrCodeDto } from './dto/generate-dynamic-qr-code.dto';
 import { PixKeyType } from './enums/pix-key-type.enum';
 import { PixTransfer } from './entities/pix-transfer.entity';
+import { PixQrCode } from './entities/pix-qr-code.entity';
 import { PixTransferStatus } from './enums/pix-transfer-status.enum';
+import { PixQrCodeType } from './enums/pix-qr-code-type.enum';
+import { PixQrCodeStatus } from './enums/pix-qr-code-status.enum';
 import { PixAccountType } from './enums/pix-account-type.enum';
 import { OnboardingTypeAccount } from '@/onboarding/enums/onboarding-type-account.enum';
 import { TransactionService } from '@/transaction/transaction.service';
@@ -29,6 +35,8 @@ import {
   mapTransactionType,
   mapPixTransferStatus,
 } from './helpers/pix-transfer.helper';
+import { PaymentSender } from '@/common/entities/payment-sender.entity';
+import { PaymentRecipient } from '@/common/entities/payment-recipient.entity';
 
 @Injectable()
 export class PixService {
@@ -40,6 +48,8 @@ export class PixService {
     private readonly logger: AppLoggerService,
     @InjectRepository(PixTransfer)
     private readonly pixTransferRepository: Repository<PixTransfer>,
+    @InjectRepository(PixQrCode)
+    private readonly pixQrCodeRepository: Repository<PixQrCode>,
     private readonly transactionService: TransactionService,
   ) {}
 
@@ -303,18 +313,17 @@ export class PixService {
       pixTransfer.channel = response.channel;
       pixTransfer.type = mapTransactionType(response.type);
 
-      pixTransfer.recipient = {
-        documentType: response.recipient.documentType,
-        documentNumber: response.recipient.documentNumber,
-        name: response.recipient.name,
-        accountBranch: response.recipient.account.branch,
-        accountNumber: response.recipient.account.number,
-        accountType: response.recipient.account.type,
-        bankIspb: response.recipient.bank.ispb,
-        bankCompe: response.recipient.bank.compe,
-        bankName: response.recipient.bank.name,
-        // Assuming id, createdAt, updatedAt handled by TypeORM or new
-      } as any;
+      const recipient = new PaymentRecipient();
+      recipient.documentType = response.recipient.documentType;
+      recipient.documentNumber = response.recipient.documentNumber;
+      recipient.name = response.recipient.name;
+      recipient.accountBranch = response.recipient.account.branch;
+      recipient.accountNumber = response.recipient.account.number;
+      recipient.accountType = response.recipient.account.type;
+      recipient.bankIspb = response.recipient.bank.ispb;
+      recipient.bankCompe = response.recipient.bank.compe;
+      recipient.bankName = response.recipient.bank.name;
+      pixTransfer.recipient = recipient;
 
       await this.pixTransferRepository.save(pixTransfer);
 
@@ -347,6 +356,190 @@ export class PixService {
         'Failed to process PIX transfer',
         HttpStatus.INTERNAL_SERVER_ERROR,
         ErrorCode.PIX_TRANSFER_FAILED,
+      );
+    }
+  }
+
+  async generateStaticQrCode(
+    provider: FinancialProvider,
+    dto: GenerateStaticQrCodeDto,
+    accountId: string,
+    clientId: string,
+    session: ProviderSession,
+  ): Promise<PixQrCode> {
+    this.logger.log(
+      `Generating static QR Code for account ${accountId}`,
+      this.context,
+    );
+
+    try {
+      const response = await this.providerHelper.generateStaticQrCode(
+        provider,
+        dto,
+        session,
+      );
+
+      const pixQrCode = this.pixQrCodeRepository.create({
+        encodedValue: response.encodedValue,
+        type: PixQrCodeType.STATIC,
+        status: PixQrCodeStatus.CREATED,
+        amount: dto.amount || 0,
+        addressingKeyType: dto.addressingKeyType,
+        addressingKeyValue: dto.addressingKeyValue,
+        recipientName: dto.recipientName,
+        conciliationId: dto.conciliationId,
+        categoryCode: dto.categoryCode || '0000',
+        locationCity: dto.locationCity,
+        locationZipCode: dto.locationZipCode,
+        singlePayment: false,
+        providerSlug: provider,
+        clientId,
+        accountId,
+      });
+
+      await this.pixQrCodeRepository.save(pixQrCode);
+
+      this.logger.log(
+        `Static QR Code generated: id=${pixQrCode.id}`,
+        this.context,
+      );
+
+      return pixQrCode;
+    } catch (error) {
+      this.logger.error(
+        `Failed to generate static QR Code`,
+        error instanceof Error ? error.stack : undefined,
+        this.context,
+      );
+      if (error instanceof CustomHttpException) throw error;
+      throw new CustomHttpException(
+        'Failed to generate static QR Code',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        ErrorCode.PIX_QRCODE_GENERATION_FAILED,
+      );
+    }
+  }
+
+  async generateDynamicQrCode(
+    provider: FinancialProvider,
+    dto: GenerateDynamicQrCodeDto,
+    accountId: string,
+    clientId: string,
+    session: ProviderSession,
+  ): Promise<PixQrCode> {
+    this.logger.log(
+      `Generating dynamic QR Code for account ${accountId}`,
+      this.context,
+    );
+
+    try {
+      const response = await this.providerHelper.generateDynamicQrCode(
+        provider,
+        dto,
+        session,
+      );
+
+      // Criar entidade de pagador
+      const payer = new PaymentSender();
+      payer.name = dto.payer.name;
+      payer.documentNumber = dto.payer.documentNumber;
+      payer.type = dto.payer.type;
+
+      const pixQrCode = this.pixQrCodeRepository.create({
+        encodedValue: response.encodedValue,
+        type: PixQrCodeType.DYNAMIC,
+        status: PixQrCodeStatus.CREATED,
+        amount: dto.amount || 0,
+        addressingKeyType: dto.addressingKeyType,
+        addressingKeyValue: dto.addressingKeyValue,
+        recipientName: dto.recipientName,
+        conciliationId: dto.conciliationId,
+        singlePayment: dto.singlePayment || false,
+        expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
+        changeAmountType: dto.changeAmountType,
+        payer,
+        providerSlug: provider,
+        clientId,
+        accountId,
+      });
+
+      await this.pixQrCodeRepository.save(pixQrCode);
+
+      this.logger.log(
+        `Dynamic QR Code generated: id=${pixQrCode.id}`,
+        this.context,
+      );
+
+      return pixQrCode;
+    } catch (error) {
+      this.logger.error(
+        `Failed to generate dynamic QR Code`,
+        error instanceof Error ? error.stack : undefined,
+        this.context,
+      );
+      if (error instanceof CustomHttpException) throw error;
+      throw new CustomHttpException(
+        'Failed to generate dynamic QR Code',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        ErrorCode.PIX_QRCODE_GENERATION_FAILED,
+      );
+    }
+  }
+
+  async decodeQrCode(
+    provider: FinancialProvider,
+    code: string,
+    session: ProviderSession,
+  ): Promise<PixQrCodeDecodeResponse> {
+    this.logger.log(`Decoding QR Code via provider`, this.context);
+
+    try {
+      const result = await this.providerHelper.decodeQrCode(
+        provider,
+        code,
+        session,
+      );
+      this.logger.log(
+        `QR Code decoded: endToEndId=${result.endToEndId}`,
+        this.context,
+      );
+      return result;
+    } catch (error) {
+      this.logger.error(
+        `Failed to decode QR Code`,
+        error instanceof Error ? error.stack : undefined,
+        this.context,
+      );
+      if (error instanceof CustomHttpException) throw error;
+      throw new CustomHttpException(
+        'Failed to decode QR Code',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        ErrorCode.PIX_QRCODE_DECODE_FAILED,
+      );
+    }
+  }
+
+  /**
+   * Decodifica o Base64 do QR Code para EMV (Pix Copia e Cola).
+   */
+  decodeBase64QrCode(encodedValue: string): { emvCode: string } {
+    try {
+      const decodedBuffer = Buffer.from(encodedValue, 'base64');
+      const emvCode = decodedBuffer.toString('utf-8');
+
+      this.logger.log(`Base64 QR Code decoded to EMV`, this.context);
+
+      return { emvCode };
+    } catch (error) {
+      this.logger.error(
+        `Failed to decode Base64 QR Code`,
+        error instanceof Error ? error.stack : undefined,
+        this.context,
+      );
+      throw new CustomHttpException(
+        'Invalid Base64 encoded value',
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.INVALID_INPUT,
       );
     }
   }

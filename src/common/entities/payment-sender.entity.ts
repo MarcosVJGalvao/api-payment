@@ -9,6 +9,7 @@ import {
 import { PixTransfer } from '@/pix/entities/pix-transfer.entity';
 import { PixCashIn } from '@/pix/entities/pix-cash-in.entity';
 import { PixRefund } from '@/pix/entities/pix-refund.entity';
+import { PixQrCode } from '@/pix/entities/pix-qr-code.entity';
 
 @Entity('payment_sender')
 export class PaymentSender {
@@ -120,6 +121,9 @@ export class PaymentSender {
 
   @OneToOne(() => PixRefund, (pixRefund) => pixRefund.sender)
   pixRefund?: PixRefund;
+
+  @OneToOne(() => PixQrCode, (pixQrCode) => pixQrCode.payer)
+  pixQrCode?: PixQrCode;
 
   @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   createdAt: Date;

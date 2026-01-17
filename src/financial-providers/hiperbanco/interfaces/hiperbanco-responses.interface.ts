@@ -329,3 +329,79 @@ export interface PixTransferResponse {
   status?: string;
   type?: string;
 }
+
+// ============ PIX QR Code ============
+
+/** Resposta da geração de QR Code (Estático e Dinâmico) */
+export interface PixQrCodeGenerateResponse {
+  encodedValue: string;
+}
+
+/** Chave de endereçamento na decodificação */
+export interface PixQrCodeAddressingKey {
+  type: string;
+  value: string;
+}
+
+/** Documento do pagador/holder */
+export interface PixQrCodeDocument {
+  value: string;
+  type: string;
+}
+
+/** Pagador na decodificação de QR Code dinâmico */
+export interface PixQrCodePayer {
+  type: string;
+  name: string;
+  document: PixQrCodeDocument;
+}
+
+/** Titular da conta (holder) */
+export interface PixQrCodeHolder {
+  type: string;
+  name: string;
+  tradingName?: string;
+  document: PixQrCodeDocument;
+}
+
+/** Banco na decodificação */
+export interface PixQrCodeBank {
+  ispb?: string;
+  name?: string;
+}
+
+/** Informações de pagamento na decodificação */
+export interface PixQrCodePayment {
+  baseValue: number;
+  interestValue: number;
+  penaltyValue: number;
+  discountValue: number;
+  reductionValue: number;
+  totalValue: number;
+  dueDate?: string;
+  changeValue: number;
+  withdrawalValue: number;
+  isSinglePayment: boolean;
+  qrCodeChangeAmountType: string;
+}
+
+/** Localização na decodificação */
+export interface PixQrCodeLocation {
+  city: string;
+  zipCode?: string;
+}
+
+/** Resposta da decodificação de QR Code */
+export interface PixQrCodeDecodeResponse {
+  endToEndId: string;
+  conciliationId?: string;
+  addressingKey: PixQrCodeAddressingKey;
+  qrCodeType: 'STATIC' | 'DYNAMIC';
+  payer?: PixQrCodePayer;
+  holder: PixQrCodeHolder;
+  bank: PixQrCodeBank;
+  payment: PixQrCodePayment;
+  location: PixQrCodeLocation;
+  qrCodePurpose: string;
+  additionalData?: Record<string, unknown>[];
+}

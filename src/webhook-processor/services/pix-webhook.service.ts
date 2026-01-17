@@ -4,8 +4,11 @@ import { Repository } from 'typeorm';
 import { PixCashIn } from '@/pix/entities/pix-cash-in.entity';
 import { PixRefund, PixRefundStatus } from '@/pix/entities/pix-refund.entity';
 import { PixTransfer } from '@/pix/entities/pix-transfer.entity';
+import { PixQrCode } from '@/pix/entities/pix-qr-code.entity';
 import { PixTransferStatus } from '@/pix/enums/pix-transfer-status.enum';
 import { PixCashInStatus } from '@/pix/enums/pix-cash-in-status.enum';
+import { PixQrCodeType } from '@/pix/enums/pix-qr-code-type.enum';
+import { PixQrCodeStatus } from '@/pix/enums/pix-qr-code-status.enum';
 import { TransactionService } from '@/transaction/transaction.service';
 import { TransactionType } from '@/transaction/enums/transaction-type.enum';
 import { AccountService } from '@/account/account.service';
@@ -16,6 +19,7 @@ import {
   PixCashInClearedData,
   PixCashOutData,
   PixRefundData,
+  PixQrCodeCreatedData,
 } from '../interfaces/pix-webhook.interface';
 import { mapWebhookEventToTransactionStatus } from '../helpers/transaction-status-mapper.helper';
 import { canProcessWebhook } from '../helpers/webhook-state-machine.helper';
@@ -35,6 +39,8 @@ export class PixWebhookService {
     private readonly pixRefundRepository: Repository<PixRefund>,
     @InjectRepository(PixTransfer)
     private readonly pixTransferRepository: Repository<PixTransfer>,
+    @InjectRepository(PixQrCode)
+    private readonly pixQrCodeRepository: Repository<PixQrCode>,
     private readonly transactionService: TransactionService,
     private readonly webhookEventLogService: WebhookEventLogService,
     private readonly accountService: AccountService,
@@ -560,6 +566,94 @@ export class PixWebhookService {
       this.logger.log(
         `PIX_REFUND_WAS_CLEARED processed: ${data.authenticationCode}`,
       );
+    }
+  }
+
+  /**
+   * Processa evento PIX_QRCODE_WAS_CREATED.
+   * Atualiza o PixQrCode existente ou cria novo registro com dados do webhook.
+   */
+  async handleQrCodeCreated(
+    events: WebhookPayload<PixQrCodeCreatedData>[],
+    clientId: string,
+    validPublicKey: boolean,
+  ): Promise<void> {
+    if (!validPublicKey) {
+      this.logger.warn('PIX_QRCODE_WAS_CREATED: Invalid publicKey, skipping');
+      return;
+    }
+
+    for (const event of events) {
+      const data = event.data;
+
+      // Verificar se já existe pelo conciliationId
+      let pixQrCode = await this.pixQrCodeRepository.findOne({
+        where: { conciliationId: data.conciliationId },
+      });
+
+      if (pixQrCode) {
+        // Atualizar registro existente com dados do webhook
+        pixQrCode.encodedValue = data.encodedValue;
+        pixQrCode.status = PixQrCodeStatus.CREATED;
+        if (data.expiresAt) {
+          pixQrCode.expiresAt = new Date(data.expiresAt);
+        }
+        await this.pixQrCodeRepository.save(pixQrCode);
+
+        this.logger.log(
+          `PIX_QRCODE_WAS_CREATED updated existing: ${data.conciliationId}`,
+        );
+      } else {
+        // Buscar conta pelo recipient para obter clientId e accountId
+        const account = await this.accountService.findByOnboardingDocument(
+          data.recipient.documentNumber,
+        );
+
+        if (!account) {
+          this.logger.warn(
+            `PIX_QRCODE_WAS_CREATED: Account not found for document ${data.recipient.documentNumber}`,
+          );
+          continue;
+        }
+
+        // Criar novo registro
+        pixQrCode = this.pixQrCodeRepository.create({
+          conciliationId: data.conciliationId,
+          encodedValue: data.encodedValue,
+          type:
+            data.type === 'STATIC'
+              ? PixQrCodeType.STATIC
+              : PixQrCodeType.DYNAMIC,
+          status: PixQrCodeStatus.CREATED,
+          amount: data.amount,
+          addressingKeyType: data.addressingKey.type as any,
+          addressingKeyValue: data.addressingKey.value,
+          recipientName: data.recipient.name,
+          singlePayment: data.singlePayment,
+          changeAmountType: data.changeAmountType,
+          expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
+          providerSlug: FinancialProvider.HIPERBANCO,
+          clientId: account.clientId,
+          accountId: account.id,
+        });
+
+        const saved = await this.pixQrCodeRepository.save(pixQrCode);
+
+        this.logger.log(
+          `PIX_QRCODE_WAS_CREATED created new: ${data.conciliationId} (id: ${saved.id})`,
+        );
+      }
+
+      await this.webhookEventLogService.logEvent({
+        authenticationCode: data.conciliationId,
+        entityType: 'PIX_QR_CODE',
+        entityId: pixQrCode.id,
+        eventName: WebhookEvent.PIX_QRCODE_WAS_CREATED,
+        wasProcessed: true,
+        payload: event as unknown as Record<string, unknown>,
+        providerTimestamp: new Date(event.timestamp),
+        clientId,
+      });
     }
   }
 }

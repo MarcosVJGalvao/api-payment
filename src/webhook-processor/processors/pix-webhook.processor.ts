@@ -9,6 +9,7 @@ import {
   PixCashInClearedData,
   PixCashOutData,
   PixRefundData,
+  PixQrCodeCreatedData,
 } from '../interfaces/pix-webhook.interface';
 import { TransactionNotFoundRetryableException } from '@/common/errors/exceptions/transaction-not-found-retryable.exception';
 import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
@@ -24,7 +25,8 @@ export type PixWebhookEventType =
   | 'CASH_OUT_CANCELED'
   | 'CASH_OUT_UNDONE'
   | 'REFUND_RECEIVED'
-  | 'REFUND_CLEARED';
+  | 'REFUND_CLEARED'
+  | 'QRCODE_CREATED';
 
 /**
  * Estrutura do Job na fila de webhook de PIX.
@@ -35,7 +37,8 @@ export interface PixWebhookJob {
     | WebhookPayload<PixCashInReceivedData>[]
     | WebhookPayload<PixCashInClearedData>[]
     | WebhookPayload<PixCashOutData>[]
-    | WebhookPayload<PixRefundData>[];
+    | WebhookPayload<PixRefundData>[]
+    | WebhookPayload<PixQrCodeCreatedData>[];
   clientId: string;
   validPublicKey: boolean;
 }
@@ -112,6 +115,13 @@ export class PixWebhookProcessor {
             validPublicKey,
           );
           break;
+        case 'QRCODE_CREATED':
+          await this.pixWebhookService.handleQrCodeCreated(
+            events as WebhookPayload<PixQrCodeCreatedData>[],
+            clientId,
+            validPublicKey,
+          );
+          break;
         default:
           this.logger.warn(`Unknown event type: ${String(eventType)}`);
       }
@@ -163,6 +173,7 @@ export class PixWebhookProcessor {
         CASH_OUT_UNDONE: WebhookEvent.PIX_CASHOUT_WAS_UNDONE,
         REFUND_RECEIVED: WebhookEvent.PIX_REFUND_WAS_RECEIVED,
         REFUND_CLEARED: WebhookEvent.PIX_REFUND_WAS_CLEARED,
+        QRCODE_CREATED: WebhookEvent.PIX_QRCODE_WAS_CREATED,
       };
 
       const entityTypeMap: Record<string, string> = {
@@ -173,6 +184,7 @@ export class PixWebhookProcessor {
         CASH_OUT_UNDONE: 'PIX_TRANSFER',
         REFUND_RECEIVED: 'PIX_REFUND',
         REFUND_CLEARED: 'PIX_REFUND',
+        QRCODE_CREATED: 'PIX_QR_CODE',
       };
 
       for (const event of events) {

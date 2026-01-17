@@ -110,3 +110,32 @@ export interface PixRefundData {
   channel: PixRefundChannelData;
   createdAt: string;
 }
+
+/**
+ * Dados do recebedor do QR Code.
+ */
+export interface PixQrCodeRecipientData {
+  type: string;
+  documentNumber: string;
+  name: string;
+}
+
+/**
+ * Payload de PIX_QRCODE_WAS_CREATED.
+ */
+export interface PixQrCodeCreatedData {
+  partnerKey: string;
+  conciliationId: string;
+  addressingKey: AddressingKeyData;
+  amount: number;
+  singlePayment: boolean;
+  type: 'STATIC' | 'DYNAMIC';
+  purpose: string;
+  encodedValue: string;
+  changeAmountType: string;
+  format: string;
+  createdAt: string;
+  expiresAt?: string;
+  paymentDateLimit?: string;
+  recipient: PixQrCodeRecipientData;
+}

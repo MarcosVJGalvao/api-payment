@@ -48,4 +48,10 @@ export enum HiperbancoEndpoint {
   PIX_VALIDATE_KEY = '/pix/validate',
   /** Transferência PIX */
   PIX_TRANSFER = '/pix/transfer',
+  /** Gerar QR Code Estático */
+  PIX_GENERATE_QRCODE_STATIC = '/pix/qrCodeStatic',
+  /** Gerar QR Code Dinâmico */
+  PIX_GENERATE_QRCODE_DYNAMIC = '/pix/qrCodeDynamic',
+  /** Decodificar QR Code */
+  PIX_DECODE_QRCODE = '/pix/qrCode/decode',
 }

@@ -17,6 +17,7 @@ import { WebhookCleanupScheduler } from './schedulers/webhook-cleanup.scheduler'
 import { PixCashIn } from '@/pix/entities/pix-cash-in.entity';
 import { PixRefund } from '@/pix/entities/pix-refund.entity';
 import { PixTransfer } from '@/pix/entities/pix-transfer.entity';
+import { PixQrCode } from '@/pix/entities/pix-qr-code.entity';
 import { Boleto } from '@/boleto/entities/boleto.entity';
 import { BillPayment } from '@/bill-payment/entities/bill-payment.entity';
 import { Webhook } from '@/webhook/entities/webhook.entity';
@@ -50,6 +51,7 @@ const WEBHOOK_QUEUE_DEFAULT_OPTIONS = {
       PixCashIn,
       PixRefund,
       PixTransfer,
+      PixQrCode,
       Boleto,
       BillPayment,
       Webhook,

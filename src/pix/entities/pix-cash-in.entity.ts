@@ -155,8 +155,6 @@ export class PixCashIn extends BaseFinancialOperation {
   })
   providerCreatedAt?: Date;
 
-  // created_at, updated_at inherited
-
   @OneToMany(() => Transaction, (transaction) => transaction.pixCashIn)
   transactions: Transaction[];
 }
