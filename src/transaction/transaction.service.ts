@@ -21,6 +21,7 @@ export interface CreateTransactionFromWebhook {
   pixCashInId?: string;
   pixTransferId?: string;
   pixRefundId?: string;
+  pixQrCodeId?: string;
   boletoId?: string;
   billPaymentId?: string;
 }

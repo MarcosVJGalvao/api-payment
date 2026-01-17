@@ -133,15 +133,6 @@ export class PixQrCode extends BaseFinancialOperation {
   @JoinColumn({ name: 'payer_id' })
   payer?: PaymentSender;
 
-  @Column({
-    type: 'varchar',
-    length: 100,
-    name: 'transaction_id',
-    nullable: true,
-    comment: 'ID da transação quando pago',
-  })
-  transactionId?: string;
-
   @OneToMany(() => Transaction, (transaction) => transaction.pixQrCode)
   transactions: Transaction[];
 }

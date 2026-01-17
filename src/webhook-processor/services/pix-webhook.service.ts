@@ -9,6 +9,7 @@ import { PixTransferStatus } from '@/pix/enums/pix-transfer-status.enum';
 import { PixCashInStatus } from '@/pix/enums/pix-cash-in-status.enum';
 import { PixQrCodeType } from '@/pix/enums/pix-qr-code-type.enum';
 import { PixQrCodeStatus } from '@/pix/enums/pix-qr-code-status.enum';
+import { PixInitializationType } from '@/pix/enums/pix-initialization-type.enum';
 import { TransactionService } from '@/transaction/transaction.service';
 import { TransactionType } from '@/transaction/enums/transaction-type.enum';
 import { AccountService } from '@/account/account.service';
@@ -138,6 +139,33 @@ export class PixWebhookService {
 
       const saved = await this.pixCashInRepository.save(pixCashIn);
 
+      let pixQrCodeId: string | undefined;
+      const conciliationId = data.channel?.receiverReconciliationId;
+      const initializationType = data.channel?.pixInitializationType;
+
+      const qrCodeTypes: string[] = [
+        PixInitializationType.STATIC_QR_CODE,
+        PixInitializationType.DYNAMIC_QR_CODE,
+      ];
+
+      if (
+        conciliationId &&
+        initializationType &&
+        qrCodeTypes.includes(initializationType)
+      ) {
+        const pixQrCode = await this.pixQrCodeRepository.findOne({
+          where: { conciliationId },
+        });
+
+        if (pixQrCode) {
+          pixQrCodeId = pixQrCode.id;
+          if (pixQrCode.status !== PixQrCodeStatus.PAID) {
+            pixQrCode.status = PixQrCodeStatus.PAID;
+            await this.pixQrCodeRepository.save(pixQrCode);
+          }
+        }
+      }
+
       await this.transactionService.createFromWebhook({
         authenticationCode: data.authenticationCode,
         correlationId: event.correlationId,
@@ -151,6 +179,7 @@ export class PixWebhookService {
         clientId,
         accountId,
         pixCashInId: saved.id,
+        pixQrCodeId,
         providerTimestamp: new Date(event.timestamp),
       });
 
