@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HiperbancoHttpService } from '@/financial-providers/hiperbanco/hiperbanco-http.service';
 import { HiperbancoEndpoint } from '@/financial-providers/hiperbanco/enums/hiperbanco-endpoint.enum';
-import { CreateTedDto } from '@/ted/dto/create-ted.dto';
+import { ITedTransferRequest } from '@/ted/interfaces/ted-transfer-request.interface';
 import { handleHiperbancoError } from '@/financial-providers/hiperbanco/helpers/hiperbanco-error.helper';
+import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
 import { instanceToPlain } from 'class-transformer';
 
 export interface HiperbancoTedResponse {
@@ -56,14 +57,23 @@ export class HiperbancoTedHelper {
 
   /**
    * Realiza uma transferência via TED no Hiperbanco.
-   * @param dto Dados da transferência
+   * @param transferRequest Dados da transferência
+   * @param session Sessão autenticada do provedor (já validada pelo guard)
    */
-  async createTransfer(dto: CreateTedDto): Promise<HiperbancoTedResponse> {
+  async createTransfer(
+    transferRequest: ITedTransferRequest,
+    session: ProviderSession,
+  ): Promise<HiperbancoTedResponse> {
     try {
       const response =
         await this.hiperbancoHttpService.post<HiperbancoTedResponse>(
           HiperbancoEndpoint.TED_TRANSFER,
-          instanceToPlain(dto),
+          instanceToPlain(transferRequest),
+          {
+            headers: {
+              Authorization: `Bearer ${session.hiperbancoToken}`,
+            },
+          },
         );
       return response;
     } catch (error) {
@@ -79,16 +89,22 @@ export class HiperbancoTedHelper {
    * @param authenticationCode Código de autenticação da transação
    * @param branchNumber Agência da conta de origem
    * @param accountNumber Número da conta de origem
+   * @param session Sessão autenticada do provedor (já validada pelo guard)
    */
   async getTransferStatus(
     authenticationCode: string,
     branchNumber: string,
     accountNumber: string,
+    session: ProviderSession,
   ): Promise<HiperbancoTedStatusResponse> {
     try {
       const url = `${HiperbancoEndpoint.TED_STATUS}/${authenticationCode}/${branchNumber}/${accountNumber}`;
       const response =
-        await this.hiperbancoHttpService.get<HiperbancoTedStatusResponse>(url);
+        await this.hiperbancoHttpService.get<HiperbancoTedStatusResponse>(url, {
+          headers: {
+            Authorization: `Bearer ${session.hiperbancoToken}`,
+          },
+        });
       return response;
     } catch (error) {
       handleHiperbancoError(error, () => {

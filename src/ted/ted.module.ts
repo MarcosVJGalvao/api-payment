@@ -39,3 +39,4 @@ import { AccountModule } from '@/account/account.module';
   exports: [TedService],
 })
 export class TedModule {}
+

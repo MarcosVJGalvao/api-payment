@@ -7,7 +7,6 @@ import { CreateTedDto } from './dto/create-ted.dto';
 import { Account } from '@/account/entities/account.entity';
 import { TransactionService } from '@/transaction/transaction.service';
 import { TransactionType } from '@/transaction/enums/transaction-type.enum';
-import { TransactionStatus } from '@/transaction/enums/transaction-status.enum';
 import { TedProviderHelper } from './helpers/ted-provider.helper';
 import { PaymentSender } from '@/common/entities/payment-sender.entity';
 import { PaymentRecipient } from '@/common/entities/payment-recipient.entity';
@@ -16,6 +15,9 @@ import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { BaseQueryService } from '@/common/base-query/service/base-query.service';
 import { PaginationResult } from '@/common/base-query/interfaces/pagination-result.interface';
+import { ITedTransferRequest } from './interfaces/ted-transfer-request.interface';
+import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import { mapTedTransferStatusToTransactionStatus } from '@/common/helpers/status-mapper.helper';
 
 @Injectable()
 export class TedService {
@@ -93,13 +95,16 @@ export class TedService {
     createTedDto: CreateTedDto,
     clientId: string,
     accountId: string,
+    session: ProviderSession,
   ): Promise<{ authenticationCode: string; transactionId: string }> {
     this.logger.log(
       `Starting TED transfer for client ${clientId} on account ${accountId}`,
     );
 
+    // Buscar conta com onboarding para obter dados do sender
     const account = await this.accountRepository.findOne({
       where: { id: accountId, clientId },
+      relations: ['onboarding'],
     });
 
     if (!account) {
@@ -110,12 +115,22 @@ export class TedService {
       );
     }
 
-    // 1. Criar PaymentSender e PaymentRecipient
+    const onboarding = account.onboarding;
+
+    if (!onboarding) {
+      throw new CustomHttpException(
+        'Account onboarding not found',
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.ACCOUNT_NOT_FOUND,
+      );
+    }
+
+    // 1. Criar PaymentSender a partir dos dados do onboarding da conta
     const sender = new PaymentSender();
-    sender.documentNumber = createTedDto.sender.document;
-    sender.name = createTedDto.sender.name;
-    sender.accountBranch = createTedDto.sender.branch;
-    sender.accountNumber = createTedDto.sender.account;
+    sender.documentNumber = onboarding.documentNumber;
+    sender.name = onboarding.registerName;
+    sender.accountBranch = account.branch;
+    sender.accountNumber = account.number;
 
     const recipient = new PaymentRecipient();
     recipient.documentNumber = createTedDto.recipient.document;
@@ -141,22 +156,37 @@ export class TedService {
     await this.tedTransferRepository.save(tedTransfer);
 
     try {
-      // 3. Chamar provedor usando o Helper Genérico
+      // 3. Montar objeto para enviar ao provedor
+      const transferRequest: ITedTransferRequest = {
+        amount: createTedDto.amount,
+        description: createTedDto.description,
+        idempotencyKey: createTedDto.idempotencyKey,
+        sender: {
+          document: onboarding.documentNumber,
+          name: onboarding.registerName,
+          branch: account.branch,
+          account: account.number,
+        },
+        recipient: createTedDto.recipient,
+      };
+
+      // 4. Chamar provedor usando o Helper Genérico
       const providerResponse = await this.providerHelper.createTransfer(
         provider,
-        createTedDto,
+        transferRequest,
+        session,
       );
 
-      // 4. Atualizar registro com dados do provedor
+      // 5. Atualizar registro com dados do provedor
       tedTransfer.authenticationCode = providerResponse.authenticationCode;
       tedTransfer.providerTransactionId = providerResponse.transactionId;
       await this.tedTransferRepository.save(tedTransfer);
 
-      // 5. Criar Transação (CREATED)
+      // 6. Criar Transação (CREATED)
       await this.transactionService.createFromWebhook({
         authenticationCode: providerResponse.authenticationCode,
         type: TransactionType.TED_OUT,
-        status: TransactionStatus.CREATED,
+        status: mapTedTransferStatusToTransactionStatus(tedTransfer.status),
         amount: createTedDto.amount,
         description: createTedDto.description,
         clientId: clientId,

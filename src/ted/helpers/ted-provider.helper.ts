@@ -7,7 +7,8 @@ import {
   HiperbancoTedResponse,
   HiperbancoTedStatusResponse,
 } from './hiperbanco/hiperbanco-ted.helper';
-import { CreateTedDto } from '../dto/create-ted.dto';
+import { ITedTransferRequest } from '../interfaces/ted-transfer-request.interface';
+import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
 
 @Injectable()
 export class TedProviderHelper {
@@ -15,11 +16,12 @@ export class TedProviderHelper {
 
   async createTransfer(
     provider: FinancialProvider,
-    dto: CreateTedDto,
+    transferRequest: ITedTransferRequest,
+    session: ProviderSession,
   ): Promise<HiperbancoTedResponse> {
     switch (provider) {
       case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.createTransfer(dto);
+        return this.hiperbancoHelper.createTransfer(transferRequest, session);
       default:
         throw new CustomHttpException(
           `Provider ${String(provider)} is not supported for TED`,
@@ -34,6 +36,7 @@ export class TedProviderHelper {
     authenticationCode: string,
     branch: string,
     account: string,
+    session: ProviderSession,
   ): Promise<HiperbancoTedStatusResponse> {
     switch (provider) {
       case FinancialProvider.HIPERBANCO:
@@ -41,6 +44,7 @@ export class TedProviderHelper {
           authenticationCode,
           branch,
           account,
+          session,
         );
       default:
         throw new CustomHttpException(

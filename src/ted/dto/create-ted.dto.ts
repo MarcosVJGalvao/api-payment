@@ -9,7 +9,6 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { TedSenderDto } from './ted-sender.dto';
 import { TedRecipientDto } from './ted-recipient.dto';
 
 export class CreateTedDto {
@@ -37,15 +36,6 @@ export class CreateTedDto {
   @IsOptional()
   @IsString()
   idempotencyKey?: string;
-
-  @ApiProperty({
-    description: 'Dados do remetente',
-    type: TedSenderDto,
-  })
-  @ValidateNested()
-  @Type(() => TedSenderDto)
-  @IsNotEmpty()
-  sender: TedSenderDto;
 
   @ApiProperty({
     description: 'Dados do destinatário',

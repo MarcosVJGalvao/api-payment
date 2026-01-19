@@ -2,6 +2,7 @@ import { TransactionStatus } from '@/transaction/enums/transaction-status.enum';
 import { BoletoStatus } from '@/boleto/enums/boleto-status.enum';
 import { BillPaymentStatus } from '@/bill-payment/enums/bill-payment-status.enum';
 import { PixTransferStatus } from '@/pix/enums/pix-transfer-status.enum';
+import { TedTransferStatus } from '@/ted/enums/ted-transfer-status.enum';
 
 /**
  * Mapeia BoletoStatus para TransactionStatus.
@@ -54,6 +55,29 @@ export function mapPixTransferStatusToTransactionStatus(
     [PixTransferStatus.CANCELED]: TransactionStatus.CANCELED,
     [PixTransferStatus.UNDONE]: TransactionStatus.UNDONE,
     [PixTransferStatus.REPROVED]: TransactionStatus.REPROVED,
+  };
+
+  return statusMap[status] || TransactionStatus.PENDING;
+}
+
+/**
+ * Mapeia TedTransferStatus para TransactionStatus.
+ */
+export function mapTedTransferStatusToTransactionStatus(
+  status: TedTransferStatus,
+): TransactionStatus {
+  // Import TedTransferStatus dynamically or move imports to avoid circular dependency if needed.
+  // Assuming TedTransferStatus is available or passed as string/enum.
+  // Ideally, import it at the top.
+  const statusMap: Record<string, TransactionStatus> = {
+    CREATED: TransactionStatus.PENDING,
+    IN_PROCESS: TransactionStatus.IN_PROCESS,
+    APPROVED: TransactionStatus.IN_PROCESS,
+    DONE: TransactionStatus.DONE,
+    UNDONE: TransactionStatus.UNDONE,
+    CANCELED: TransactionStatus.CANCELED,
+    FAILED: TransactionStatus.FAILED,
+    REPROVED: TransactionStatus.REPROVED,
   };
 
   return statusMap[status] || TransactionStatus.PENDING;

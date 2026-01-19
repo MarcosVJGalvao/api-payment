@@ -71,6 +71,7 @@ export class TedController {
       createTedDto,
       req.clientId!,
       req.accountId!,
+      req.providerSession,
     );
   }
 }
