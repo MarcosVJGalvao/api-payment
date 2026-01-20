@@ -59,6 +59,29 @@ describe('WebhookStateMachineHelper', () => {
       );
       expect(isTerminalEvent(WebhookEvent.BILL_PAYMENT_HAS_FAILED)).toBe(false);
     });
+
+    it('should return true for terminal TED events', () => {
+      expect(isTerminalEvent(WebhookEvent.TED_CASH_OUT_WAS_DONE)).toBe(true);
+      expect(isTerminalEvent(WebhookEvent.TED_CASH_OUT_WAS_REPROVED)).toBe(
+        true,
+      );
+      expect(isTerminalEvent(WebhookEvent.TED_CASH_OUT_WAS_UNDONE)).toBe(true);
+      expect(isTerminalEvent(WebhookEvent.TED_CASH_IN_WAS_CLEARED)).toBe(true);
+      expect(isTerminalEvent(WebhookEvent.TED_REFUND_WAS_CLEARED)).toBe(true);
+    });
+
+    it('should return false for non-terminal TED events', () => {
+      expect(isTerminalEvent(WebhookEvent.TED_CASH_OUT_WAS_APPROVED)).toBe(
+        false,
+      );
+      expect(isTerminalEvent(WebhookEvent.TED_CASH_OUT_WAS_CANCELED)).toBe(
+        false,
+      );
+      expect(isTerminalEvent(WebhookEvent.TED_CASH_IN_WAS_RECEIVED)).toBe(
+        false,
+      );
+      expect(isTerminalEvent(WebhookEvent.TED_REFUND_WAS_RECEIVED)).toBe(false);
+    });
   });
 
   describe('canProcessWebhook', () => {
@@ -219,6 +242,100 @@ describe('WebhookStateMachineHelper', () => {
         const result = canProcessWebhook(
           WebhookEvent.BILL_PAYMENT_HAS_FAILED,
           WebhookEvent.BILL_PAYMENT_WAS_CANCELLED,
+        );
+        expect(result.canProcess).toBe(true);
+      });
+    });
+
+    describe('TED Cash-Out flow', () => {
+      it('should allow APPROVED as initial event', () => {
+        const result = canProcessWebhook(
+          null,
+          WebhookEvent.TED_CASH_OUT_WAS_APPROVED,
+        );
+        expect(result.canProcess).toBe(true);
+      });
+
+      it('should allow DONE after APPROVED', () => {
+        const result = canProcessWebhook(
+          WebhookEvent.TED_CASH_OUT_WAS_APPROVED,
+          WebhookEvent.TED_CASH_OUT_WAS_DONE,
+        );
+        expect(result.canProcess).toBe(true);
+      });
+
+      it('should reject DONE without prior APPROVED', () => {
+        const result = canProcessWebhook(
+          null,
+          WebhookEvent.TED_CASH_OUT_WAS_DONE,
+        );
+        expect(result.canProcess).toBe(false);
+      });
+
+      it('should allow CANCELED after APPROVED', () => {
+        const result = canProcessWebhook(
+          WebhookEvent.TED_CASH_OUT_WAS_APPROVED,
+          WebhookEvent.TED_CASH_OUT_WAS_CANCELED,
+        );
+        expect(result.canProcess).toBe(true);
+      });
+
+      it('should allow REPROVED as initial event', () => {
+        const result = canProcessWebhook(
+          null,
+          WebhookEvent.TED_CASH_OUT_WAS_REPROVED,
+        );
+        expect(result.canProcess).toBe(true);
+      });
+
+      it('should allow UNDONE after CANCELED', () => {
+        const result = canProcessWebhook(
+          WebhookEvent.TED_CASH_OUT_WAS_CANCELED,
+          WebhookEvent.TED_CASH_OUT_WAS_UNDONE,
+        );
+        expect(result.canProcess).toBe(true);
+      });
+    });
+
+    describe('TED Cash-In flow', () => {
+      it('should allow RECEIVED as initial event', () => {
+        const result = canProcessWebhook(
+          null,
+          WebhookEvent.TED_CASH_IN_WAS_RECEIVED,
+        );
+        expect(result.canProcess).toBe(true);
+      });
+
+      it('should allow CLEARED after RECEIVED', () => {
+        const result = canProcessWebhook(
+          WebhookEvent.TED_CASH_IN_WAS_RECEIVED,
+          WebhookEvent.TED_CASH_IN_WAS_CLEARED,
+        );
+        expect(result.canProcess).toBe(true);
+      });
+
+      it('should reject CLEARED without prior RECEIVED', () => {
+        const result = canProcessWebhook(
+          null,
+          WebhookEvent.TED_CASH_IN_WAS_CLEARED,
+        );
+        expect(result.canProcess).toBe(false);
+      });
+    });
+
+    describe('TED Refund flow', () => {
+      it('should allow RECEIVED as initial event', () => {
+        const result = canProcessWebhook(
+          null,
+          WebhookEvent.TED_REFUND_WAS_RECEIVED,
+        );
+        expect(result.canProcess).toBe(true);
+      });
+
+      it('should allow CLEARED after RECEIVED', () => {
+        const result = canProcessWebhook(
+          WebhookEvent.TED_REFUND_WAS_RECEIVED,
+          WebhookEvent.TED_REFUND_WAS_CLEARED,
         );
         expect(result.canProcess).toBe(true);
       });

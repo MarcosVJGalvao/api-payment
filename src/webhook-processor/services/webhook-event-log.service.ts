@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { WebhookEventLog } from '../entities/webhook-event-log.entity';
 import { CreateWebhookEventLogDto } from '../dto/create-webhook-event-log.dto';
+import { getCurrentDate } from '@/common/helpers/date.helpers';
 
 @Injectable()
 export class WebhookEventLogService {
@@ -79,7 +80,7 @@ export class WebhookEventLogService {
   }
 
   async cleanupOldLogs(): Promise<number> {
-    const cutoffDate = new Date();
+    const cutoffDate = getCurrentDate();
     cutoffDate.setDate(cutoffDate.getDate() - this.RETENTION_DAYS);
 
     const result = await this.repository.delete({

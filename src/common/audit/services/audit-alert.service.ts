@@ -5,6 +5,7 @@ import { AuditLogStatus } from '../enums/audit-log-status.enum';
 import { subHours } from 'date-fns';
 import { AuditLogRepository } from '../repositories/audit-log.repository';
 import { AuditAlert } from '../interfaces/audit-alert.interface';
+import { getCurrentDate } from '@/common/helpers/date.helpers';
 
 @Injectable()
 export class AuditAlertService {
@@ -86,7 +87,7 @@ export class AuditAlertService {
 
   private async detectMultipleLoginFailures(): Promise<AuditAlert[]> {
     const alerts: AuditAlert[] = [];
-    const fifteenMinutesAgo = subHours(new Date(), 0.25);
+    const fifteenMinutesAgo = subHours(getCurrentDate(), 0.25);
 
     const counts =
       await this.auditLogRepository.countLoginFailures(fifteenMinutesAgo);
@@ -118,7 +119,7 @@ export class AuditAlertService {
             threshold: this.loginFailureThreshold,
             timeWindow: '15 minutes',
           },
-          timestamp: new Date(),
+          timestamp: getCurrentDate(),
         });
       }
     }
@@ -135,7 +136,7 @@ export class AuditAlertService {
             threshold: this.loginFailureThreshold,
             timeWindow: '15 minutes',
           },
-          timestamp: new Date(),
+          timestamp: getCurrentDate(),
         });
       }
     }
@@ -145,7 +146,7 @@ export class AuditAlertService {
 
   private async detectMassDeletions(): Promise<AuditAlert[]> {
     const alerts: AuditAlert[] = [];
-    const oneHourAgo = subHours(new Date(), 1);
+    const oneHourAgo = subHours(getCurrentDate(), 1);
 
     const counts = await this.auditLogRepository.countMassDeletions(oneHourAgo);
 
@@ -162,7 +163,7 @@ export class AuditAlertService {
             threshold: this.massDeletionThreshold,
             timeWindow: '1 hour',
           },
-          timestamp: new Date(),
+          timestamp: getCurrentDate(),
         });
       }
     }
@@ -172,7 +173,7 @@ export class AuditAlertService {
 
   private async detectUnauthorizedAccess(): Promise<AuditAlert[]> {
     const alerts: AuditAlert[] = [];
-    const oneHourAgo = subHours(new Date(), 1);
+    const oneHourAgo = subHours(getCurrentDate(), 1);
 
     const counts = await this.auditLogRepository.countUnauthorizedAccesses(
       oneHourAgo,
@@ -215,7 +216,7 @@ export class AuditAlertService {
             threshold: this.unauthorizedAccessThreshold,
             timeWindow: '1 hour',
           },
-          timestamp: new Date(),
+          timestamp: getCurrentDate(),
         });
       }
     }
@@ -232,7 +233,7 @@ export class AuditAlertService {
             threshold: this.unauthorizedAccessThreshold,
             timeWindow: '1 hour',
           },
-          timestamp: new Date(),
+          timestamp: getCurrentDate(),
         });
       }
     }
@@ -242,7 +243,7 @@ export class AuditAlertService {
 
   private async detectPasswordChangeAbuse(): Promise<AuditAlert[]> {
     const alerts: AuditAlert[] = [];
-    const oneHourAgo = subHours(new Date(), 1);
+    const oneHourAgo = subHours(getCurrentDate(), 1);
 
     const counts =
       await this.auditLogRepository.countPasswordChanges(oneHourAgo);
@@ -260,7 +261,7 @@ export class AuditAlertService {
             threshold: this.passwordChangeThreshold,
             timeWindow: '1 hour',
           },
-          timestamp: new Date(),
+          timestamp: getCurrentDate(),
         });
       }
     }
@@ -270,7 +271,7 @@ export class AuditAlertService {
 
   private async detectUnusualActivity(): Promise<AuditAlert[]> {
     const alerts: AuditAlert[] = [];
-    const oneHourAgo = subHours(new Date(), 1);
+    const oneHourAgo = subHours(getCurrentDate(), 1);
 
     const counts = await this.auditLogRepository.countAllActivity(oneHourAgo);
 
@@ -303,7 +304,7 @@ export class AuditAlertService {
             timeWindow: '1 hour',
             actionsBreakdown: actions,
           },
-          timestamp: new Date(),
+          timestamp: getCurrentDate(),
         });
       }
     }

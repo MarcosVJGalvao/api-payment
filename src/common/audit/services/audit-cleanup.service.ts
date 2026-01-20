@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuditLogStatus } from '../enums/audit-log-status.enum';
 import { subDays } from 'date-fns';
 import { AuditLogRepository } from '../repositories/audit-log.repository';
+import { getCurrentDate } from '@/common/helpers/date.helpers';
 
 @Injectable()
 export class AuditCleanupService {
@@ -30,7 +31,7 @@ export class AuditCleanupService {
     this.logger.log('Starting cleanup of old audit logs...');
 
     try {
-      const cutoffDate = subDays(new Date(), this.retentionDays);
+      const cutoffDate = subDays(getCurrentDate(), this.retentionDays);
       const result = await this.auditLogRepository.deleteOldLogs(
         AuditLogStatus.SUCCESS,
         cutoffDate,
@@ -52,7 +53,7 @@ export class AuditCleanupService {
     this.logger.log('Starting cleanup of failed audit logs...');
 
     try {
-      const cutoffDate = subDays(new Date(), this.failedRetentionDays);
+      const cutoffDate = subDays(getCurrentDate(), this.failedRetentionDays);
       const result = await this.auditLogRepository.deleteOldLogs(
         AuditLogStatus.FAILURE,
         cutoffDate,
@@ -71,7 +72,7 @@ export class AuditCleanupService {
 
   async cleanupManually(retentionDays?: number): Promise<number> {
     const days = retentionDays || this.retentionDays;
-    const cutoffDate = subDays(new Date(), days);
+    const cutoffDate = subDays(getCurrentDate(), days);
 
     try {
       const result = await this.auditLogRepository.deleteAllOldLogs(cutoffDate);
@@ -92,7 +93,7 @@ export class AuditCleanupService {
 
   async cleanupFailedManually(retentionDays?: number): Promise<number> {
     const days = retentionDays || this.failedRetentionDays;
-    const cutoffDate = subDays(new Date(), days);
+    const cutoffDate = subDays(getCurrentDate(), days);
 
     try {
       const result = await this.auditLogRepository.deleteOldLogs(

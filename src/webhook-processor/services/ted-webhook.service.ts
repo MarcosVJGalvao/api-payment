@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, EntityManager } from 'typeorm';
+import { Repository } from 'typeorm';
 import { TedTransfer } from '@/ted/entities/ted-transfer.entity';
 import { TedCashIn } from '@/ted/entities/ted-cash-in.entity';
 import { TedRefund } from '@/ted/entities/ted-refund.entity';
@@ -23,6 +23,7 @@ import { WebhookEventLogService } from './webhook-event-log.service';
 import { WebhookEvent } from '../enums/webhook-event.enum';
 import { TransactionNotFoundRetryableException } from '@/common/errors/exceptions/transaction-not-found-retryable.exception';
 import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
+import { parseDate } from '@/common/helpers/date.helpers';
 
 @Injectable()
 export class TedWebhookService {
@@ -38,14 +39,8 @@ export class TedWebhookService {
     private readonly accountService: AccountService,
     private readonly transactionService: TransactionService,
     private readonly webhookEventLogService: WebhookEventLogService,
-    private readonly entityManager: EntityManager,
   ) {}
 
-  // ============ Cash-Out Event Handlers ============
-
-  /**
-   * Processa TED_CASH_OUT_WAS_APPROVED
-   */
   async handleCashOutApproved(
     events: WebhookPayload<TedCashOutData>[],
     clientId: string,
@@ -60,9 +55,6 @@ export class TedWebhookService {
     );
   }
 
-  /**
-   * Processa TED_CASH_OUT_WAS_DONE
-   */
   async handleCashOutDone(
     events: WebhookPayload<TedCashOutData>[],
     clientId: string,
@@ -77,9 +69,6 @@ export class TedWebhookService {
     );
   }
 
-  /**
-   * Processa TED_CASH_OUT_WAS_CANCELED
-   */
   async handleCashOutCanceled(
     events: WebhookPayload<TedCashOutData>[],
     clientId: string,
@@ -94,9 +83,6 @@ export class TedWebhookService {
     );
   }
 
-  /**
-   * Processa TED_CASH_OUT_WAS_REPROVED
-   */
   async handleCashOutReproved(
     events: WebhookPayload<TedCashOutData>[],
     clientId: string,
@@ -111,9 +97,6 @@ export class TedWebhookService {
     );
   }
 
-  /**
-   * Processa TED_CASH_OUT_WAS_UNDONE
-   */
   async handleCashOutUndone(
     events: WebhookPayload<TedCashOutData>[],
     clientId: string,
@@ -176,7 +159,7 @@ export class TedWebhookService {
 
       tedTransfer.status = status;
       tedTransfer.paymentDate = data.paymentDate
-        ? new Date(data.paymentDate)
+        ? parseDate(data.paymentDate)
         : undefined;
       tedTransfer.refusalReason = data.refusalReason;
 
@@ -189,7 +172,7 @@ export class TedWebhookService {
         idempotencyKey: event.idempotencyKey,
         entityId: event.entityId,
         description: data.description,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
       });
 
       await this.webhookEventLogService.logEvent({
@@ -199,7 +182,7 @@ export class TedWebhookService {
         eventName,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 
@@ -207,11 +190,6 @@ export class TedWebhookService {
     }
   }
 
-  // ============ Cash-In Event Handlers ============
-
-  /**
-   * Processa TED_CASH_IN_WAS_RECEIVED
-   */
   async handleCashInReceived(
     events: WebhookPayload<TedCashInData>[],
     _clientId: string,
@@ -284,7 +262,7 @@ export class TedWebhookService {
         clientId,
         accountId,
         providerCreatedAt: data.createdAt
-          ? new Date(data.createdAt)
+          ? parseDate(data.createdAt)
           : undefined,
       });
 
@@ -305,7 +283,7 @@ export class TedWebhookService {
         clientId,
         accountId,
         tedCashInId: saved.id,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
       });
 
       await this.webhookEventLogService.logEvent({
@@ -315,7 +293,7 @@ export class TedWebhookService {
         eventName: WebhookEvent.TED_CASH_IN_WAS_RECEIVED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 
@@ -396,7 +374,7 @@ export class TedWebhookService {
         idempotencyKey: event.idempotencyKey,
         entityId: event.entityId,
         description: data.description,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
       });
 
       await this.webhookEventLogService.logEvent({
@@ -406,7 +384,7 @@ export class TedWebhookService {
         eventName: WebhookEvent.TED_CASH_IN_WAS_CLEARED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 
@@ -484,7 +462,7 @@ export class TedWebhookService {
         },
         clientId,
         providerCreatedAt: data.createdAt
-          ? new Date(data.createdAt)
+          ? parseDate(data.createdAt)
           : undefined,
       });
 
@@ -504,7 +482,7 @@ export class TedWebhookService {
         description: data.description,
         clientId,
         tedRefundId: saved.id,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
       });
 
       await this.webhookEventLogService.logEvent({
@@ -514,7 +492,7 @@ export class TedWebhookService {
         eventName: WebhookEvent.TED_REFUND_WAS_RECEIVED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 
@@ -595,7 +573,7 @@ export class TedWebhookService {
         idempotencyKey: event.idempotencyKey,
         entityId: event.entityId,
         description: data.description,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
       });
 
       await this.webhookEventLogService.logEvent({
@@ -605,7 +583,7 @@ export class TedWebhookService {
         eventName: WebhookEvent.TED_REFUND_WAS_CLEARED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 

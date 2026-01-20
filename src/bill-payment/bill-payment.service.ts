@@ -19,6 +19,7 @@ import {
   BillPaymentConfirmResponse,
 } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { FilterOperator } from '@/common/base-query/enums/filter-operator.enum';
+import { parseDate } from '@/common/helpers/date.helpers';
 
 @Injectable()
 export class BillPaymentService {
@@ -106,7 +107,7 @@ export class BillPaymentService {
         bankAccount: dto.bankAccount,
         description: dto.description,
         settleDate: response.settleDate
-          ? new Date(response.settleDate)
+          ? parseDate(response.settleDate)
           : undefined,
         providerSlug: provider,
         clientId,

@@ -23,6 +23,10 @@ export async function enqueueWebhookEvent<TJob extends WebhookJobBase>(
   const clientId = request.webhookClientId || '';
   const validPublicKey = request.validPublicKey || false;
 
+  if (!validPublicKey) {
+    return { received: true };
+  }
+
   // Usar idempotencyKey do primeiro evento como jobId para deduplicação
   const firstEvent = events.length > 0 ? events[0] : undefined;
   const jobId = firstEvent?.idempotencyKey;

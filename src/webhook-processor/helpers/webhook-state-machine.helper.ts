@@ -1,33 +1,17 @@
 import { WebhookEvent } from '../enums/webhook-event.enum';
 
-/**
- * Resultado da validação de sequência de webhook.
- */
 export interface WebhookValidationResult {
-  /** Se o webhook pode ser processado */
   canProcess: boolean;
-  /** Motivo se não puder processar */
   reason?: string;
-  /** Status/evento atual da entidade */
   currentEvent?: string;
-  /** Evento que está sendo tentado */
   attemptedEvent: string;
 }
 
-/**
- * Configuração de transição de estado para cada evento.
- */
 interface StateConfig {
-  /** Eventos anteriores permitidos (vazio = evento inicial) */
   allowedPrevious: string[];
-  /** Se este evento é um estado terminal (final) */
   isTerminal: boolean;
 }
 
-/**
- * Máquina de estados para webhooks.
- * Define quais transições são válidas para cada tipo de operação.
- */
 const STATE_MACHINE: Record<string, StateConfig> = {
   [WebhookEvent.PIX_CASH_IN_WAS_RECEIVED]: {
     allowedPrevious: [],
@@ -112,11 +96,50 @@ const STATE_MACHINE: Record<string, StateConfig> = {
     allowedPrevious: [WebhookEvent.BILL_PAYMENT_WAS_CONFIRMED],
     isTerminal: true,
   },
+
+  // TED Cash-Out
+  [WebhookEvent.TED_CASH_OUT_WAS_APPROVED]: {
+    allowedPrevious: [],
+    isTerminal: false,
+  },
+  [WebhookEvent.TED_CASH_OUT_WAS_DONE]: {
+    allowedPrevious: [WebhookEvent.TED_CASH_OUT_WAS_APPROVED],
+    isTerminal: true,
+  },
+  [WebhookEvent.TED_CASH_OUT_WAS_CANCELED]: {
+    allowedPrevious: [WebhookEvent.TED_CASH_OUT_WAS_APPROVED],
+    isTerminal: false,
+  },
+  [WebhookEvent.TED_CASH_OUT_WAS_REPROVED]: {
+    allowedPrevious: [],
+    isTerminal: true,
+  },
+  [WebhookEvent.TED_CASH_OUT_WAS_UNDONE]: {
+    allowedPrevious: [WebhookEvent.TED_CASH_OUT_WAS_CANCELED],
+    isTerminal: true,
+  },
+
+  // TED Cash-In
+  [WebhookEvent.TED_CASH_IN_WAS_RECEIVED]: {
+    allowedPrevious: [],
+    isTerminal: false,
+  },
+  [WebhookEvent.TED_CASH_IN_WAS_CLEARED]: {
+    allowedPrevious: [WebhookEvent.TED_CASH_IN_WAS_RECEIVED],
+    isTerminal: true,
+  },
+
+  // TED Refund
+  [WebhookEvent.TED_REFUND_WAS_RECEIVED]: {
+    allowedPrevious: [],
+    isTerminal: false,
+  },
+  [WebhookEvent.TED_REFUND_WAS_CLEARED]: {
+    allowedPrevious: [WebhookEvent.TED_REFUND_WAS_RECEIVED],
+    isTerminal: true,
+  },
 };
 
-/**
- * Eventos terminais (finais) que não podem receber mais atualizações.
- */
 const TERMINAL_EVENTS = new Set<string>([
   WebhookEvent.PIX_CASH_IN_WAS_CLEARED,
   WebhookEvent.PIX_CASHOUT_WAS_COMPLETED,
@@ -127,6 +150,11 @@ const TERMINAL_EVENTS = new Set<string>([
   WebhookEvent.BOLETO_WAS_CANCELLED,
   WebhookEvent.BILL_PAYMENT_WAS_CANCELLED,
   WebhookEvent.BILL_PAYMENT_WAS_REFUSED,
+  WebhookEvent.TED_CASH_OUT_WAS_DONE,
+  WebhookEvent.TED_CASH_OUT_WAS_REPROVED,
+  WebhookEvent.TED_CASH_OUT_WAS_UNDONE,
+  WebhookEvent.TED_CASH_IN_WAS_CLEARED,
+  WebhookEvent.TED_REFUND_WAS_CLEARED,
 ]);
 
 /**

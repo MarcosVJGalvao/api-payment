@@ -8,6 +8,7 @@ import { BillPaymentWebhookData } from '../interfaces/bill-payment-webhook.inter
 import { TransactionNotFoundRetryableException } from '@/common/errors/exceptions/transaction-not-found-retryable.exception';
 import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
 import { WebhookEvent } from '../enums/webhook-event.enum';
+import { parseDate } from '@/common/helpers/date.helpers';
 
 /**
  * Tipos de eventos de webhook de pagamento de contas.
@@ -152,7 +153,7 @@ export class BillPaymentWebhookProcessor {
             wasProcessed: false,
             skipReason: `Failed after ${maxAttempts} attempts: ${error.message}`,
             payload: event as unknown as Record<string, unknown>,
-            providerTimestamp: new Date(event.timestamp),
+            providerTimestamp: parseDate(event.timestamp),
             clientId,
           });
           this.logger.log(

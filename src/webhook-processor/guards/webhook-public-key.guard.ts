@@ -28,24 +28,21 @@ export class WebhookPublicKeyGuard implements CanActivate {
     const publicKey = request.headers['publickey'] as string;
     const provider = request.params.provider;
 
-    // Sempre retorna true para não rejeitar o webhook
-    // Mas verifica se a publicKey é válida
     if (!publicKey) {
       this.logger.warn(
-        `Webhook received without publicKey from provider: ${provider}`,
+        `Webhook received without publicKey from provider: ${provider}. Webhook will be IGNORED.`,
       );
       request['validPublicKey'] = false;
       return true;
     }
 
-    // Buscar webhook com essa publicKey
     const webhook = await this.webhookRepository.findOne({
       where: { publicKey, isActive: true },
     });
 
     if (!webhook) {
       this.logger.warn(
-        `Invalid publicKey received: ${publicKey.substring(0, 8)}... from provider: ${provider}`,
+        `Invalid publicKey received: ${publicKey.substring(0, 8)}... from provider: ${provider}. Webhook will be IGNORED.`,
       );
       request['validPublicKey'] = false;
       return true;

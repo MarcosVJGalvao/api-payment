@@ -18,6 +18,7 @@ import { findPermissions } from '../helpers/permission-finder.helper';
 import { BaseQueryService } from '@/common/base-query/service/base-query.service';
 import { PaginationResult } from '@/common/base-query/interfaces/pagination-result.interface';
 import { FilterOperator } from '@/common/base-query/enums/filter-operator.enum';
+import { getCurrentDate } from '@/common/helpers/date.helpers';
 
 @Injectable()
 export class RoleService {
@@ -125,7 +126,7 @@ export class RoleService {
       (rp) => !permissionIds.has(rp.permission.id),
     );
     if (toDelete.length > 0) {
-      const now = new Date();
+      const now = getCurrentDate();
       for (const rolePermission of toDelete) {
         rolePermission.deletedAt = now;
       }

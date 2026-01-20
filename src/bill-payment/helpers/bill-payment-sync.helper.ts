@@ -12,6 +12,7 @@ import { sanitizeDocument } from './document-sanitizer.helper';
 import { TransactionService } from '@/transaction/transaction.service';
 import { TransactionType } from '@/transaction/enums/transaction-type.enum';
 import { mapBillPaymentStatusToTransactionStatus } from '@/common/helpers/status-mapper.helper';
+import { parseISO } from '@/common/helpers/date.helpers';
 
 /**
  * Helper responsável pela sincronização de dados de pagamento de contas com provedores externos.
@@ -304,7 +305,7 @@ export class BillPaymentSyncHelper {
     if (!dateStr) return undefined;
 
     // Tenta parse ISO primeiro
-    const isoDate = new Date(dateStr);
+    const isoDate = parseISO(dateStr);
     if (!isNaN(isoDate.getTime())) {
       return isoDate;
     }
