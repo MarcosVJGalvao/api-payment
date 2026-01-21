@@ -4,8 +4,7 @@ import { RoleService } from '../../services/role.service';
 import { Role } from '../../entities/role.entity';
 import { Permission } from '../../entities/permission.entity';
 import { RolePermission } from '../../entities/role-permission.entity';
-import { User } from '@/user/entities/user.entity';
-import { UserRole } from '@/user/entities/user-role.entity';
+import { ClientRole } from '../../entities/client-role.entity';
 import { PermissionService } from '../../services/permission.service';
 import { RedisService } from '@/common/redis/redis.service';
 import { BaseQueryService } from '@/common/base-query/service/base-query.service';
@@ -50,11 +49,7 @@ export const createRoleServiceTestFactory = async () => {
         useValue: mockRepository(),
       },
       {
-        provide: getRepositoryToken(User),
-        useValue: mockRepository(),
-      },
-      {
-        provide: getRepositoryToken(UserRole),
+        provide: getRepositoryToken(ClientRole),
         useValue: mockRepository(),
       },
       {
@@ -79,8 +74,7 @@ export const createRoleServiceTestFactory = async () => {
     rolePermissionRepositoryMock: module.get(
       getRepositoryToken(RolePermission),
     ),
-    userRepositoryMock: module.get(getRepositoryToken(User)),
-    userRoleRepositoryMock: module.get(getRepositoryToken(UserRole)),
+    clientRoleRepositoryMock: module.get(getRepositoryToken(ClientRole)),
     permissionServiceMock,
     redisServiceMock,
     baseQueryServiceMock,

@@ -3,23 +3,27 @@ import { createWebhookServiceTestFactory } from './factory/webhook.service.facto
 import {
   mockRegisterWebhookDto,
   mockRegisterWebhookResponse,
-  mockProviderSession,
 } from './mocks/webhook.mock';
 import { validate } from 'class-validator';
 import { RegisterWebhookDto } from '../dto/register-webhook.dto';
 import { WebhookContext } from '../enums/webhook-context.enum';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
+import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 
 describe('WebhookService', () => {
   let service: WebhookService;
   let webhookRepositoryMock: any;
   let providerHelperMock: any;
+  let queueMock: any;
+  let providerSessionHelperMock: any;
 
   beforeEach(async () => {
     const factory = await createWebhookServiceTestFactory();
     service = factory.webhookService;
     webhookRepositoryMock = factory.webhookRepositoryMock;
     providerHelperMock = factory.providerHelperMock;
+    queueMock = factory.queueMock;
+    providerSessionHelperMock = factory.providerSessionHelperMock;
   });
 
   afterEach(() => {
@@ -27,55 +31,46 @@ describe('WebhookService', () => {
   });
 
   describe('registerWebhook', () => {
-    it('should register webhook via provider helper and save to repository', async () => {
+    it('should queue webhook registration and return processing status', async () => {
       const dto = mockRegisterWebhookDto();
-      const expectedResponse = mockRegisterWebhookResponse();
-      const session = mockProviderSession();
-
       const clientId = 'test-client-id';
-
-      providerHelperMock.register.mockResolvedValue(expectedResponse);
 
       const result = await service.registerWebhook(
         FinancialProvider.HIPERBANCO,
         dto,
-        session,
         clientId,
       );
 
-      expect(providerHelperMock.register).toHaveBeenCalledWith(
-        FinancialProvider.HIPERBANCO,
+      expect(queueMock.add).toHaveBeenCalledWith({
+        provider: FinancialProvider.HIPERBANCO,
         dto,
-        session,
-      );
-      expect(webhookRepositoryMock.saveWebhook).toHaveBeenCalledWith(
-        FinancialProvider.HIPERBANCO,
-        dto,
-        expectedResponse,
         clientId,
-      );
-      expect(result).toEqual(expectedResponse);
+      });
+      expect(result).toEqual({
+        message: 'Webhook registration queued',
+        status: 'PROCESSING',
+      });
     });
+  });
 
-    it('should propagate error from provider helper', async () => {
-      const dto = mockRegisterWebhookDto();
-      const session = mockProviderSession();
+  describe('listWebhooks', () => {
+    it('should return webhooks from repository', async () => {
       const clientId = 'test-client-id';
+      const expectedWebhooks = [{ id: 'webhook-1' }, { id: 'webhook-2' }];
 
-      providerHelperMock.register.mockRejectedValue(
-        new Error('Provider error'),
+      webhookRepositoryMock.findByClientIdAndProvider.mockResolvedValue(
+        expectedWebhooks,
       );
 
-      await expect(
-        service.registerWebhook(
-          FinancialProvider.HIPERBANCO,
-          dto,
-          session,
-          clientId,
-        ),
-      ).rejects.toThrow('Provider error');
+      const result = await service.listWebhooks(
+        FinancialProvider.HIPERBANCO,
+        clientId,
+      );
 
-      expect(webhookRepositoryMock.saveWebhook).not.toHaveBeenCalled();
+      expect(
+        webhookRepositoryMock.findByClientIdAndProvider,
+      ).toHaveBeenCalledWith(clientId, FinancialProvider.HIPERBANCO);
+      expect(result).toEqual(expectedWebhooks);
     });
   });
 
@@ -83,7 +78,6 @@ describe('WebhookService', () => {
     it('should update webhook via provider helper and update repository', async () => {
       const webhookId = 'webhook-id';
       const dto = { uri: 'https://new-uri.com' };
-      const session = mockProviderSession();
       const clientId = 'test-client-id';
       const expectedResponse = {
         ...mockRegisterWebhookResponse(),
@@ -95,23 +89,23 @@ describe('WebhookService', () => {
         externalId: webhookId,
       });
       providerHelperMock.update.mockResolvedValue(expectedResponse);
+      providerSessionHelperMock.executeWithRetry.mockImplementation(
+        (provider, fn) => fn('mock-session'),
+      );
 
       const result = await service.updateWebhook(
         FinancialProvider.HIPERBANCO,
         webhookId,
         dto,
-        session,
         clientId,
       );
 
       expect(
         webhookRepositoryMock.findByExternalIdAndClient,
       ).toHaveBeenCalledWith(webhookId, clientId);
-      expect(providerHelperMock.update).toHaveBeenCalledWith(
+      expect(providerSessionHelperMock.executeWithRetry).toHaveBeenCalledWith(
         FinancialProvider.HIPERBANCO,
-        webhookId,
-        dto,
-        session,
+        expect.any(Function),
       );
       expect(webhookRepositoryMock.updateWebhookUri).toHaveBeenCalledWith(
         webhookId,
@@ -120,24 +114,43 @@ describe('WebhookService', () => {
       expect(result).toEqual(expectedResponse);
     });
 
-    it('should propagate error from provider helper and not update repository', async () => {
+    it('should throw NOT_FOUND if webhook does not exist', async () => {
       const webhookId = 'webhook-id';
       const dto = { uri: 'https://new-uri.com' };
-      const session = mockProviderSession();
       const clientId = 'test-client-id';
 
-      webhookRepositoryMock.findByExternalIdAndClient.mockResolvedValue({
-        id: 'internal-id',
-        externalId: webhookId,
-      });
-      providerHelperMock.update.mockRejectedValue(new Error('Provider error'));
+      webhookRepositoryMock.findByExternalIdAndClient.mockResolvedValue(null);
 
       await expect(
         service.updateWebhook(
           FinancialProvider.HIPERBANCO,
           webhookId,
           dto,
-          session,
+          clientId,
+        ),
+      ).rejects.toThrow(CustomHttpException);
+
+      expect(webhookRepositoryMock.updateWebhookUri).not.toHaveBeenCalled();
+    });
+
+    it('should propagate error from provider helper and not update repository', async () => {
+      const webhookId = 'webhook-id';
+      const dto = { uri: 'https://new-uri.com' };
+      const clientId = 'test-client-id';
+
+      webhookRepositoryMock.findByExternalIdAndClient.mockResolvedValue({
+        id: 'internal-id',
+        externalId: webhookId,
+      });
+      providerSessionHelperMock.executeWithRetry.mockRejectedValue(
+        new Error('Provider error'),
+      );
+
+      await expect(
+        service.updateWebhook(
+          FinancialProvider.HIPERBANCO,
+          webhookId,
+          dto,
           clientId,
         ),
       ).rejects.toThrow('Provider error');
@@ -149,35 +162,34 @@ describe('WebhookService', () => {
   describe('deleteWebhook', () => {
     it('should delete webhook via provider helper and soft delete from repository', async () => {
       const webhookId = 'webhook-id';
-      const session = mockProviderSession();
       const clientId = 'test-client-id';
       const webhook = { id: 'internal-id', externalId: webhookId };
 
       webhookRepositoryMock.findByExternalIdAndClient.mockResolvedValue(
         webhook,
       );
+      providerSessionHelperMock.executeWithRetry.mockImplementation(
+        (provider, fn) => fn('mock-session'),
+      );
 
       await service.deleteWebhook(
         FinancialProvider.HIPERBANCO,
         webhookId,
-        session,
         clientId,
       );
 
       expect(
         webhookRepositoryMock.findByExternalIdAndClient,
       ).toHaveBeenCalledWith(webhookId, clientId);
-      expect(providerHelperMock.delete).toHaveBeenCalledWith(
+      expect(providerSessionHelperMock.executeWithRetry).toHaveBeenCalledWith(
         FinancialProvider.HIPERBANCO,
-        webhookId,
-        session,
+        expect.any(Function),
       );
       expect(webhookRepositoryMock.softDelete).toHaveBeenCalledWith(webhook.id);
     });
 
     it('should throw NOT_FOUND if webhook does not exist locally', async () => {
       const webhookId = 'webhook-id';
-      const session = mockProviderSession();
       const clientId = 'test-client-id';
 
       webhookRepositoryMock.findByExternalIdAndClient.mockResolvedValue(null);
@@ -186,33 +198,32 @@ describe('WebhookService', () => {
         service.deleteWebhook(
           FinancialProvider.HIPERBANCO,
           webhookId,
-          session,
           clientId,
         ),
       ).rejects.toThrow(
         'Webhook não encontrado ou não pertence a este cliente',
       );
 
-      expect(providerHelperMock.delete).not.toHaveBeenCalled();
+      expect(providerSessionHelperMock.executeWithRetry).not.toHaveBeenCalled();
       expect(webhookRepositoryMock.softDelete).not.toHaveBeenCalled();
     });
 
     it('should propagate error from provider and not delete locally', async () => {
       const webhookId = 'webhook-id';
-      const session = mockProviderSession();
       const clientId = 'test-client-id';
       const webhook = { id: 'internal-id', externalId: webhookId };
 
       webhookRepositoryMock.findByExternalIdAndClient.mockResolvedValue(
         webhook,
       );
-      providerHelperMock.delete.mockRejectedValue(new Error('Provider error'));
+      providerSessionHelperMock.executeWithRetry.mockRejectedValue(
+        new Error('Provider error'),
+      );
 
       await expect(
         service.deleteWebhook(
           FinancialProvider.HIPERBANCO,
           webhookId,
-          session,
           clientId,
         ),
       ).rejects.toThrow('Provider error');
