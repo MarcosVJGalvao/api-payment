@@ -37,6 +37,7 @@ import {
 } from './helpers/pix-transfer.helper';
 import { PaymentSender } from '@/common/entities/payment-sender.entity';
 import { PaymentRecipient } from '@/common/entities/payment-recipient.entity';
+import { parseDate } from '@/common/helpers/date.helpers';
 
 @Injectable()
 export class PixService {
@@ -455,7 +456,7 @@ export class PixService {
         recipientName: dto.recipientName,
         conciliationId: dto.conciliationId,
         singlePayment: dto.singlePayment || false,
-        expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
+        expiresAt: dto.expiresAt ? parseDate(dto.expiresAt) : undefined,
         changeAmountType: dto.changeAmountType,
         payer,
         providerSlug: provider,

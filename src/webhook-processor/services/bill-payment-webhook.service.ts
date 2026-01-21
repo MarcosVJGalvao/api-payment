@@ -13,6 +13,7 @@ import { WebhookEventLogService } from './webhook-event-log.service';
 import { WebhookEvent } from '../enums/webhook-event.enum';
 import { TransactionNotFoundRetryableException } from '@/common/errors/exceptions/transaction-not-found-retryable.exception';
 import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
+import { parseDate } from '@/common/helpers/date.helpers';
 
 @Injectable()
 export class BillPaymentWebhookService {
@@ -56,10 +57,10 @@ export class BillPaymentWebhookService {
 
       if (data.transactionId)
         billPayment.transactionId = String(data.transactionId);
-      if (data.settleDate) billPayment.settleDate = new Date(data.settleDate);
+      if (data.settleDate) billPayment.settleDate = parseDate(data.settleDate);
       if (data.paymentDate)
-        billPayment.paymentDate = new Date(data.paymentDate);
-      if (data.dueDate) billPayment.dueDate = new Date(data.dueDate);
+        billPayment.paymentDate = parseDate(data.paymentDate);
+      if (data.dueDate) billPayment.dueDate = parseDate(data.dueDate);
       if (data.digitable) billPayment.digitable = data.digitable;
       if (data.description) billPayment.description = data.description;
 
@@ -104,7 +105,7 @@ export class BillPaymentWebhookService {
         clientId,
         billPaymentId: billPayment.id,
         accountId: billPayment.accountId,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
       });
 
       await this.webhookEventLogService.logEvent({
@@ -114,7 +115,7 @@ export class BillPaymentWebhookService {
         eventName: WebhookEvent.BILL_PAYMENT_WAS_RECEIVED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 
@@ -185,7 +186,7 @@ export class BillPaymentWebhookService {
         eventName: WebhookEvent.BILL_PAYMENT_WAS_CREATED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 
@@ -244,7 +245,7 @@ export class BillPaymentWebhookService {
 
       billPayment.status = BillPaymentStatus.CONFIRMED;
       if (data.confirmedAt)
-        billPayment.confirmedAt = new Date(data.confirmedAt);
+        billPayment.confirmedAt = parseDate(data.confirmedAt);
 
       await this.billPaymentRepository.save(billPayment);
 
@@ -260,7 +261,7 @@ export class BillPaymentWebhookService {
         eventName: WebhookEvent.BILL_PAYMENT_WAS_CONFIRMED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 
@@ -333,7 +334,7 @@ export class BillPaymentWebhookService {
         eventName: WebhookEvent.BILL_PAYMENT_HAS_FAILED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 
@@ -407,7 +408,7 @@ export class BillPaymentWebhookService {
         eventName: WebhookEvent.BILL_PAYMENT_WAS_CANCELLED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 
@@ -478,7 +479,7 @@ export class BillPaymentWebhookService {
         eventName: WebhookEvent.BILL_PAYMENT_WAS_REFUSED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 

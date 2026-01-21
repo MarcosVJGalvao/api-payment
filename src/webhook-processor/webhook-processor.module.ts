@@ -27,6 +27,12 @@ import { PaymentRecipient } from '@/common/entities/payment-recipient.entity';
 import { BoletoPayer } from '@/boleto/entities/boleto-payer.entity';
 import { TransactionModule } from '@/transaction/transaction.module';
 import { AccountModule } from '@/account/account.module';
+import { TedTransfer } from '@/ted/entities/ted-transfer.entity';
+import { TedCashIn } from '@/ted/entities/ted-cash-in.entity';
+import { TedRefund } from '@/ted/entities/ted-refund.entity';
+import { TedWebhookService } from './services/ted-webhook.service';
+import { TedWebhookController } from './controllers/ted-webhook.controller';
+import { TedWebhookProcessor } from './processors/ted-webhook.processor';
 
 /**
  * Configuração padrão de retry para filas de webhook.
@@ -59,6 +65,9 @@ const WEBHOOK_QUEUE_DEFAULT_OPTIONS = {
       PaymentSender,
       PaymentRecipient,
       BoletoPayer,
+      TedTransfer,
+      TedCashIn,
+      TedRefund,
     ]),
     TransactionModule,
     AccountModule,
@@ -68,12 +77,14 @@ const WEBHOOK_QUEUE_DEFAULT_OPTIONS = {
       { name: 'webhook-bill-payment', ...WEBHOOK_QUEUE_DEFAULT_OPTIONS },
       { name: 'webhook-boleto', ...WEBHOOK_QUEUE_DEFAULT_OPTIONS },
       { name: 'webhook-pix', ...WEBHOOK_QUEUE_DEFAULT_OPTIONS },
+      { name: 'webhook-ted', ...WEBHOOK_QUEUE_DEFAULT_OPTIONS },
     ),
   ],
   controllers: [
     PixWebhookController,
     BoletoWebhookController,
     BillPaymentWebhookController,
+    TedWebhookController,
   ],
   providers: [
     PixWebhookService,
@@ -85,12 +96,13 @@ const WEBHOOK_QUEUE_DEFAULT_OPTIONS = {
     BillPaymentWebhookProcessor,
     BoletoWebhookProcessor,
     PixWebhookProcessor,
+    TedWebhookService,
+    TedWebhookProcessor,
   ],
   exports: [
-    PixWebhookService,
-    BoletoWebhookService,
     BillPaymentWebhookService,
     WebhookEventLogService,
+    TedWebhookService,
   ],
 })
 export class WebhookProcessorModule {}

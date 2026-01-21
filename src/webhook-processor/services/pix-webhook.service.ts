@@ -28,6 +28,7 @@ import { WebhookEventLogService } from './webhook-event-log.service';
 import { WebhookEvent } from '../enums/webhook-event.enum';
 import { TransactionNotFoundRetryableException } from '@/common/errors/exceptions/transaction-not-found-retryable.exception';
 import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
+import { parseDate } from '@/common/helpers/date.helpers';
 
 @Injectable()
 export class PixWebhookService {
@@ -133,7 +134,7 @@ export class PixWebhookService {
         clientId,
         accountId,
         providerCreatedAt: data.createdAt
-          ? new Date(data.createdAt)
+          ? parseDate(data.createdAt)
           : undefined,
       });
 
@@ -180,7 +181,7 @@ export class PixWebhookService {
         accountId,
         pixCashInId: saved.id,
         pixQrCodeId,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
       });
 
       await this.webhookEventLogService.logEvent({
@@ -190,7 +191,7 @@ export class PixWebhookService {
         eventName: WebhookEvent.PIX_CASH_IN_WAS_RECEIVED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 
@@ -267,7 +268,7 @@ export class PixWebhookService {
         idempotencyKey: event.idempotencyKey,
         entityId: event.entityId,
         description: data.description,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
       });
 
       await this.webhookEventLogService.logEvent({
@@ -277,7 +278,7 @@ export class PixWebhookService {
         eventName: WebhookEvent.PIX_CASH_IN_WAS_CLEARED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 
@@ -377,7 +378,7 @@ export class PixWebhookService {
 
       pixTransfer.status = status;
       pixTransfer.paymentDate = data.paymentDate
-        ? new Date(data.paymentDate)
+        ? parseDate(data.paymentDate)
         : undefined;
       pixTransfer.isRefund = data.isRefund || false;
       pixTransfer.endToEndIdOriginal = data.endToEndIdOriginal;
@@ -398,7 +399,7 @@ export class PixWebhookService {
         idempotencyKey: event.idempotencyKey,
         entityId: event.entityId,
         description: data.description,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
       });
 
       await this.webhookEventLogService.logEvent({
@@ -408,7 +409,7 @@ export class PixWebhookService {
         eventName,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 
@@ -483,7 +484,7 @@ export class PixWebhookService {
         relatedPixTransferId,
         clientId,
         providerCreatedAt: data.createdAt
-          ? new Date(data.createdAt)
+          ? parseDate(data.createdAt)
           : undefined,
       });
 
@@ -501,7 +502,7 @@ export class PixWebhookService {
         description: data.description,
         clientId,
         pixRefundId: saved.id,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
       });
 
       await this.webhookEventLogService.logEvent({
@@ -511,7 +512,7 @@ export class PixWebhookService {
         eventName: WebhookEvent.PIX_REFUND_WAS_RECEIVED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 
@@ -578,7 +579,7 @@ export class PixWebhookService {
         idempotencyKey: event.idempotencyKey,
         entityId: event.entityId,
         description: data.description,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
       });
 
       await this.webhookEventLogService.logEvent({
@@ -588,7 +589,7 @@ export class PixWebhookService {
         eventName: WebhookEvent.PIX_REFUND_WAS_CLEARED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 
@@ -625,7 +626,7 @@ export class PixWebhookService {
         pixQrCode.encodedValue = data.encodedValue;
         pixQrCode.status = PixQrCodeStatus.CREATED;
         if (data.expiresAt) {
-          pixQrCode.expiresAt = new Date(data.expiresAt);
+          pixQrCode.expiresAt = parseDate(data.expiresAt);
         }
         await this.pixQrCodeRepository.save(pixQrCode);
 
@@ -660,7 +661,7 @@ export class PixWebhookService {
           recipientName: data.recipient.name,
           singlePayment: data.singlePayment,
           changeAmountType: data.changeAmountType,
-          expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
+          expiresAt: data.expiresAt ? parseDate(data.expiresAt) : undefined,
           providerSlug: FinancialProvider.HIPERBANCO,
           clientId: account.clientId,
           accountId: account.id,
@@ -680,7 +681,7 @@ export class PixWebhookService {
         eventName: WebhookEvent.PIX_QRCODE_WAS_CREATED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
     }

@@ -24,6 +24,9 @@ export interface CreateTransactionFromWebhook {
   pixQrCodeId?: string;
   boletoId?: string;
   billPaymentId?: string;
+  tedTransferId?: string;
+  tedCashInId?: string;
+  tedRefundId?: string;
 }
 
 export interface UpdateTransactionFromWebhook {

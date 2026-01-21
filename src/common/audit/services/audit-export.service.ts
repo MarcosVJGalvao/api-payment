@@ -6,7 +6,7 @@ import {
 } from '../helpers/export/export-formatter.helper';
 import { AuditLogRepository } from '../repositories/audit-log.repository';
 import { ExportResponse } from '../interfaces/export-response.interface';
-import { transformToISO } from '@/common/helpers/date.helpers';
+import { transformToISO, getCurrentDate } from '@/common/helpers/date.helpers';
 
 @Injectable()
 export class AuditExportService {
@@ -19,7 +19,7 @@ export class AuditExportService {
       const logs = await this.auditLogRepository.findAllForExport(dto);
 
       const format = dto.format || ExportFormat.JSON;
-      const timestamp = transformToISO(new Date())
+      const timestamp = transformToISO(getCurrentDate())
         .replace(/:/g, '-')
         .split('.')[0];
 

@@ -54,4 +54,10 @@ export enum HiperbancoEndpoint {
   PIX_GENERATE_QRCODE_DYNAMIC = '/pix/qrCodeDynamic',
   /** Decodificar QR Code */
   PIX_DECODE_QRCODE = '/pix/qrCode/decode',
+
+  // ============ TED ============
+  /** Transferência via TED */
+  TED_TRANSFER = '/ted/transfer',
+  /** Consulta de TED por código de autenticação (Polling) */
+  TED_STATUS = '/ted/auths',
 }

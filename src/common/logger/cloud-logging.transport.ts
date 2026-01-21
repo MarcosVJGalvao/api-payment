@@ -1,10 +1,11 @@
 import * as winston from 'winston';
-import TransportStream = require('winston-transport');
+import TransportStream from 'winston-transport';
 import {
   CloudLoggingProvider,
   CloudLogEntry,
 } from './providers/cloud-logging.provider';
 import { getModuleName } from './helpers/module-context.helper';
+import { transformToISO, getCurrentDate } from '@/common/helpers/date.helpers';
 
 const BOOTSTRAP_SKIP_PATTERNS = [
   /bootstrap/i,
@@ -60,6 +61,7 @@ export class CloudLoggingTransport extends TransportStream {
   }
 
   private cleanLevel(level: string): string {
+    // eslint-disable-next-line no-control-regex
     return level.replace(/\u001b\[[0-9;]*m/g, '').trim();
   }
 
@@ -92,8 +94,10 @@ export class CloudLoggingTransport extends TransportStream {
     if (Array.isArray(obj)) return obj.map((item) => this.removeStack(item));
 
     if (typeof obj === 'object') {
-      const cleaned: Record<string, any> = {};
-      for (const [key, value] of Object.entries(obj)) {
+      const cleaned: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(
+        obj as Record<string, unknown>,
+      )) {
         if (key.toLowerCase() === 'stack') continue;
         cleaned[key] = this.removeStack(value);
       }
@@ -125,7 +129,7 @@ export class CloudLoggingTransport extends TransportStream {
     const cleanedEntry = this.cleanLogEntry(info as Record<string, any>);
     const logEntry: CloudLogEntry = {
       ...cleanedEntry,
-      timestamp: (info.timestamp as string) || new Date().toISOString(),
+      timestamp: (info.timestamp as string) || transformToISO(getCurrentDate()),
       level: this.cleanLevel(info.level || 'info'),
       message: message || '',
     };

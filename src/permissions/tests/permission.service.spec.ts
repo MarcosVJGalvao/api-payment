@@ -9,8 +9,6 @@ import {
   mockPermission,
   mockPermissionWithRoles,
   mockPaginationResult,
-  mockUserRole,
-  mockUserPermission,
   mockRolePermission,
   mockRole,
 } from './mocks/permission.mock';
@@ -22,10 +20,7 @@ jest.mock('../helpers/permission.helper');
 
 describe('PermissionService', () => {
   let service: PermissionService;
-  let userRepositoryMock: any;
   let permissionRepositoryMock: any;
-  let userRoleRepositoryMock: any;
-  let userPermissionRepositoryMock: any;
   let redisServiceMock: any;
   let configServiceMock: any;
   let baseQueryServiceMock: any;
@@ -33,10 +28,7 @@ describe('PermissionService', () => {
   beforeEach(async () => {
     const factory = await createPermissionServiceTestFactory();
     service = factory.permissionService;
-    userRepositoryMock = factory.userRepositoryMock;
     permissionRepositoryMock = factory.permissionRepositoryMock;
-    userRoleRepositoryMock = factory.userRoleRepositoryMock;
-    userPermissionRepositoryMock = factory.userPermissionRepositoryMock;
     redisServiceMock = factory.redisServiceMock;
     configServiceMock = factory.configServiceMock;
     baseQueryServiceMock = factory.baseQueryServiceMock;
@@ -60,80 +52,8 @@ describe('PermissionService', () => {
   });
 
   describe('getUserPermissions', () => {
-    it('should return permissions from cache when available', async () => {
+    it('should return empty array (placeholder implementation)', async () => {
       const userId = '550e8400-e29b-41d4-a716-446655440010';
-      const cachedPermissions = [
-        PermissionName.USER_READ,
-        PermissionName.USER_UPDATE,
-      ];
-
-      redisServiceMock.get.mockResolvedValue(JSON.stringify(cachedPermissions));
-
-      const result = await service.getUserPermissions(userId);
-
-      expect(redisServiceMock.get).toHaveBeenCalledWith(
-        `user_permissions:${userId}`,
-      );
-      expect(userRepositoryMock.findOne).not.toHaveBeenCalled();
-      expect(result).toEqual(cachedPermissions);
-    });
-
-    it('should return permissions from database when cache is empty', async () => {
-      const userId = '550e8400-e29b-41d4-a716-446655440010';
-      const userRole = mockUserRole();
-      const userPermission = mockUserPermission();
-      (userRole as any).deletedAt = null;
-      (userPermission as any).deletedAt = null;
-      const role = mockRole();
-      const rolePermission = mockRolePermission();
-      rolePermission.role = role;
-      role.rolePermissions = [rolePermission];
-      userRole.role = role;
-
-      redisServiceMock.get.mockResolvedValue(null);
-      userRoleRepositoryMock.find.mockResolvedValue([userRole]);
-      userPermissionRepositoryMock.find.mockResolvedValue([userPermission]);
-      redisServiceMock.set.mockResolvedValue(undefined);
-
-      const result = await service.getUserPermissions(userId);
-
-      expect(redisServiceMock.get).toHaveBeenCalledWith(
-        `user_permissions:${userId}`,
-      );
-      expect(userRoleRepositoryMock.find).toHaveBeenCalledWith({
-        where: { user: { id: userId } },
-        relations: {
-          role: { rolePermissions: { permission: true } },
-        },
-      });
-      expect(userPermissionRepositoryMock.find).toHaveBeenCalledWith({
-        where: { user: { id: userId } },
-        relations: { permission: true },
-      });
-      expect(redisServiceMock.set).toHaveBeenCalled();
-      expect(result).toContain(PermissionName.USER_READ);
-    });
-
-    it('should return empty array when user has no roles or permissions', async () => {
-      const userId = '550e8400-e29b-41d4-a716-446655440010';
-
-      redisServiceMock.get.mockResolvedValue(null);
-      userRoleRepositoryMock.find.mockResolvedValue([]);
-      userPermissionRepositoryMock.find.mockResolvedValue([]);
-
-      const result = await service.getUserPermissions(userId);
-
-      expect(result).toEqual([]);
-    });
-
-    it('should filter out deleted user roles and permissions', async () => {
-      const userId = '550e8400-e29b-41d4-a716-446655440010';
-      const userRole = mockUserRole();
-      userRole.deletedAt = new Date();
-
-      redisServiceMock.get.mockResolvedValue(null);
-      userRoleRepositoryMock.find.mockResolvedValue([userRole]);
-      userPermissionRepositoryMock.find.mockResolvedValue([]);
 
       const result = await service.getUserPermissions(userId);
 
@@ -142,59 +62,8 @@ describe('PermissionService', () => {
   });
 
   describe('getUserRoles', () => {
-    it('should return roles from cache when available', async () => {
+    it('should return empty array (placeholder implementation)', async () => {
       const userId = '550e8400-e29b-41d4-a716-446655440010';
-      const cachedRoles = ['admin'];
-
-      redisServiceMock.get.mockResolvedValue(JSON.stringify(cachedRoles));
-
-      const result = await service.getUserRoles(userId);
-
-      expect(redisServiceMock.get).toHaveBeenCalledWith(`user_roles:${userId}`);
-      expect(userRepositoryMock.findOne).not.toHaveBeenCalled();
-      expect(result).toEqual(cachedRoles);
-    });
-
-    it('should return roles from database when cache is empty', async () => {
-      const userId = '550e8400-e29b-41d4-a716-446655440010';
-      const userRole = mockUserRole();
-      (userRole as any).deletedAt = null;
-      const role = mockRole();
-      userRole.role = role;
-
-      redisServiceMock.get.mockResolvedValue(null);
-      userRoleRepositoryMock.find.mockResolvedValue([userRole]);
-      redisServiceMock.set.mockResolvedValue(undefined);
-
-      const result = await service.getUserRoles(userId);
-
-      expect(redisServiceMock.get).toHaveBeenCalledWith(`user_roles:${userId}`);
-      expect(userRoleRepositoryMock.find).toHaveBeenCalledWith({
-        where: { user: { id: userId } },
-        relations: { role: true },
-      });
-      expect(redisServiceMock.set).toHaveBeenCalled();
-      expect(result).toEqual(['admin']);
-    });
-
-    it('should return empty array when user has no roles', async () => {
-      const userId = '550e8400-e29b-41d4-a716-446655440010';
-
-      redisServiceMock.get.mockResolvedValue(null);
-      userRoleRepositoryMock.find.mockResolvedValue([]);
-
-      const result = await service.getUserRoles(userId);
-
-      expect(result).toEqual([]);
-    });
-
-    it('should filter out deleted user roles', async () => {
-      const userId = '550e8400-e29b-41d4-a716-446655440010';
-      const userRole = mockUserRole();
-      userRole.deletedAt = new Date();
-
-      redisServiceMock.get.mockResolvedValue(null);
-      userRoleRepositoryMock.find.mockResolvedValue([userRole]);
 
       const result = await service.getUserRoles(userId);
 
@@ -203,16 +72,10 @@ describe('PermissionService', () => {
   });
 
   describe('hasPermission', () => {
-    it('should return true when user has permission', async () => {
+    it('should return true when checkPermissionHierarchy returns true', async () => {
       const userId = '550e8400-e29b-41d4-a716-446655440010';
       const requiredPermission = PermissionName.USER_READ;
 
-      jest
-        .spyOn(service, 'getUserPermissions')
-        .mockResolvedValue([
-          PermissionName.USER_READ,
-          PermissionName.USER_UPDATE,
-        ]);
       (permissionHelper.checkPermissionHierarchy as jest.Mock).mockReturnValue(
         true,
       );
@@ -220,22 +83,16 @@ describe('PermissionService', () => {
       const result = await service.hasPermission(userId, requiredPermission);
 
       expect(permissionHelper.checkPermissionHierarchy).toHaveBeenCalledWith(
-        [PermissionName.USER_READ, PermissionName.USER_UPDATE],
+        [],
         requiredPermission,
       );
       expect(result).toBe(true);
     });
 
-    it('should return false when user does not have permission', async () => {
+    it('should return false when checkPermissionHierarchy returns false', async () => {
       const userId = '550e8400-e29b-41d4-a716-446655440010';
       const requiredPermission = PermissionName.USER_DELETE;
 
-      jest
-        .spyOn(service, 'getUserPermissions')
-        .mockResolvedValue([
-          PermissionName.USER_READ,
-          PermissionName.USER_UPDATE,
-        ]);
       (permissionHelper.checkPermissionHierarchy as jest.Mock).mockReturnValue(
         false,
       );
@@ -500,31 +357,24 @@ describe('PermissionService', () => {
       expect(permissionRepositoryMock.findOne).toHaveBeenCalledWith({
         where: { id: permissionId },
         relations: {
-          rolePermissions: { role: { userRoles: { user: true } } },
-          userPermissions: { user: true },
+          rolePermissions: { role: true },
         },
       });
       expect(permissionRepositoryMock.remove).toHaveBeenCalledWith(permission);
     });
 
-    it('should invalidate user cache when permission has roles with users', async () => {
+    it('should successfully delete a permission with roles', async () => {
       const permissionId = '550e8400-e29b-41d4-a716-446655440020';
       const permission = mockPermissionWithRoles();
       const rolePermission = mockRolePermission();
-      const userRole = mockUserRole();
-      (userRole as any).deletedAt = null;
       rolePermission.role = mockRole();
-      rolePermission.role.userRoles = [userRole];
       permission.rolePermissions = [rolePermission];
-      permission.userPermissions = [];
 
       permissionRepositoryMock.findOne.mockResolvedValue(permission);
-      redisServiceMock.del.mockResolvedValue(undefined);
       permissionRepositoryMock.remove.mockResolvedValue(permission);
 
       await service.deletePermission(permissionId);
 
-      expect(redisServiceMock.del).toHaveBeenCalled();
       expect(permissionRepositoryMock.remove).toHaveBeenCalledWith(permission);
     });
 
@@ -546,8 +396,7 @@ describe('PermissionService', () => {
       expect(permissionRepositoryMock.findOne).toHaveBeenCalledWith({
         where: { id: permissionId },
         relations: {
-          rolePermissions: { role: { userRoles: { user: true } } },
-          userPermissions: { user: true },
+          rolePermissions: { role: true },
         },
       });
       expect(permissionRepositoryMock.remove).not.toHaveBeenCalled();

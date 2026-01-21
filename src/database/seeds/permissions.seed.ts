@@ -27,6 +27,12 @@ export const permissions = [
     action: 'pix',
     description: 'Permite realizar transferências PIX',
   },
+  {
+    name: 'financial:ted',
+    module: 'financial',
+    action: 'ted',
+    description: 'Permite realizar transferências TED',
+  },
   // Integration scopes
   {
     name: 'integration:webhook',

@@ -7,6 +7,7 @@ import { ProviderJwtService } from '../../services/provider-jwt.service';
 import { AppLoggerService } from '@/common/logger/logger.service';
 import { AccountService } from '@/account/account.service';
 import { OnboardingService } from '@/onboarding/onboarding.service';
+import { RedisService } from '@/common/redis/redis.service';
 
 /**
  * Factory para criar o módulo de teste do HiperbancoAuthService.
@@ -63,9 +64,17 @@ export const createHiperbancoAuthTestFactory = async () => {
     findById: jest.fn(),
   };
 
+  const redisServiceMock = {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+  };
+
   const configMock = {
     clientId: 'env-client-id',
     baseUrl: 'https://api.hiperbanco.com',
+    backofficeUser: 'test-user',
+    backofficePass: 'test-pass',
   };
 
   const module = await Test.createTestingModule({
@@ -82,6 +91,7 @@ export const createHiperbancoAuthTestFactory = async () => {
       { provide: AccountService, useValue: accountServiceMock },
       { provide: OnboardingService, useValue: onboardingServiceMock },
       { provide: 'HIPERBANCO_CONFIG', useValue: configMock },
+      { provide: RedisService, useValue: redisServiceMock },
     ],
   }).compile();
 
@@ -94,5 +104,6 @@ export const createHiperbancoAuthTestFactory = async () => {
     loggerMock,
     accountServiceMock,
     onboardingServiceMock,
+    redisServiceMock,
   };
 };

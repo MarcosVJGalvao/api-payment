@@ -3,9 +3,15 @@ import * as common from 'oci-common';
 import * as loggingingestion from 'oci-loggingingestion';
 import * as path from 'path';
 import * as os from 'os';
+import * as fs from 'fs';
 import { CloudLoggingProvider, CloudLogEntry } from '../cloud-logging.provider';
 import type { OCILoggingConfig, ModuleLogMapping } from './oci-logging.config';
 import { AppLoggerService } from '../../logger.service';
+import {
+  transformToISO,
+  getCurrentDate,
+  parseISO,
+} from '@/common/helpers/date.helpers';
 
 /** Implementação do CloudLoggingProvider para OCI Logging */
 @Injectable()
@@ -55,7 +61,6 @@ export class OCILoggingProvider implements CloudLoggingProvider {
             configFile = path.join(homeDir, configFile.slice(1));
           }
 
-          const fs = require('fs');
           if (!fs.existsSync(configFile)) {
             throw new Error(`OCI config file not found: ${configFile}`);
           }
@@ -87,7 +92,7 @@ export class OCILoggingProvider implements CloudLoggingProvider {
     return this.initializationPromise;
   }
 
-  private async getLogOcidForModule(moduleName: string): Promise<string> {
+  private getLogOcidForModule(moduleName: string): string {
     if (this.moduleLogCache[moduleName]) return this.moduleLogCache[moduleName];
 
     if (this.config.logId) {
@@ -104,8 +109,8 @@ export class OCILoggingProvider implements CloudLoggingProvider {
       return obj.map((item) => this.removeOracleFields(item));
     if (typeof obj !== 'object') return obj;
 
-    const cleaned: Record<string, any> = {};
-    for (const [key, value] of Object.entries(obj)) {
+    const cleaned: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
       const lowerKey = key.toLowerCase();
       if (
         lowerKey.includes('oracle') ||
@@ -130,8 +135,10 @@ export class OCILoggingProvider implements CloudLoggingProvider {
     if (obj instanceof Date) return obj.toISOString();
 
     if (typeof obj === 'object') {
-      const normalized: Record<string, any> = {};
-      for (const [key, value] of Object.entries(obj)) {
+      const normalized: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(
+        obj as Record<string, unknown>,
+      )) {
         if (value instanceof Date) {
           normalized[key] = value.toISOString();
         } else if (
@@ -160,11 +167,14 @@ export class OCILoggingProvider implements CloudLoggingProvider {
 
       if (this.initializationError || !this.loggingClient) return;
 
-      const logOcid = await this.getLogOcidForModule(moduleName);
-      const logTimestamp = logEntry.timestamp || new Date().toISOString();
+      const logOcid = this.getLogOcidForModule(moduleName);
+      const logTimestamp =
+        logEntry.timestamp || transformToISO(getCurrentDate());
 
       if (logEntry.level && typeof logEntry.level === 'string') {
-        logEntry.level = logEntry.level.replace(/\u001b\[[0-9;]*m/g, '').trim();
+        const esc = String.fromCharCode(27);
+        const ansiEscapeRegex = new RegExp(`${esc}\\[[0-9;]*m`, 'g');
+        logEntry.level = logEntry.level.replace(ansiEscapeRegex, '').trim();
       }
 
       const cleanedEntry = this.removeOracleFields(logEntry);
@@ -174,8 +184,8 @@ export class OCILoggingProvider implements CloudLoggingProvider {
         typeof logTimestamp === 'string'
           ? logTimestamp.includes('T')
             ? logTimestamp
-            : new Date(logTimestamp).toISOString()
-          : new Date(logTimestamp).toISOString();
+            : parseISO(logTimestamp).toISOString()
+          : parseISO(logTimestamp).toISOString();
 
       const logData = {
         ...normalizedEntry,
@@ -186,7 +196,7 @@ export class OCILoggingProvider implements CloudLoggingProvider {
       const logEntryData: loggingingestion.models.LogEntry = {
         data: JSON.stringify(logData),
         id: `${Date.now()}-${Math.random().toString(36).substring(7)}`,
-        time: new Date(isoTimestamp),
+        time: parseISO(isoTimestamp),
       };
 
       const putLogsRequest: loggingingestion.requests.PutLogsRequest = {
@@ -198,7 +208,7 @@ export class OCILoggingProvider implements CloudLoggingProvider {
               entries: [logEntryData],
               source: 'school-api',
               type: `module:${moduleName}`,
-              defaultlogentrytime: new Date(),
+              defaultlogentrytime: getCurrentDate(),
             },
           ],
         },

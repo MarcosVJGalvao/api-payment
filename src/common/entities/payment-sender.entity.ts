@@ -10,6 +10,9 @@ import { PixTransfer } from '@/pix/entities/pix-transfer.entity';
 import { PixCashIn } from '@/pix/entities/pix-cash-in.entity';
 import { PixRefund } from '@/pix/entities/pix-refund.entity';
 import { PixQrCode } from '@/pix/entities/pix-qr-code.entity';
+import { TedTransfer } from '@/ted/entities/ted-transfer.entity';
+import { TedCashIn } from '@/ted/entities/ted-cash-in.entity';
+import { TedRefund } from '@/ted/entities/ted-refund.entity';
 
 @Entity('payment_sender')
 export class PaymentSender {
@@ -124,6 +127,15 @@ export class PaymentSender {
 
   @OneToOne(() => PixQrCode, (pixQrCode) => pixQrCode.payer)
   pixQrCode?: PixQrCode;
+
+  @OneToOne(() => TedTransfer, (tedTransfer) => tedTransfer.sender)
+  tedTransfer?: TedTransfer;
+
+  @OneToOne(() => TedCashIn, (tedCashIn) => tedCashIn.sender)
+  tedCashIn?: TedCashIn;
+
+  @OneToOne(() => TedRefund, (tedRefund) => tedRefund.sender)
+  tedRefund?: TedRefund;
 
   @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   createdAt: Date;

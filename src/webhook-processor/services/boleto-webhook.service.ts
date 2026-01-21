@@ -13,6 +13,7 @@ import { WebhookEventLogService } from './webhook-event-log.service';
 import { WebhookEvent } from '../enums/webhook-event.enum';
 import { TransactionNotFoundRetryableException } from '@/common/errors/exceptions/transaction-not-found-retryable.exception';
 import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
+import { parseDate } from '@/common/helpers/date.helpers';
 
 @Injectable()
 export class BoletoWebhookService {
@@ -66,7 +67,7 @@ export class BoletoWebhookService {
         eventName: WebhookEvent.BOLETO_WAS_REGISTERED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 
@@ -143,7 +144,7 @@ export class BoletoWebhookService {
         clientId,
         boletoId: boleto.id,
         accountId: boleto.accountId,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
       });
 
       await this.webhookEventLogService.logEvent({
@@ -153,7 +154,7 @@ export class BoletoWebhookService {
         eventName: WebhookEvent.BOLETO_CASH_IN_WAS_RECEIVED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 
@@ -228,7 +229,7 @@ export class BoletoWebhookService {
         eventName: WebhookEvent.BOLETO_CASH_IN_WAS_CLEARED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 
@@ -302,7 +303,7 @@ export class BoletoWebhookService {
         eventName: WebhookEvent.BOLETO_WAS_CANCELLED,
         wasProcessed: true,
         payload: event as unknown as Record<string, unknown>,
-        providerTimestamp: new Date(event.timestamp),
+        providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
 

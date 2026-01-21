@@ -1,0 +1,10 @@
+export enum TedTransferStatus {
+  CREATED = 'CREATED',
+  IN_PROCESS = 'IN_PROCESS',
+  APPROVED = 'APPROVED',
+  REPROVED = 'REPROVED',
+  DONE = 'DONE',
+  UNDONE = 'UNDONE',
+  CANCELED = 'CANCELED',
+  FAILED = 'FAILED',
+}

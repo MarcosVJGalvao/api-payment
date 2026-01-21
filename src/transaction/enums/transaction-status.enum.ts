@@ -3,6 +3,8 @@
  * Status padronizado para extratos e consultas.
  */
 export enum TransactionStatus {
+  /** Transação criada, aguardando inicio de processamento */
+  CREATED = 'CREATED',
   /** Transação pendente de processamento */
   PENDING = 'PENDING',
   /** Transação em processamento (recebida no core bancário) */

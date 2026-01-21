@@ -19,6 +19,9 @@ import { PixRefund } from '@/pix/entities/pix-refund.entity';
 import { Boleto } from '@/boleto/entities/boleto.entity';
 import { BillPayment } from '@/bill-payment/entities/bill-payment.entity';
 import { PixQrCode } from '@/pix/entities/pix-qr-code.entity';
+import { TedTransfer } from '@/ted/entities/ted-transfer.entity';
+import { TedCashIn } from '@/ted/entities/ted-cash-in.entity';
+import { TedRefund } from '@/ted/entities/ted-refund.entity';
 
 /**
  * Entidade centralizada de transações financeiras.
@@ -31,6 +34,9 @@ import { PixQrCode } from '@/pix/entities/pix-qr-code.entity';
 @Index(['type'])
 @Index(['status'])
 @Index(['createdAt'])
+@Index(['tedTransferId'])
+@Index(['tedCashInId'])
+@Index(['tedRefundId'])
 export class Transaction {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -199,6 +205,45 @@ export class Transaction {
   @ManyToOne(() => PixQrCode, (pixQrCode) => pixQrCode.transactions)
   @JoinColumn({ name: 'pix_qr_code_id' })
   pixQrCode?: PixQrCode;
+
+  /** FK para TedTransfer (quando type = TED_OUT) */
+  @Column({
+    type: 'uuid',
+    name: 'ted_transfer_id',
+    nullable: true,
+    comment: 'Referência para TedTransfer',
+  })
+  tedTransferId?: string;
+
+  @ManyToOne(() => TedTransfer, (tedTransfer) => tedTransfer.transactions)
+  @JoinColumn({ name: 'ted_transfer_id' })
+  tedTransfer?: TedTransfer;
+
+  /** FK para TedCashIn (quando type = TED_IN) */
+  @Column({
+    type: 'uuid',
+    name: 'ted_cash_in_id',
+    nullable: true,
+    comment: 'Referência para TedCashIn',
+  })
+  tedCashInId?: string;
+
+  @ManyToOne(() => TedCashIn, (tedCashIn) => tedCashIn.transactions)
+  @JoinColumn({ name: 'ted_cash_in_id' })
+  tedCashIn?: TedCashIn;
+
+  /** FK para TedRefund (quando type = TED_REFUND) */
+  @Column({
+    type: 'uuid',
+    name: 'ted_refund_id',
+    nullable: true,
+    comment: 'Referência para TedRefund',
+  })
+  tedRefundId?: string;
+
+  @ManyToOne(() => TedRefund, (tedRefund) => tedRefund.transactions)
+  @JoinColumn({ name: 'ted_refund_id' })
+  tedRefund?: TedRefund;
 
   // ========================================
   // Relacionamentos com Account e Client

@@ -28,6 +28,19 @@ export function mapWebhookEventToTransactionStatus(
     BILL_PAYMENT_HAS_FAILED: TransactionStatus.FAILED,
     BILL_PAYMENT_WAS_CANCELLED: TransactionStatus.CANCELED,
     BILL_PAYMENT_WAS_REFUSED: TransactionStatus.FAILED,
+
+    // TED
+    TED_CASH_OUT_WAS_APPROVED: TransactionStatus.IN_PROCESS,
+    TED_CASH_OUT_WAS_DONE: TransactionStatus.DONE,
+    TED_CASH_OUT_WAS_CANCELED: TransactionStatus.CANCELED,
+    TED_CASH_OUT_WAS_REPROVED: TransactionStatus.REPROVED,
+    TED_CASH_OUT_WAS_UNDONE: TransactionStatus.UNDONE,
+
+    TED_CASH_IN_WAS_RECEIVED: TransactionStatus.IN_PROCESS,
+    TED_CASH_IN_WAS_CLEARED: TransactionStatus.DONE,
+
+    TED_REFUND_WAS_RECEIVED: TransactionStatus.REFUND_PENDING,
+    TED_REFUND_WAS_CLEARED: TransactionStatus.REFUNDED,
   };
 
   return eventStatusMap[eventName] || TransactionStatus.PENDING;
