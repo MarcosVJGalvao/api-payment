@@ -163,6 +163,27 @@ export class TransactionService {
         searchFields: ['authenticationCode', 'description'],
         defaultSortBy: 'createdAt',
         filters: filterConfigs,
+        relations: [
+          'pixCashIn',
+          'pixCashIn.sender',
+          'pixCashIn.recipient',
+          'pixTransfer',
+          'pixTransfer.sender',
+          'pixTransfer.recipient',
+          'pixRefund',
+          'boleto',
+          'boleto.payer',
+          'billPayment',
+          'billPayment.recipient',
+          'pixQrCode',
+          'tedTransfer',
+          'tedTransfer.sender',
+          'tedTransfer.recipient',
+          'tedCashIn',
+          'tedCashIn.sender',
+          'tedCashIn.recipient',
+          'tedRefund',
+        ],
       },
     );
 
@@ -194,6 +215,27 @@ export class TransactionService {
   ): Promise<Transaction> {
     const transaction = await this.typeOrmRepository.findOne({
       where: { id, accountId, clientId },
+      relations: [
+        'pixCashIn',
+        'pixCashIn.sender',
+        'pixCashIn.recipient',
+        'pixTransfer',
+        'pixTransfer.sender',
+        'pixTransfer.recipient',
+        'pixRefund',
+        'boleto',
+        'boleto.payer',
+        'billPayment',
+        'billPayment.recipient',
+        'pixQrCode',
+        'tedTransfer',
+        'tedTransfer.sender',
+        'tedTransfer.recipient',
+        'tedCashIn',
+        'tedCashIn.sender',
+        'tedCashIn.recipient',
+        'tedRefund',
+      ],
     });
 
     if (!transaction) {

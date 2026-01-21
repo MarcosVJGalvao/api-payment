@@ -4,6 +4,15 @@ import { TransactionType } from '../enums/transaction-type.enum';
 import { TransactionStatus } from '../enums/transaction-status.enum';
 import { TransactionSemanticStatus } from '../enums/transaction-semantic-status.enum';
 import { getSemanticStatus } from '../helpers/transaction-status.helper';
+import { PixCashIn } from '@/pix/entities/pix-cash-in.entity';
+import { PixTransfer } from '@/pix/entities/pix-transfer.entity';
+import { PixRefund } from '@/pix/entities/pix-refund.entity';
+import { Boleto } from '@/boleto/entities/boleto.entity';
+import { BillPayment } from '@/bill-payment/entities/bill-payment.entity';
+import { PixQrCode } from '@/pix/entities/pix-qr-code.entity';
+import { TedTransfer } from '@/ted/entities/ted-transfer.entity';
+import { TedCashIn } from '@/ted/entities/ted-cash-in.entity';
+import { TedRefund } from '@/ted/entities/ted-refund.entity';
 
 export class TransactionResponseDto {
   @ApiProperty({ description: 'ID da transação' })
@@ -53,6 +62,33 @@ export class TransactionResponseDto {
   })
   providerTimestamp?: Date;
 
+  @ApiProperty({ required: false, nullable: true })
+  pixCashIn?: PixCashIn;
+
+  @ApiProperty({ required: false, nullable: true })
+  pixTransfer?: PixTransfer;
+
+  @ApiProperty({ required: false, nullable: true })
+  pixRefund?: PixRefund;
+
+  @ApiProperty({ required: false, nullable: true })
+  boleto?: Boleto;
+
+  @ApiProperty({ required: false, nullable: true })
+  billPayment?: BillPayment;
+
+  @ApiProperty({ required: false, nullable: true })
+  pixQrCode?: PixQrCode;
+
+  @ApiProperty({ required: false, nullable: true })
+  tedTransfer?: TedTransfer;
+
+  @ApiProperty({ required: false, nullable: true })
+  tedCashIn?: TedCashIn;
+
+  @ApiProperty({ required: false, nullable: true })
+  tedRefund?: TedRefund;
+
   constructor(transaction: Transaction) {
     this.id = transaction.id;
     this.authenticationCode = transaction.authenticationCode;
@@ -65,5 +101,16 @@ export class TransactionResponseDto {
     this.createdAt = transaction.createdAt;
     this.updatedAt = transaction.updatedAt;
     this.providerTimestamp = transaction.providerTimestamp;
+
+    // Relations
+    this.pixCashIn = transaction.pixCashIn;
+    this.pixTransfer = transaction.pixTransfer;
+    this.pixRefund = transaction.pixRefund;
+    this.boleto = transaction.boleto;
+    this.billPayment = transaction.billPayment;
+    this.pixQrCode = transaction.pixQrCode;
+    this.tedTransfer = transaction.tedTransfer;
+    this.tedCashIn = transaction.tedCashIn;
+    this.tedRefund = transaction.tedRefund;
   }
 }

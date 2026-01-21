@@ -164,6 +164,27 @@ describe('TransactionService', () => {
               ignore: true,
             },
           ],
+          relations: [
+            'pixCashIn',
+            'pixCashIn.sender',
+            'pixCashIn.recipient',
+            'pixTransfer',
+            'pixTransfer.sender',
+            'pixTransfer.recipient',
+            'pixRefund',
+            'boleto',
+            'boleto.payer',
+            'billPayment',
+            'billPayment.recipient',
+            'pixQrCode',
+            'tedTransfer',
+            'tedTransfer.sender',
+            'tedTransfer.recipient',
+            'tedCashIn',
+            'tedCashIn.sender',
+            'tedCashIn.recipient',
+            'tedRefund',
+          ],
         }),
       );
       expect(baseQueryServiceMock.findAll).toHaveBeenCalledWith(
@@ -216,6 +237,27 @@ describe('TransactionService', () => {
 
       expect(typeOrmRepositoryMock.findOne).toHaveBeenCalledWith({
         where: { id, accountId, clientId },
+        relations: [
+          'pixCashIn',
+          'pixCashIn.sender',
+          'pixCashIn.recipient',
+          'pixTransfer',
+          'pixTransfer.sender',
+          'pixTransfer.recipient',
+          'pixRefund',
+          'boleto',
+          'boleto.payer',
+          'billPayment',
+          'billPayment.recipient',
+          'pixQrCode',
+          'tedTransfer',
+          'tedTransfer.sender',
+          'tedTransfer.recipient',
+          'tedCashIn',
+          'tedCashIn.sender',
+          'tedCashIn.recipient',
+          'tedRefund',
+        ],
       });
       expect(result).toEqual(transaction);
     });
