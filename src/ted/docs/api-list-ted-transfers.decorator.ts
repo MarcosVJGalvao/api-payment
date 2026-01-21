@@ -1,10 +1,19 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { TedTransferStatus } from '../enums/ted-transfer-status.enum';
 
 export function ApiListTedTransfers() {
   return applyDecorators(
+    ApiExtraModels(ErrorResponseDto),
     ApiOperation({
       summary: 'Listar transferências TED',
       description:
@@ -92,59 +101,14 @@ export function ApiListTedTransfers() {
                   type: 'string',
                   example: 'ABC123DEF456GHI789',
                 },
-                status: {
-                  type: 'string',
-                  example: TedTransferStatus.DONE,
-                  enum: Object.values(TedTransferStatus),
-                },
-                amount: {
-                  type: 'number',
-                  example: 1500.0,
-                },
-                currency: {
-                  type: 'string',
-                  example: 'BRL',
-                },
+                status: { type: 'string', example: TedTransferStatus.DONE },
+                amount: { type: 'number', example: 1500.0 },
+                currency: { type: 'string', example: 'BRL' },
                 description: {
                   type: 'string',
                   example: 'Pagamento de fornecedor',
                 },
-                sender: {
-                  type: 'object',
-                  properties: {
-                    name: { type: 'string', example: 'João da Silva' },
-                    documentNumber: {
-                      type: 'string',
-                      example: '123.456.789-01',
-                    },
-                    accountNumber: { type: 'string', example: '123456' },
-                    accountBranch: { type: 'string', example: '0001' },
-                  },
-                },
-                recipient: {
-                  type: 'object',
-                  properties: {
-                    name: { type: 'string', example: 'Maria Oliveira' },
-                    documentNumber: {
-                      type: 'string',
-                      example: '987.654.321-00',
-                    },
-                    bankCode: { type: 'string', example: '341' },
-                    accountNumber: { type: 'string', example: '654321' },
-                    accountBranch: { type: 'string', example: '0001' },
-                  },
-                },
-                createdAt: {
-                  type: 'string',
-                  format: 'date-time',
-                  example: '2026-01-17T10:00:00.000Z',
-                },
-                paymentDate: {
-                  type: 'string',
-                  format: 'date-time',
-                  example: '2026-01-17T10:05:00.000Z',
-                  nullable: true,
-                },
+                createdAt: { type: 'string', format: 'date-time' },
               },
             },
           },
@@ -162,11 +126,22 @@ export function ApiListTedTransfers() {
     }),
     ApiResponse({
       status: 401,
-      description: 'Token de autenticação inválido ou expirado',
-    }),
-    ApiResponse({
-      status: 403,
-      description: 'Sem permissão para listar transferências TED',
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              summary: 'Token inválido ou expirado',
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
   );
 }

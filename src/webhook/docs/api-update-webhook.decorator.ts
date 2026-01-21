@@ -1,14 +1,23 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiBody, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { UpdateWebhookDto } from '../dto/update-webhook.dto';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiUpdateWebhook() {
   return applyDecorators(
+    ApiExtraModels(ErrorResponseDto),
     ApiOperation({
       summary: 'Atualizar Webhook',
       description:
-        'Atualiza a configuração de um webhook existente no provedor financeiro. Atualmente suporta apenas a alteração da URI.',
+        'Atualiza a configuração de um webhook existente. Atualmente suporta apenas alteração da URI.',
     }),
     ApiParam({
       name: 'provider',
@@ -18,17 +27,14 @@ export function ApiUpdateWebhook() {
     }),
     ApiParam({
       name: 'id',
-      description: 'ID do webhook no provedor financeiro',
+      description: 'ID do webhook no provedor',
       example: '89444df2-a1d1-4fe8-ade8-3d03de0fd61m',
     }),
     ApiBody({
       type: UpdateWebhookDto,
       examples: {
         'Atualizar URI': {
-          summary: 'Atualizar URL do webhook',
-          value: {
-            uri: 'https://novourlwebhook.com/callback',
-          },
+          value: { uri: 'https://novourlwebhook.com/callback' },
         },
       },
     }),
@@ -36,19 +42,54 @@ export function ApiUpdateWebhook() {
       status: 200,
       description: 'Webhook atualizado com sucesso',
       schema: {
-        example: {
-          id: '89444df2-a1d1-4fe8-ade8-3d03de0fd61m',
-          name: 'SANDBOX_BOLETO_CASH_IN_WAS_RECEIVED',
-          context: 'Boleto',
-          eventName: 'BOLETO_CASH_IN_WAS_RECEIVED',
-          uri: 'https://meuwebhook.com/123',
-          publicKey: '872dc2ed-8bee-40b5-8465-5d2953ba76dp',
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          name: { type: 'string' },
+          context: { type: 'string' },
+          eventName: { type: 'string' },
+          uri: { type: 'string' },
+          publicKey: { type: 'string' },
         },
       },
     }),
     ApiResponse({
       status: 400,
-      description: 'Dados inválidos ou provedor não suportado',
+      description: 'Erro de validação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            INVALID_INPUT: {
+              summary: 'Dados inválidos',
+              value: {
+                errorCode: 'INVALID_INPUT',
+                message: 'Invalid webhook data',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 401,
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              summary: 'Token inválido ou expirado',
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
   );
 }

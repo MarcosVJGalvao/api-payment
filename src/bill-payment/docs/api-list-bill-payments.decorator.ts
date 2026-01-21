@@ -1,9 +1,17 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiExtraModels,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { BillPaymentStatus } from '../enums/bill-payment-status.enum';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 
 export function ApiListBillPayments() {
   return applyDecorators(
+    ApiExtraModels(ErrorResponseDto),
     ApiOperation({
       summary: 'Listar pagamentos de contas',
       description: 'Lista os pagamentos de contas com paginação e filtros.',
@@ -47,8 +55,7 @@ export function ApiListBillPayments() {
                 status: { type: 'string' },
                 digitable: { type: 'string' },
                 amount: { type: 'number' },
-                dueDate: { type: 'string' },
-                createdAt: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' },
               },
             },
           },
@@ -58,7 +65,7 @@ export function ApiListBillPayments() {
               total: { type: 'number' },
               page: { type: 'number' },
               limit: { type: 'number' },
-              totalPages: { type: 'number' },
+              lastPage: { type: 'number' },
             },
           },
         },
@@ -66,7 +73,22 @@ export function ApiListBillPayments() {
     }),
     ApiResponse({
       status: 401,
-      description: 'Token de autenticação inválido ou expirado',
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              summary: 'Token inválido ou expirado',
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
   );
 }

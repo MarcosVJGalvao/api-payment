@@ -11,57 +11,201 @@ export class ForceAllForeignKeys1768201000000 implements MigrationInterface {
     // Todas as FKs que devem existir no sistema
     const allForeignKeys = [
       // role_permission
-      { table: 'role_permission', fkName: 'FK_role_permission_role', column: 'role_id', refTable: 'role', onDelete: 'CASCADE' },
-      { table: 'role_permission', fkName: 'FK_role_permission_permission', column: 'permission_id', refTable: 'permission', onDelete: 'CASCADE' },
+      {
+        table: 'role_permission',
+        fkName: 'FK_role_permission_role',
+        column: 'role_id',
+        refTable: 'role',
+        onDelete: 'CASCADE',
+      },
+      {
+        table: 'role_permission',
+        fkName: 'FK_role_permission_permission',
+        column: 'permission_id',
+        refTable: 'permission',
+        onDelete: 'CASCADE',
+      },
 
       // provider_credentials
-      { table: 'provider_credentials', fkName: 'FK_provider_credentials_client', column: 'client_id', refTable: 'client', onDelete: 'NO ACTION' },
+      {
+        table: 'provider_credentials',
+        fkName: 'FK_provider_credentials_client',
+        column: 'client_id',
+        refTable: 'client',
+        onDelete: 'NO ACTION',
+      },
 
       // onboarding
-      { table: 'onboarding', fkName: 'FK_onboarding_client', column: 'client_id', refTable: 'client', onDelete: 'NO ACTION' },
+      {
+        table: 'onboarding',
+        fkName: 'FK_onboarding_client',
+        column: 'client_id',
+        refTable: 'client',
+        onDelete: 'NO ACTION',
+      },
 
       // account
-      { table: 'account', fkName: 'FK_account_client', column: 'client_id', refTable: 'client', onDelete: 'NO ACTION' },
-      { table: 'account', fkName: 'FK_account_onboarding', column: 'onboarding_id', refTable: 'onboarding', onDelete: 'NO ACTION' },
+      {
+        table: 'account',
+        fkName: 'FK_account_client',
+        column: 'client_id',
+        refTable: 'client',
+        onDelete: 'NO ACTION',
+      },
+      {
+        table: 'account',
+        fkName: 'FK_account_onboarding',
+        column: 'onboarding_id',
+        refTable: 'onboarding',
+        onDelete: 'NO ACTION',
+      },
 
       // boleto
-      { table: 'boleto', fkName: 'FK_boleto_client', column: 'client_id', refTable: 'client', onDelete: 'NO ACTION' },
-      { table: 'boleto', fkName: 'FK_boleto_account', column: 'account_id', refTable: 'account', onDelete: 'NO ACTION' },
+      {
+        table: 'boleto',
+        fkName: 'FK_boleto_client',
+        column: 'client_id',
+        refTable: 'client',
+        onDelete: 'NO ACTION',
+      },
+      {
+        table: 'boleto',
+        fkName: 'FK_boleto_account',
+        column: 'account_id',
+        refTable: 'account',
+        onDelete: 'NO ACTION',
+      },
 
       // webhook
-      { table: 'webhook', fkName: 'FK_webhook_client', column: 'client_id', refTable: 'client', onDelete: 'NO ACTION' },
+      {
+        table: 'webhook',
+        fkName: 'FK_webhook_client',
+        column: 'client_id',
+        refTable: 'client',
+        onDelete: 'NO ACTION',
+      },
 
       // client_role
-      { table: 'client_role', fkName: 'FK_client_role_client', column: 'client_id', refTable: 'client', onDelete: 'NO ACTION' },
-      { table: 'client_role', fkName: 'FK_client_role_role', column: 'role_id', refTable: 'role', onDelete: 'NO ACTION' },
+      {
+        table: 'client_role',
+        fkName: 'FK_client_role_client',
+        column: 'client_id',
+        refTable: 'client',
+        onDelete: 'NO ACTION',
+      },
+      {
+        table: 'client_role',
+        fkName: 'FK_client_role_role',
+        column: 'role_id',
+        refTable: 'role',
+        onDelete: 'NO ACTION',
+      },
 
       // client_permission
-      { table: 'client_permission', fkName: 'FK_client_permission_client', column: 'client_id', refTable: 'client', onDelete: 'NO ACTION' },
-      { table: 'client_permission', fkName: 'FK_client_permission_permission', column: 'permission_id', refTable: 'permission', onDelete: 'NO ACTION' },
+      {
+        table: 'client_permission',
+        fkName: 'FK_client_permission_client',
+        column: 'client_id',
+        refTable: 'client',
+        onDelete: 'NO ACTION',
+      },
+      {
+        table: 'client_permission',
+        fkName: 'FK_client_permission_permission',
+        column: 'permission_id',
+        refTable: 'permission',
+        onDelete: 'NO ACTION',
+      },
 
       // bill_payment
-      { table: 'bill_payment', fkName: 'FK_bill_payment_client', column: 'client_id', refTable: 'client', onDelete: 'NO ACTION' },
-      { table: 'bill_payment', fkName: 'FK_bill_payment_account', column: 'account_id', refTable: 'account', onDelete: 'NO ACTION' },
+      {
+        table: 'bill_payment',
+        fkName: 'FK_bill_payment_client',
+        column: 'client_id',
+        refTable: 'client',
+        onDelete: 'NO ACTION',
+      },
+      {
+        table: 'bill_payment',
+        fkName: 'FK_bill_payment_account',
+        column: 'account_id',
+        refTable: 'account',
+        onDelete: 'NO ACTION',
+      },
 
       // pix_transfer
-      { table: 'pix_transfer', fkName: 'FK_pix_transfer_client', column: 'client_id', refTable: 'client', onDelete: 'NO ACTION' },
-      { table: 'pix_transfer', fkName: 'FK_pix_transfer_account', column: 'account_id', refTable: 'account', onDelete: 'NO ACTION' },
+      {
+        table: 'pix_transfer',
+        fkName: 'FK_pix_transfer_client',
+        column: 'client_id',
+        refTable: 'client',
+        onDelete: 'NO ACTION',
+      },
+      {
+        table: 'pix_transfer',
+        fkName: 'FK_pix_transfer_account',
+        column: 'account_id',
+        refTable: 'account',
+        onDelete: 'NO ACTION',
+      },
 
       // pix_cash_in
-      { table: 'pix_cash_in', fkName: 'FK_pix_cash_in_client', column: 'client_id', refTable: 'client', onDelete: 'NO ACTION' },
-      { table: 'pix_cash_in', fkName: 'FK_pix_cash_in_account', column: 'account_id', refTable: 'account', onDelete: 'NO ACTION' },
+      {
+        table: 'pix_cash_in',
+        fkName: 'FK_pix_cash_in_client',
+        column: 'client_id',
+        refTable: 'client',
+        onDelete: 'NO ACTION',
+      },
+      {
+        table: 'pix_cash_in',
+        fkName: 'FK_pix_cash_in_account',
+        column: 'account_id',
+        refTable: 'account',
+        onDelete: 'NO ACTION',
+      },
 
       // pix_refund
-      { table: 'pix_refund', fkName: 'FK_pix_refund_client', column: 'client_id', refTable: 'client', onDelete: 'NO ACTION' },
-      { table: 'pix_refund', fkName: 'FK_pix_refund_account', column: 'account_id', refTable: 'account', onDelete: 'NO ACTION' },
+      {
+        table: 'pix_refund',
+        fkName: 'FK_pix_refund_client',
+        column: 'client_id',
+        refTable: 'client',
+        onDelete: 'NO ACTION',
+      },
+      {
+        table: 'pix_refund',
+        fkName: 'FK_pix_refund_account',
+        column: 'account_id',
+        refTable: 'account',
+        onDelete: 'NO ACTION',
+      },
 
       // transaction (já criadas, mas garantindo)
-      { table: 'transaction', fkName: 'FK_transaction_client', column: 'client_id', refTable: 'client', onDelete: 'NO ACTION' },
-      { table: 'transaction', fkName: 'FK_transaction_account', column: 'account_id', refTable: 'account', onDelete: 'SET NULL' },
+      {
+        table: 'transaction',
+        fkName: 'FK_transaction_client',
+        column: 'client_id',
+        refTable: 'client',
+        onDelete: 'NO ACTION',
+      },
+      {
+        table: 'transaction',
+        fkName: 'FK_transaction_account',
+        column: 'account_id',
+        refTable: 'account',
+        onDelete: 'SET NULL',
+      },
     ];
 
     // Tabelas base que precisam ter ID padronizado
-    const baseTables = ['client', 'account', 'onboarding', 'role', 'permission'];
+    const baseTables = [
+      'client',
+      'account',
+      'onboarding',
+      'role',
+      'permission',
+    ];
 
     // PASSO 1: Padronizar IDs das tabelas base
     console.log('=== STEP 1: Standardizing base table IDs ===');
@@ -91,7 +235,9 @@ export class ForceAllForeignKeys1768201000000 implements MigrationInterface {
 
       // Dropar FK existente (ignorar erro)
       try {
-        await queryRunner.query(`ALTER TABLE \`${fk.table}\` DROP FOREIGN KEY \`${fk.fkName}\``);
+        await queryRunner.query(
+          `ALTER TABLE \`${fk.table}\` DROP FOREIGN KEY \`${fk.fkName}\``,
+        );
         console.log(`Dropped: ${fk.fkName}`);
       } catch {
         // FK não existe, ok
@@ -104,7 +250,8 @@ export class ForceAllForeignKeys1768201000000 implements MigrationInterface {
         );
 
         if (columnInfo.length > 0) {
-          const nullable = columnInfo[0].IS_NULLABLE === 'YES' ? 'NULL' : 'NOT NULL';
+          const nullable =
+            columnInfo[0].IS_NULLABLE === 'YES' ? 'NULL' : 'NOT NULL';
           await queryRunner.query(
             `ALTER TABLE \`${fk.table}\` MODIFY COLUMN \`${fk.column}\` varchar(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ${nullable}`,
           );

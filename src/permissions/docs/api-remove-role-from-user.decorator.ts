@@ -1,63 +1,52 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import {
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 
 export function ApiRemoveRoleFromUser() {
   return applyDecorators(
+    ApiExtraModels(ErrorResponseDto),
     ApiOperation({ summary: 'Remover role de um usuário' }),
-    ApiParam({
-      name: 'id',
-      description: 'ID da role',
-      type: 'string',
-      format: 'uuid',
-    }),
-    ApiParam({
-      name: 'userId',
-      description: 'ID do usuário',
-      type: 'string',
-      format: 'uuid',
-    }),
+    ApiParam({ name: 'userId', description: 'ID do usuário' }),
+    ApiParam({ name: 'roleId', description: 'ID da role' }),
+    ApiResponse({ status: 204, description: 'Role removida do usuário' }),
     ApiResponse({
-      status: 204,
-      description: 'Role removida com sucesso',
-    }),
-    ApiResponse({
-      status: 403,
-      description: 'Permissão negada',
-      schema: {
-        type: 'object',
-        properties: {
-          erroCode: {
-            type: 'string',
-            example: 'PERMISSION_DENIED',
-          },
-          message: {
-            type: 'string',
-            example: 'Permission denied.',
-          },
-          correlationId: {
-            type: 'string',
-            example: '9afe65e8-a787-4bd5-8f71-db7074117352',
+      status: 401,
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
           },
         },
       },
     }),
     ApiResponse({
       status: 404,
-      description: 'Role ou usuário não encontrado',
-      schema: {
-        type: 'object',
-        properties: {
-          erroCode: {
-            type: 'string',
-            example: 'ROLE_NOT_FOUND',
-          },
-          message: {
-            type: 'string',
-            example: 'Role or user not found.',
-          },
-          correlationId: {
-            type: 'string',
-            example: '9afe65e8-a787-4bd5-8f71-db7074117352',
+      description: 'Usuário ou Role não encontrada',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            USER_NOT_FOUND: {
+              value: {
+                errorCode: 'USER_NOT_FOUND',
+                message: 'User not found',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
           },
         },
       },

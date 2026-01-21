@@ -1,21 +1,59 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 
 export function ApiDeleteBackofficeUser() {
   return applyDecorators(
-    ApiOperation({ summary: 'Delete a Backoffice User' }),
-    ApiParam({ name: 'id', description: 'User ID' }),
+    ApiExtraModels(ErrorResponseDto),
+    ApiOperation({ summary: 'Deletar usuário Backoffice' }),
+    ApiParam({ name: 'id', description: 'ID do usuário' }),
     ApiResponse({
       status: 204,
-      description: 'User deleted successfully',
+      description: 'Usuário removido com sucesso',
     }),
     ApiResponse({
       status: 401,
-      description: 'Unauthorized',
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              summary: 'Token inválido ou expirado',
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
     ApiResponse({
       status: 404,
-      description: 'User not found',
+      description: 'Usuário não encontrado',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            USER_NOT_FOUND: {
+              summary: 'Usuário não encontrado',
+              value: {
+                errorCode: 'USER_NOT_FOUND',
+                message: 'User not found',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
   );
 }

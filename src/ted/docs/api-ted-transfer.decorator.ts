@@ -1,11 +1,24 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { CreateTedDto } from '../dto/create-ted.dto';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiTedTransfer() {
   return applyDecorators(
-    ApiOperation({ summary: 'Realizar transferência via TED' }),
+    ApiExtraModels(ErrorResponseDto),
+    ApiOperation({
+      summary: 'Realizar transferência via TED',
+      description:
+        'Executa uma transferência bancária via TED para a conta do destinatário especificado.',
+    }),
     ApiParam({
       name: 'provider',
       description: 'Provedor financeiro',
@@ -17,18 +30,11 @@ export function ApiTedTransfer() {
       examples: {
         'Transferência para Pessoa Física - Conta Corrente': {
           summary: 'TED para CPF em Conta Corrente',
-          description:
-            'Transferência TED para pessoa física em conta corrente no Itaú',
+          description: 'Transferência TED para pessoa física em conta corrente',
           value: {
             amount: 1500.0,
             description: 'Pagamento de fornecedor',
             idempotencyKey: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-            sender: {
-              document: '12345678901',
-              name: 'João da Silva',
-              branch: '0001',
-              account: '123456',
-            },
             recipient: {
               document: '98765432100',
               name: 'Maria Oliveira',
@@ -37,21 +43,14 @@ export function ApiTedTransfer() {
               account: '654321',
               accountType: 'CHECKING',
             },
-          } as CreateTedDto,
+          },
         },
         'Transferência para Pessoa Jurídica - Conta Corrente': {
           summary: 'TED para CNPJ em Conta Corrente',
-          description:
-            'Transferência TED para empresa em conta corrente no Bradesco',
+          description: 'Transferência TED para empresa em conta corrente',
           value: {
             amount: 25000.0,
             description: 'Pagamento de serviços prestados',
-            sender: {
-              document: '12345678000199',
-              name: 'Empresa XYZ Ltda',
-              branch: '0001',
-              account: '123456789',
-            },
             recipient: {
               document: '98765432000188',
               name: 'Fornecedor ABC S/A',
@@ -60,52 +59,7 @@ export function ApiTedTransfer() {
               account: '987654321',
               accountType: 'CHECKING',
             },
-          } as CreateTedDto,
-        },
-        'Transferência para Pessoa Física - Conta Poupança': {
-          summary: 'TED para CPF em Conta Poupança',
-          description:
-            'Transferência TED para pessoa física em conta poupança na Caixa',
-          value: {
-            amount: 500.0,
-            description: 'Transferência pessoal',
-            sender: {
-              document: '12345678901',
-              name: 'João da Silva',
-              branch: '0001',
-              account: '123456',
-            },
-            recipient: {
-              document: '11122233344',
-              name: 'Carlos Pereira',
-              bankCode: '104',
-              branch: '1234',
-              account: '00123456',
-              accountType: 'SAVINGS',
-            },
-          } as CreateTedDto,
-        },
-        'Transferência com Valor Mínimo': {
-          summary: 'TED com valor mínimo permitido',
-          description: 'Transferência TED com valor mínimo de R$ 0,01',
-          value: {
-            amount: 0.01,
-            description: 'Teste de transferência',
-            sender: {
-              document: '12345678901',
-              name: 'Teste Usuario',
-              branch: '0001',
-              account: '111111',
-            },
-            recipient: {
-              document: '99988877766',
-              name: 'Destinatário Teste',
-              bankCode: '001',
-              branch: '0001',
-              account: '222222',
-              accountType: 'CHECKING',
-            },
-          } as CreateTedDto,
+          },
         },
       },
     }),
@@ -115,76 +69,94 @@ export function ApiTedTransfer() {
       schema: {
         type: 'object',
         properties: {
-          id: {
-            type: 'string',
-            example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-            description: 'ID único da transferência TED',
-          },
           authenticationCode: {
             type: 'string',
             example: 'ABC123DEF456GHI789',
             description: 'Código de autenticação retornado pelo provedor',
           },
-          status: {
+          transactionId: {
             type: 'string',
-            example: 'CREATED',
-            description: 'Status atual da transferência',
-          },
-          amount: {
-            type: 'number',
-            example: 1500.0,
-            description: 'Valor da transferência',
-          },
-          createdAt: {
-            type: 'string',
-            format: 'date-time',
-            example: '2026-01-17T10:00:00.000Z',
-            description: 'Data de criação',
+            example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+            description: 'ID da transação no provedor',
           },
         },
       },
     }),
     ApiResponse({
       status: 400,
-      description: 'Dados inválidos ou erro de validação',
-      schema: {
-        type: 'object',
-        properties: {
-          statusCode: { type: 'number', example: 400 },
-          message: {
-            type: 'string',
-            example: 'Dados inválidos para transferência TED',
+      description: 'Erro de validação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            ACCOUNT_NOT_FOUND: {
+              summary: 'Onboarding não encontrado',
+              value: {
+                errorCode: 'ACCOUNT_NOT_FOUND',
+                message: 'Account onboarding not found',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
           },
-          errorCode: { type: 'string', example: 'TED_TRANSFER_FAILED' },
         },
       },
     }),
     ApiResponse({
       status: 401,
-      description: 'Token de autenticação inválido ou expirado',
-    }),
-    ApiResponse({
-      status: 403,
-      description: 'Sem permissão para realizar transferências TED',
-    }),
-    ApiResponse({
-      status: 422,
-      description: 'Saldo insuficiente ou conta inválida',
-      schema: {
-        type: 'object',
-        properties: {
-          statusCode: { type: 'number', example: 422 },
-          message: {
-            type: 'string',
-            example: 'Saldo insuficiente para realizar a transferência',
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              summary: 'Token inválido ou expirado',
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
           },
-          errorCode: { type: 'string', example: 'INSUFFICIENT_BALANCE' },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 404,
+      description: 'Recurso não encontrado',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            RESOURCE_NOT_FOUND: {
+              summary: 'Conta origem não encontrada',
+              value: {
+                errorCode: 'RESOURCE_NOT_FOUND',
+                message: 'Sender account not found',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
         },
       },
     }),
     ApiResponse({
       status: 500,
-      description: 'Erro interno do servidor',
+      description: 'Erro interno',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            EXTERNAL_SERVICE_ERROR: {
+              summary: 'Erro no provedor financeiro',
+              value: {
+                errorCode: 'EXTERNAL_SERVICE_ERROR',
+                message: 'Failed to execute TED at provider',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
   );
 }

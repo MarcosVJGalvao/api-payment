@@ -1,36 +1,33 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import {
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 
 export function ApiRemovePermission() {
   return applyDecorators(
-    ApiOperation({ summary: 'Deletar uma permissão' }),
-    ApiParam({
-      name: 'id',
-      description: 'ID da permissão',
-      type: 'string',
-      format: 'uuid',
-    }),
+    ApiExtraModels(ErrorResponseDto),
+    ApiOperation({ summary: 'Remover permissão' }),
+    ApiParam({ name: 'id', description: 'ID da permissão' }),
+    ApiResponse({ status: 204, description: 'Permissão removida' }),
     ApiResponse({
-      status: 204,
-      description: 'Permissão deletada com sucesso',
-    }),
-    ApiResponse({
-      status: 403,
-      description: 'Permissão negada',
-      schema: {
-        type: 'object',
-        properties: {
-          erroCode: {
-            type: 'string',
-            example: 'PERMISSION_DENIED',
-          },
-          message: {
-            type: 'string',
-            example: 'Permission denied.',
-          },
-          correlationId: {
-            type: 'string',
-            example: '9afe65e8-a787-4bd5-8f71-db7074117352',
+      status: 401,
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
           },
         },
       },
@@ -38,20 +35,17 @@ export function ApiRemovePermission() {
     ApiResponse({
       status: 404,
       description: 'Permissão não encontrada',
-      schema: {
-        type: 'object',
-        properties: {
-          erroCode: {
-            type: 'string',
-            example: 'PERMISSION_NOT_FOUND',
-          },
-          message: {
-            type: 'string',
-            example: 'Permission not found.',
-          },
-          correlationId: {
-            type: 'string',
-            example: '9afe65e8-a787-4bd5-8f71-db7074117352',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            PERMISSION_NOT_FOUND: {
+              value: {
+                errorCode: 'PERMISSION_NOT_FOUND',
+                message: 'Permission not found',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
           },
         },
       },

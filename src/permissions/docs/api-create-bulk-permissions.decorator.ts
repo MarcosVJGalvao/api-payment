@@ -1,101 +1,51 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
-import { CreateBulkPermissionsDto } from '../dto/create-bulk-permissions.dto';
-import { Permission } from '../entities/permission.entity';
+import {
+  ApiBody,
+  ApiExtraModels,
+  ApiOperation,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 
 export function ApiCreateBulkPermissions() {
   return applyDecorators(
-    ApiOperation({ summary: 'Criar múltiplas permissões para um módulo' }),
+    ApiExtraModels(ErrorResponseDto),
+    ApiOperation({ summary: 'Criar múltiplas permissões em lote' }),
     ApiBody({
-      type: CreateBulkPermissionsDto,
-      examples: {
-        example1: {
-          value: {
-            module: 'user',
-            actions: ['read', 'write', 'delete', 'create'],
-            description: 'Permissões para gerenciar usuários',
-          },
-        },
-        example2: {
-          value: {
-            module: 'employee',
-            actions: ['read', 'write'],
+      schema: {
+        type: 'object',
+        properties: {
+          permissions: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string' },
+                module: { type: 'string' },
+                action: { type: 'string' },
+                description: { type: 'string' },
+              },
+            },
           },
         },
       },
     }),
+    ApiResponse({ status: 201, description: 'Permissões criadas' }),
     ApiResponse({
-      status: 201,
-      description: 'Permissões criadas com sucesso',
-      type: [Permission],
-      example: [
-        {
-          id: 'uuid-1',
-          name: 'user:read',
-          module: 'user',
-          action: 'read',
-          description: 'Permissões para gerenciar usuários',
-          createdAt: '2023-01-01T10:00:00Z',
-          updatedAt: '2023-01-01T10:00:00Z',
-        },
-        {
-          id: 'uuid-2',
-          name: 'user:write',
-          module: 'user',
-          action: 'write',
-          description: 'Permissões para gerenciar usuários',
-          createdAt: '2023-01-01T10:00:00Z',
-          updatedAt: '2023-01-01T10:00:00Z',
-        },
-      ],
-    }),
-    ApiResponse({
-      status: 400,
-      description: 'Dados inválidos',
-      schema: {
-        type: 'object',
-        properties: {
-          errorCode: {
-            type: 'string',
-            example: 'VALIDATION_ERROR',
-          },
-          message: {
-            type: 'string',
-            example: 'Validation failed',
-          },
-        },
-      },
-    }),
-    ApiResponse({
-      status: 403,
-      description: 'Permissão negada',
-      schema: {
-        type: 'object',
-        properties: {
-          errorCode: {
-            type: 'string',
-            example: 'PERMISSION_DENIED',
-          },
-          message: {
-            type: 'string',
-            example: 'Permission denied.',
-          },
-        },
-      },
-    }),
-    ApiResponse({
-      status: 409,
-      description: 'Todas as permissões já existem',
-      schema: {
-        type: 'object',
-        properties: {
-          errorCode: {
-            type: 'string',
-            example: 'PERMISSION_ALREADY_EXISTS',
-          },
-          message: {
-            type: 'string',
-            example: 'Todas as permissões já existem: user:read, user:write',
+      status: 401,
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
           },
         },
       },

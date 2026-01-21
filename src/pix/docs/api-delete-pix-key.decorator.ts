@@ -1,9 +1,17 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiDeletePixKey() {
   return applyDecorators(
+    ApiExtraModels(ErrorResponseDto),
     ApiOperation({
       summary: 'Excluir chave PIX',
       description:
@@ -27,12 +35,42 @@ export function ApiDeletePixKey() {
       description: 'Chave PIX excluída com sucesso',
     }),
     ApiResponse({
-      status: 400,
-      description: 'Chave não encontrada ou não pertence à conta',
+      status: 401,
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              summary: 'Token inválido ou expirado',
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
     ApiResponse({
-      status: 401,
-      description: 'Token de autenticação inválido ou expirado',
+      status: 500,
+      description: 'Erro interno',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            PIX_KEY_DELETE_FAILED: {
+              summary: 'Falha ao excluir chave PIX',
+              value: {
+                errorCode: 'PIX_KEY_DELETE_FAILED',
+                message: 'Failed to delete PIX key',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
   );
 }

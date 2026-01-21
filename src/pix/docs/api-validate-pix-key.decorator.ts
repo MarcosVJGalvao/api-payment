@@ -1,10 +1,22 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiValidatePixKey() {
   return applyDecorators(
-    ApiOperation({ summary: 'Validar chave PIX' }),
+    ApiExtraModels(ErrorResponseDto),
+    ApiOperation({
+      summary: 'Validar chave PIX',
+      description:
+        'Consulta os dados de uma chave PIX no DICT (Diretório de Identificadores de Contas Transacionais).',
+    }),
     ApiParam({
       name: 'provider',
       description: 'Provedor financeiro',
@@ -13,28 +25,92 @@ export function ApiValidatePixKey() {
     }),
     ApiParam({
       name: 'addressingKey',
-      description: 'Chave PIX a ser validada',
+      description:
+        'Chave PIX a ser validada (CPF, CNPJ, email, telefone ou EVP)',
+      example: '47742663023',
     }),
     ApiResponse({
       status: 200,
-      description: 'Chave válida',
+      description: 'Dados da chave PIX consultados com sucesso',
       schema: {
         type: 'object',
         properties: {
-          isValid: { type: 'boolean', example: true },
-          name: { type: 'string', example: 'John Doe' },
-          document: { type: 'string', example: '12345678909' },
-          pspName: { type: 'string', example: 'Banco Example S.A.' },
+          endToEndId: { type: 'string', example: 'E13140088...' },
+          addressingKey: {
+            type: 'object',
+            properties: {
+              type: { type: 'string', example: 'CPF' },
+              value: { type: 'string', example: '47742663023' },
+            },
+          },
+          account: {
+            type: 'object',
+            properties: {
+              bank: {
+                type: 'object',
+                properties: {
+                  ispb: { type: 'string', example: '13140088' },
+                },
+              },
+            },
+          },
+          holder: {
+            type: 'object',
+            properties: {
+              type: { type: 'string', example: 'NATURAL_PERSON' },
+              name: { type: 'string', example: 'João da Silva' },
+              document: {
+                type: 'object',
+                properties: {
+                  value: { type: 'string', example: '47742663023' },
+                  type: { type: 'string', example: 'CPF' },
+                },
+              },
+            },
+          },
+          status: { type: 'string', example: 'ACTIVE' },
+          createdAt: { type: 'string', example: '2024-01-01T00:00:00.000Z' },
+          ownedAt: { type: 'string', example: '2024-01-01T00:00:00.000Z' },
         },
       },
     }),
     ApiResponse({
-      status: 400,
-      description: 'Chave inválida ou erro na validação',
+      status: 401,
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              summary: 'Token inválido ou expirado',
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
     ApiResponse({
-      status: 404,
-      description: 'Chave não encontrada',
+      status: 500,
+      description: 'Erro interno',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            PIX_KEY_QUERY_FAILED: {
+              summary: 'Falha ao validar chave PIX',
+              value: {
+                errorCode: 'PIX_KEY_QUERY_FAILED',
+                message: 'Failed to validate PIX key',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
   );
 }

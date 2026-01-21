@@ -22,7 +22,9 @@ export class AddWebhookEventLogClientFK1768360700000 implements MigrationInterfa
     `);
 
     if (orphanedRecords && orphanedRecords.length > 0) {
-      console.log(`Deleting ${orphanedRecords.length} orphaned webhook_event_log records...`);
+      console.log(
+        `Deleting ${orphanedRecords.length} orphaned webhook_event_log records...`,
+      );
       await queryRunner.query(`
         DELETE wel FROM \`webhook_event_log\` wel
         LEFT JOIN \`client\` c ON wel.client_id = c.id

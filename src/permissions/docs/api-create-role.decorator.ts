@@ -1,10 +1,18 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiExtraModels,
+  ApiOperation,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { CreateRoleDto } from '../dto/create-role.dto';
 import { Role } from '../entities/role.entity';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 
 export function ApiCreateRole() {
   return applyDecorators(
+    ApiExtraModels(ErrorResponseDto),
     ApiOperation({ summary: 'Criar uma nova role personalizada' }),
     ApiBody({ type: CreateRoleDto }),
     ApiResponse({
@@ -15,21 +23,35 @@ export function ApiCreateRole() {
     ApiResponse({
       status: 400,
       description: 'Erro de validação',
-      schema: {
-        type: 'object',
-        properties: {
-          erroCode: {
-            type: 'string',
-            example: 'INVALID_INPUT',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            INVALID_INPUT: {
+              value: {
+                errorCode: 'INVALID_INPUT',
+                message: ['name should not be empty'],
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
           },
-          message: {
-            type: 'array',
-            items: { type: 'string' },
-            example: ['name should not be empty', 'name must be a string'],
-          },
-          correlationId: {
-            type: 'string',
-            example: 'c113416d-2180-4141-9965-c14f93046977',
+        },
+      },
+    }),
+    ApiResponse({
+      status: 401,
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
           },
         },
       },
@@ -37,20 +59,17 @@ export function ApiCreateRole() {
     ApiResponse({
       status: 403,
       description: 'Permissão negada',
-      schema: {
-        type: 'object',
-        properties: {
-          erroCode: {
-            type: 'string',
-            example: 'PERMISSION_DENIED',
-          },
-          message: {
-            type: 'string',
-            example: 'Permission denied.',
-          },
-          correlationId: {
-            type: 'string',
-            example: '9afe65e8-a787-4bd5-8f71-db7074117352',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            PERMISSION_DENIED: {
+              value: {
+                errorCode: 'PERMISSION_DENIED',
+                message: 'Permission denied',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
           },
         },
       },
@@ -58,20 +77,17 @@ export function ApiCreateRole() {
     ApiResponse({
       status: 409,
       description: 'Role já existe',
-      schema: {
-        type: 'object',
-        properties: {
-          erroCode: {
-            type: 'string',
-            example: 'ROLE_ALREADY_EXISTS',
-          },
-          message: {
-            type: 'string',
-            example: 'Role already exists.',
-          },
-          correlationId: {
-            type: 'string',
-            example: '9afe65e8-a787-4bd5-8f71-db7074117352',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            ROLE_ALREADY_EXISTS: {
+              value: {
+                errorCode: 'ROLE_ALREADY_EXISTS',
+                message: 'Role already exists',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
           },
         },
       },

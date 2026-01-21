@@ -1,11 +1,24 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { PixTransferDto } from '../dto/pix-transfer.dto';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiPixTransfer() {
   return applyDecorators(
-    ApiOperation({ summary: 'Realizar transferência PIX' }),
+    ApiExtraModels(ErrorResponseDto),
+    ApiOperation({
+      summary: 'Realizar transferência PIX',
+      description:
+        'Executa uma transferência PIX utilizando chave, QR Code ou dados manuais da conta destinatária.',
+    }),
     ApiParam({
       name: 'provider',
       description: 'Provedor financeiro',
@@ -22,7 +35,7 @@ export function ApiPixTransfer() {
             description: 'Pagamento Serviço',
             endToEndId: 'E13140088202507090058341B5EC16CC',
             pixKey: '47742663023',
-          } as PixTransferDto,
+          },
         },
         'Transferência via Static QR Code': {
           value: {
@@ -32,7 +45,7 @@ export function ApiPixTransfer() {
             endToEndId: 'E13140088202507090058341B5EC16CC',
             pixKey: '47742663023',
             conciliationId: 'FiCapc7D0Ul7KHDOnZp8HGaCS',
-          } as PixTransferDto,
+          },
         },
         'Transferência via Dynamic QR Code': {
           value: {
@@ -42,7 +55,7 @@ export function ApiPixTransfer() {
             endToEndId: 'E13140088202507090058341B5EC16CC',
             pixKey: '47742663023',
             receiverReconciliationId: 'Jk6GDZxqDD0HizWOfIYxGosIn9',
-          } as PixTransferDto,
+          },
         },
         'Transferência Manual (Agência e Conta)': {
           value: {
@@ -57,11 +70,9 @@ export function ApiPixTransfer() {
                 number: '1101263307',
                 type: 'CHECKING',
               },
-              bank: {
-                ispb: '13140088',
-              },
+              bank: { ispb: '13140088' },
             },
-          } as PixTransferDto,
+          },
         },
       },
     }),
@@ -71,19 +82,89 @@ export function ApiPixTransfer() {
       schema: {
         type: 'object',
         properties: {
-          transactionId: { type: 'string', example: 'uuid' },
+          id: { type: 'string', format: 'uuid' },
           status: { type: 'string', example: 'PROCESSING' },
           amount: { type: 'number', example: 100.5 },
+          transactionId: { type: 'string' },
+          authenticationCode: { type: 'string' },
         },
       },
     }),
     ApiResponse({
       status: 400,
-      description: 'Erro na transferência ou saldo insuficiente',
+      description: 'Erro de validação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            ACCOUNT_NOT_FOUND: {
+              summary: 'Onboarding não encontrado',
+              value: {
+                errorCode: 'ACCOUNT_NOT_FOUND',
+                message: 'Account onboarding not found',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
     ApiResponse({
-      status: 403,
-      description: 'Operação não permitida',
+      status: 401,
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              summary: 'Token inválido ou expirado',
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 404,
+      description: 'Recurso não encontrado',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            ACCOUNT_NOT_FOUND: {
+              summary: 'Conta não encontrada',
+              value: {
+                errorCode: 'ACCOUNT_NOT_FOUND',
+                message: 'Account not found',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 500,
+      description: 'Erro interno',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            PIX_TRANSFER_FAILED: {
+              summary: 'Falha na transferência PIX',
+              value: {
+                errorCode: 'PIX_TRANSFER_FAILED',
+                message: 'Failed to process PIX transfer',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
   );
 }

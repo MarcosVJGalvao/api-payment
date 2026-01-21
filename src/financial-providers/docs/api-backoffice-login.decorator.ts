@@ -1,32 +1,34 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiBody, ApiHeader } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiExtraModels,
+  ApiHeader,
+  ApiOperation,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { BackofficeLoginDto } from '../dto/backoffice-login.dto';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 
 export function ApiBackofficeLogin() {
   return applyDecorators(
+    ApiExtraModels(ErrorResponseDto),
     ApiHeader({
       name: 'X-Client-Id',
-      description:
-        'ID do cliente (obrigatório pois emails podem existir em múltiplos clientes)',
+      description: 'ID do cliente (obrigatório)',
       required: true,
       schema: { type: 'string' },
     }),
     ApiOperation({
-      summary: 'Autenticar com o Backoffice do Hiperbanco',
+      summary: 'Autenticar Backoffice Hiperbanco',
       description:
-        'Realiza a autenticação de um usuário backoffice no Hiperbanco. ' +
-        'Retorna um token JWT interno para uso nas demais operações. ' +
-        'Requer o header X-Client-Id para identificar o tenant.',
+        'Autentica usuário backoffice no Hiperbanco. Requer header X-Client-Id.',
     }),
     ApiBody({
       type: BackofficeLoginDto,
       examples: {
         'Login Backoffice': {
-          summary: 'Autenticar usuário backoffice',
-          value: {
-            email: 'admin@empresa.com.br',
-            password: 'SenhaSegura123!',
-          },
+          value: { email: 'admin@empresa.com.br', password: 'SenhaSegura123!' },
         },
       },
     }),
@@ -36,27 +38,27 @@ export function ApiBackofficeLogin() {
       schema: {
         type: 'object',
         properties: {
-          access_token: {
-            type: 'string',
-            example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-          },
-          sessionId: {
-            type: 'string',
-            example: '550e8400-e29b-41d4-a716-446655440000',
-          },
+          access_token: { type: 'string' },
+          sessionId: { type: 'string' },
         },
       },
     }),
     ApiResponse({
       status: 401,
       description: 'Falha na autenticação',
-      schema: {
-        type: 'object',
-        properties: {
-          errorCode: { type: 'string', example: 'PROVIDER_AUTH_FAILED' },
-          message: {
-            type: 'string',
-            example: 'Hiperbanco authentication failed: Invalid credentials',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            PROVIDER_AUTH_FAILED: {
+              summary: 'Credenciais inválidas',
+              value: {
+                errorCode: 'PROVIDER_AUTH_FAILED',
+                message:
+                  'Hiperbanco authentication failed: Invalid credentials',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
           },
         },
       },

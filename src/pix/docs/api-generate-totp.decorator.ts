@@ -1,10 +1,19 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { GenerateTotpDto } from '../dto/generate-totp.dto';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiGenerateTotp() {
   return applyDecorators(
+    ApiExtraModels(ErrorResponseDto),
     ApiOperation({
       summary: 'Gerar código TOTP',
       description:
@@ -54,11 +63,61 @@ export function ApiGenerateTotp() {
     }),
     ApiResponse({
       status: 400,
-      description: 'Tipo de chave inválido (apenas EMAIL e PHONE)',
+      description: 'Erro de validação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            INVALID_INPUT: {
+              summary: 'Tipo de chave inválido',
+              value: {
+                errorCode: 'INVALID_INPUT',
+                message:
+                  'TOTP generation is only available for EMAIL and PHONE key types',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
     ApiResponse({
       status: 401,
-      description: 'Token de autenticação inválido ou expirado',
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              summary: 'Token inválido ou expirado',
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 500,
+      description: 'Erro interno',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            PIX_TOTP_GENERATION_FAILED: {
+              summary: 'Falha ao gerar código TOTP',
+              value: {
+                errorCode: 'PIX_TOTP_GENERATION_FAILED',
+                message: 'Failed to generate TOTP code',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
   );
 }

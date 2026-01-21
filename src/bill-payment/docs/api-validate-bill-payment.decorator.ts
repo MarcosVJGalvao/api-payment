@@ -1,9 +1,17 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiValidateBillPayment() {
   return applyDecorators(
+    ApiExtraModels(ErrorResponseDto),
     ApiOperation({
       summary: 'Validar título para pagamento',
       description:
@@ -35,36 +43,60 @@ export function ApiValidateBillPayment() {
           recipient: {
             type: 'object',
             properties: {
-              name: {
-                type: 'string',
-                example: 'BENEFICIARIO AMBIENTE HOMOLOGACAO',
-              },
-              documentNumber: { type: 'string', example: '87.754.347/0001-08' },
+              name: { type: 'string' },
+              documentNumber: { type: 'string' },
             },
           },
           payer: {
             type: 'object',
             properties: {
-              name: {
-                type: 'string',
-                example: 'PAGADOR AMBIENTE DE HOMOLOGACAO',
-              },
-              documentNumber: { type: 'string', example: '698.447.801-44' },
+              name: { type: 'string' },
+              documentNumber: { type: 'string' },
             },
           },
-          dueDate: { type: 'string', example: '2025-09-20T00:00:00' },
-          originalAmount: { type: 'number', example: 200 },
-          amount: { type: 'number', example: 200 },
+          dueDate: { type: 'string', format: 'date-time' },
+          originalAmount: { type: 'number' },
+          amount: { type: 'number' },
         },
       },
     }),
     ApiResponse({
       status: 400,
-      description: 'Falha na validação do título',
+      description: 'Erro de validação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            BILL_PAYMENT_VALIDATION_FAILED: {
+              summary: 'Falha na validação do título',
+              value: {
+                errorCode: 'BILL_PAYMENT_VALIDATION_FAILED',
+                message: 'Failed to validate bill payment',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
     ApiResponse({
       status: 401,
-      description: 'Token de autenticação inválido ou expirado',
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              summary: 'Token inválido ou expirado',
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
   );
 }

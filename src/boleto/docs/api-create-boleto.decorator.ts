@@ -1,9 +1,25 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { CreateBoletoDto } from '../dto/create-boleto.dto';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
+import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiCreateBoleto() {
   return applyDecorators(
+    ApiExtraModels(ErrorResponseDto),
+    ApiParam({
+      name: 'provider',
+      description: 'Provedor financeiro',
+      example: FinancialProvider.HIPERBANCO,
+      enum: FinancialProvider,
+    }),
     ApiBody({
       type: CreateBoletoDto,
       examples: {
@@ -14,12 +30,8 @@ export function ApiCreateBoleto() {
             amount: 500.0,
             dueDate: '2025-10-10',
             documentNumber: '12345678909',
-            account: {
-              branch: '0001',
-              number: '123456',
-              type: 'CHECKING',
-            },
-          } as CreateBoletoDto,
+            account: { branch: '0001', number: '123456', type: 'CHECKING' },
+          },
         },
         'Boleto de Cobrança (Levy)': {
           value: {
@@ -29,11 +41,7 @@ export function ApiCreateBoleto() {
             dueDate: '2025-10-15',
             closePayment: '2025-11-15',
             documentNumber: '09876543210',
-            account: {
-              branch: '0001',
-              number: '654321',
-              type: 'CHECKING',
-            },
+            account: { branch: '0001', number: '654321', type: 'CHECKING' },
             payer: {
               name: 'João da Silva',
               document: '11122233344',
@@ -41,28 +49,12 @@ export function ApiCreateBoleto() {
                 zipCode: '01001000',
                 street: 'Praça da Sé',
                 number: '1',
-                addressLine: 'Rua Major Amarante',
                 neighborhood: 'Centro',
                 city: 'São Paulo',
                 state: 'SP',
               },
             },
-            interest: {
-              value: 1.0,
-              startDate: '2025-10-16',
-              type: 'Percent' as any,
-            },
-            fine: {
-              value: 2.0,
-              startDate: '2025-10-16',
-              type: 'FixedAmount' as any,
-            },
-            discount: {
-              value: 5.0,
-              limitDate: '2025-10-10',
-              type: 'FixedAmount' as any,
-            },
-          } as CreateBoletoDto,
+          },
         },
       },
     }),
@@ -73,28 +65,74 @@ export function ApiCreateBoleto() {
     }),
     ApiResponse({
       status: 201,
-      description:
-        'Boleto emitido com sucesso. Retorna os dados do provedor financeiro mais o campo internalId (ID gerado pelo banco de dados).',
+      description: 'Boleto emitido com sucesso',
+      schema: {
+        type: 'object',
+        properties: {
+          internalId: { type: 'string', format: 'uuid' },
+          authenticationCode: { type: 'string' },
+          barcode: { type: 'string' },
+          digitable: { type: 'string' },
+          status: { type: 'string', example: 'REGISTERED' },
+        },
+      },
     }),
     ApiResponse({
       status: 400,
-      description: 'Dados inválidos ou validação falhou',
+      description: 'Erro de validação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            INVALID_BOLETO_DATES: {
+              summary: 'Datas inválidas',
+              value: {
+                errorCode: 'INVALID_BOLETO_DATES',
+                message: 'Boleto dates are invalid',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
     ApiResponse({
       status: 401,
-      description: 'Não autenticado',
-    }),
-    ApiResponse({
-      status: 422,
-      description: 'Erro de validação de regras de negócio',
-    }),
-    ApiResponse({
-      status: 502,
-      description: 'Erro na comunicação com o provedor financeiro',
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              summary: 'Token inválido ou expirado',
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
     ApiResponse({
       status: 500,
-      description: 'Erro interno do servidor',
+      description: 'Erro interno',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            BOLETO_EMISSION_FAILED: {
+              summary: 'Falha ao emitir boleto',
+              value: {
+                errorCode: 'BOLETO_EMISSION_FAILED',
+                message: 'Failed to emit boleto in financial provider',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
   );
 }

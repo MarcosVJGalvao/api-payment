@@ -1,9 +1,16 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiExtraModels,
+  ApiOperation,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { TransactionResponseDto } from '../dto/transaction-response.dto';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 
 export function ApiListTransactions() {
   return applyDecorators(
+    ApiExtraModels(ErrorResponseDto),
     ApiOperation({
       summary: 'Listar transações',
       description:
@@ -16,12 +23,23 @@ export function ApiListTransactions() {
       isArray: true,
     }),
     ApiResponse({
-      status: 400,
-      description: 'Parâmetros de query inválidos',
-    }),
-    ApiResponse({
       status: 401,
-      description: 'Não autenticado',
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              summary: 'Token inválido ou expirado',
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
   );
 }

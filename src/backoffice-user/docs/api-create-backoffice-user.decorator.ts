@@ -1,10 +1,18 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiExtraModels,
+  ApiOperation,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { CreateBackofficeUserDto } from '../dto/create-backoffice-user.dto';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 
 export function ApiCreateBackofficeUser() {
   return applyDecorators(
-    ApiOperation({ summary: 'Create a new Backoffice User' }),
+    ApiExtraModels(ErrorResponseDto),
+    ApiOperation({ summary: 'Criar novo usuário Backoffice' }),
     ApiBody({
       type: CreateBackofficeUserDto,
       examples: {
@@ -21,29 +29,55 @@ export function ApiCreateBackofficeUser() {
     }),
     ApiResponse({
       status: 201,
-      description: 'User created successfully',
+      description: 'Usuário criado com sucesso',
       schema: {
         type: 'object',
         properties: {
-          id: { type: 'string', example: 'uuid' },
-          name: { type: 'string', example: 'John Doe' },
-          email: { type: 'string', example: 'john@example.com' },
+          id: { type: 'string', format: 'uuid' },
+          name: { type: 'string' },
+          email: { type: 'string' },
           status: { type: 'string', example: 'ACTIVE' },
-          createdAt: { type: 'string', example: '2023-01-01T00:00:00Z' },
+          createdAt: { type: 'string', format: 'date-time' },
         },
       },
     }),
     ApiResponse({
-      status: 400,
-      description: 'Bad Request',
-    }),
-    ApiResponse({
       status: 401,
-      description: 'Unauthorized',
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              summary: 'Token inválido ou expirado',
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
     ApiResponse({
-      status: 403,
-      description: 'Forbidden',
+      status: 409,
+      description: 'Usuário já existe',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            USER_ALREADY_EXISTS: {
+              summary: 'Email já cadastrado',
+              value: {
+                errorCode: 'USER_ALREADY_EXISTS',
+                message: 'User with this email already exists',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
   );
 }

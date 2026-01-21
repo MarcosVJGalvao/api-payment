@@ -1,45 +1,66 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
-import { Permission } from '../entities/permission.entity';
+import {
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 
 export function ApiGetUserDirectPermissions() {
   return applyDecorators(
+    ApiExtraModels(ErrorResponseDto),
     ApiOperation({ summary: 'Listar permissões diretas de um usuário' }),
-    ApiParam({
-      name: 'userId',
-      description: 'ID do usuário',
-      type: String,
-      example: '0886d835-bb67-4085-9e33-69e36c040933',
-    }),
+    ApiParam({ name: 'userId', description: 'ID do usuário' }),
     ApiResponse({
       status: 200,
-      description: 'Lista de permissões diretas do usuário',
-      type: [Permission],
-      example: [
-        {
-          id: '550e8400-e29b-41d4-a716-446655440000',
-          name: 'user:delete',
-          module: 'user',
-          action: 'delete',
-          description: 'Permite deletar usuários',
-          createdAt: '2023-01-01T10:00:00Z',
-          updatedAt: '2023-01-01T10:00:00Z',
+      description: 'Permissões diretas do usuário',
+      schema: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            name: { type: 'string' },
+            module: { type: 'string' },
+            action: { type: 'string' },
+          },
         },
-      ],
+      },
     }),
     ApiResponse({
-      status: 403,
-      description: 'Permissão negada',
-      schema: {
-        type: 'object',
-        properties: {
-          errorCode: {
-            type: 'string',
-            example: 'PERMISSION_DENIED',
+      status: 401,
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
           },
-          message: {
-            type: 'string',
-            example: 'Permission denied.',
+        },
+      },
+    }),
+    ApiResponse({
+      status: 404,
+      description: 'Usuário não encontrado',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            USER_NOT_FOUND: {
+              value: {
+                errorCode: 'USER_NOT_FOUND',
+                message: 'User not found',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
           },
         },
       },

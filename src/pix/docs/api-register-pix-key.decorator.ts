@@ -1,10 +1,19 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { RegisterPixKeyDto } from '../dto/register-pix-key.dto';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiRegisterPixKey() {
   return applyDecorators(
+    ApiExtraModels(ErrorResponseDto),
     ApiOperation({
       summary: 'Cadastrar chave PIX',
       description:
@@ -23,17 +32,11 @@ export function ApiRegisterPixKey() {
       examples: {
         'Chave CPF': {
           summary: 'Cadastro de chave CPF',
-          value: {
-            type: 'CPF',
-            value: '47742663023',
-          },
+          value: { type: 'CPF', value: '47742663023' },
         },
         'Chave CNPJ': {
           summary: 'Cadastro de chave CNPJ',
-          value: {
-            type: 'CNPJ',
-            value: '12345678000190',
-          },
+          value: { type: 'CNPJ', value: '12345678000190' },
         },
         'Chave EMAIL (requer TOTP)': {
           summary: 'Cadastro de chave Email - requer código TOTP',
@@ -45,17 +48,11 @@ export function ApiRegisterPixKey() {
         },
         'Chave PHONE (requer TOTP)': {
           summary: 'Cadastro de chave Telefone - requer código TOTP',
-          value: {
-            type: 'PHONE',
-            value: '+5511999887766',
-            totpCode: '654321',
-          },
+          value: { type: 'PHONE', value: '+5511999887766', totpCode: '654321' },
         },
         'Chave Aleatória (EVP)': {
           summary: 'Cadastro de chave aleatória - não requer value',
-          value: {
-            type: 'EVP',
-          },
+          value: { type: 'EVP' },
         },
       },
     }),
@@ -85,11 +82,79 @@ export function ApiRegisterPixKey() {
     }),
     ApiResponse({
       status: 400,
-      description: 'Dados inválidos ou TOTP obrigatório não informado',
+      description: 'Erro de validação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            PIX_TOTP_REQUIRED: {
+              summary: 'TOTP Obrigatório',
+              value: {
+                errorCode: 'PIX_TOTP_REQUIRED',
+                message: 'TOTP code is required for EMAIL and PHONE key types',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
     ApiResponse({
       status: 401,
-      description: 'Token de autenticação inválido ou expirado',
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              summary: 'Token inválido ou expirado',
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 404,
+      description: 'Recurso não encontrado',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            ACCOUNT_NOT_FOUND: {
+              summary: 'Conta não encontrada',
+              value: {
+                errorCode: 'ACCOUNT_NOT_FOUND',
+                message: 'Account not found',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 500,
+      description: 'Erro interno',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            PIX_KEY_REGISTRATION_FAILED: {
+              summary: 'Falha ao registrar chave PIX',
+              value: {
+                errorCode: 'PIX_KEY_REGISTRATION_FAILED',
+                message: 'Failed to register PIX key',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
   );
 }

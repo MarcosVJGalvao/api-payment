@@ -1,38 +1,34 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import {
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { Role } from '../entities/role.entity';
+import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 
 export function ApiGetRoleById() {
   return applyDecorators(
-    ApiOperation({ summary: 'Obter uma role por ID' }),
-    ApiParam({
-      name: 'id',
-      description: 'ID da role',
-      type: 'string',
-      format: 'uuid',
-    }),
+    ApiExtraModels(ErrorResponseDto),
+    ApiOperation({ summary: 'Buscar role por ID' }),
+    ApiParam({ name: 'id', description: 'ID da role' }),
+    ApiResponse({ status: 200, description: 'Role encontrada', type: Role }),
     ApiResponse({
-      status: 200,
-      description: 'Role encontrada',
-      type: Role,
-    }),
-    ApiResponse({
-      status: 403,
-      description: 'Permissão negada',
-      schema: {
-        type: 'object',
-        properties: {
-          erroCode: {
-            type: 'string',
-            example: 'PERMISSION_DENIED',
-          },
-          message: {
-            type: 'string',
-            example: 'Permission denied.',
-          },
-          correlationId: {
-            type: 'string',
-            example: '9afe65e8-a787-4bd5-8f71-db7074117352',
+      status: 401,
+      description: 'Erro de autenticação',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNAUTHORIZED: {
+              value: {
+                errorCode: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
           },
         },
       },
@@ -40,20 +36,17 @@ export function ApiGetRoleById() {
     ApiResponse({
       status: 404,
       description: 'Role não encontrada',
-      schema: {
-        type: 'object',
-        properties: {
-          erroCode: {
-            type: 'string',
-            example: 'ROLE_NOT_FOUND',
-          },
-          message: {
-            type: 'string',
-            example: 'Role not found.',
-          },
-          correlationId: {
-            type: 'string',
-            example: '9afe65e8-a787-4bd5-8f71-db7074117352',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            ROLE_NOT_FOUND: {
+              value: {
+                errorCode: 'ROLE_NOT_FOUND',
+                message: 'Role not found',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
           },
         },
       },

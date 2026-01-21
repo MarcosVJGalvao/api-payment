@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddInProcessStatusToTedTransfer1768700000000
-  implements MigrationInterface
-{
+export class AddInProcessStatusToTedTransfer1768700000000 implements MigrationInterface {
   name = 'AddInProcessStatusToTedTransfer1768700000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
