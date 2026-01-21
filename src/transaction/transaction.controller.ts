@@ -28,7 +28,7 @@ export class TransactionController {
     );
     return {
       ...result,
-      data: result.data.map((t) => TransactionMapper.toResponse(t)),
+      data: result.data.map((t) => TransactionMapper.toSummary(t)),
     };
   }
 

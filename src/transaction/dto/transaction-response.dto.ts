@@ -38,7 +38,7 @@ export class TransactionResponseDto implements ITransactionResponse {
     required: false,
     nullable: true,
   })
-  description?: string;
+  description?: string | null;
 
   @ApiProperty({ description: 'Data de criação' })
   createdAt: Date;
