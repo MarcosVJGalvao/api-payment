@@ -14,6 +14,17 @@ import { TedTransfer } from '@/ted/entities/ted-transfer.entity';
 import { TedCashIn } from '@/ted/entities/ted-cash-in.entity';
 import { TedRefund } from '@/ted/entities/ted-refund.entity';
 
+type TransactionSource =
+  | PixCashIn
+  | PixTransfer
+  | PixRefund
+  | Boleto
+  | BillPayment
+  | PixQrCode
+  | TedTransfer
+  | TedCashIn
+  | TedRefund;
+
 export class TransactionResponseDto {
   @ApiProperty({ description: 'ID da transação' })
   id: string;
@@ -62,32 +73,12 @@ export class TransactionResponseDto {
   })
   providerTimestamp?: Date;
 
-  @ApiProperty({ required: false, nullable: true })
-  pixCashIn?: PixCashIn;
-
-  @ApiProperty({ required: false, nullable: true })
-  pixTransfer?: PixTransfer;
-
-  @ApiProperty({ required: false, nullable: true })
-  pixRefund?: PixRefund;
-
-  @ApiProperty({ required: false, nullable: true })
-  boleto?: Boleto;
-
-  @ApiProperty({ required: false, nullable: true })
-  billPayment?: BillPayment;
-
-  @ApiProperty({ required: false, nullable: true })
-  pixQrCode?: PixQrCode;
-
-  @ApiProperty({ required: false, nullable: true })
-  tedTransfer?: TedTransfer;
-
-  @ApiProperty({ required: false, nullable: true })
-  tedCashIn?: TedCashIn;
-
-  @ApiProperty({ required: false, nullable: true })
-  tedRefund?: TedRefund;
+  @ApiProperty({
+    description: 'Detalhes específicos da operação (Pix, Boleto, etc)',
+    required: false,
+    nullable: true,
+  })
+  details?: Partial<TransactionSource>;
 
   constructor(transaction: Transaction) {
     this.id = transaction.id;
@@ -102,15 +93,46 @@ export class TransactionResponseDto {
     this.updatedAt = transaction.updatedAt;
     this.providerTimestamp = transaction.providerTimestamp;
 
-    // Relations
-    this.pixCashIn = transaction.pixCashIn || undefined;
-    this.pixTransfer = transaction.pixTransfer || undefined;
-    this.pixRefund = transaction.pixRefund || undefined;
-    this.boleto = transaction.boleto || undefined;
-    this.billPayment = transaction.billPayment || undefined;
-    this.pixQrCode = transaction.pixQrCode || undefined;
-    this.tedTransfer = transaction.tedTransfer || undefined;
-    this.tedCashIn = transaction.tedCashIn || undefined;
-    this.tedRefund = transaction.tedRefund || undefined;
+    // Detectar a relação ativa e remover campos duplicados
+    const sourceRelation =
+      transaction.pixCashIn ||
+      transaction.pixTransfer ||
+      transaction.pixRefund ||
+      transaction.boleto ||
+      transaction.billPayment ||
+      transaction.pixQrCode ||
+      transaction.tedTransfer ||
+      transaction.tedCashIn ||
+      transaction.tedRefund;
+
+    if (sourceRelation) {
+      this.details = this.removeRedundantFields(sourceRelation);
+    }
+  }
+
+  private removeRedundantFields(
+    source: TransactionSource,
+  ): Partial<TransactionSource> {
+    if (!this.description && source.description) {
+      this.description = source.description;
+    }
+
+    const clean = { ...source } as Partial<TransactionSource> & {
+      authenticationCode?: string;
+      providerTimestamp?: Date;
+    };
+
+    // Remover campos redundantes
+    delete clean.amount;
+    delete clean.currency;
+    delete clean.description;
+    delete clean.authenticationCode;
+    delete clean.providerTimestamp;
+    delete clean.createdAt;
+    delete clean.updatedAt;
+    delete clean.deletedAt;
+    delete clean.providerSlug;
+
+    return clean;
   }
 }
