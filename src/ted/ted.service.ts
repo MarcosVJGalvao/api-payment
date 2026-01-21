@@ -192,6 +192,7 @@ export class TedService {
         clientId: clientId,
         accountId: accountId,
         tedTransferId: tedTransfer.id,
+        idempotencyKey: createTedDto.idempotencyKey,
       });
 
       return {

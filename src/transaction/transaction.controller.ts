@@ -2,7 +2,7 @@ import { Controller, Get, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { TransactionService } from './transaction.service';
 import { GetTransactionsQueryDto } from './dto/get-transactions-query.dto';
-import { TransactionResponseDto } from './dto/transaction-response.dto';
+import { TransactionMapper } from './helpers/transaction-mapper.helper';
 import { ApiListTransactions } from './docs/api-list-transactions.decorator';
 import { ApiGetTransaction } from './docs/api-get-transaction.decorator';
 import { ProviderAuthGuard } from '@/financial-providers/guards/provider-auth.guard';
@@ -28,7 +28,7 @@ export class TransactionController {
     );
     return {
       ...result,
-      data: result.data.map((t) => new TransactionResponseDto(t)),
+      data: result.data.map((t) => TransactionMapper.toResponse(t)),
     };
   }
 
@@ -43,6 +43,6 @@ export class TransactionController {
       req.accountId!,
       req.clientId!,
     );
-    return new TransactionResponseDto(transaction);
+    return TransactionMapper.toResponse(transaction);
   }
 }

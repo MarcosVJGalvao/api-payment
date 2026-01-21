@@ -581,6 +581,8 @@ export class PixService {
           clientId,
           accountId,
           pixTransferId: pixTransfer.id,
+          correlationId: pixTransfer.correlationId,
+          idempotencyKey: pixTransfer.idempotencyKey,
         });
 
         this.logger.log(
