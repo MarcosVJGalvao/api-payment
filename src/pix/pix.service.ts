@@ -333,6 +333,9 @@ export class PixService {
           pixTransfer,
           clientId,
           accountId,
+          response.requestDateTime
+            ? parseDate(response.requestDateTime)
+            : undefined,
         );
       }
 
@@ -566,6 +569,7 @@ export class PixService {
     pixTransfer: PixTransfer,
     clientId: string,
     accountId: string,
+    providerTimestamp?: Date,
   ): Promise<void> {
     try {
       const existingTx = await this.transactionService.findByAuthenticationCode(
@@ -583,6 +587,7 @@ export class PixService {
           pixTransferId: pixTransfer.id,
           correlationId: pixTransfer.correlationId,
           idempotencyKey: pixTransfer.idempotencyKey,
+          providerTimestamp,
         });
 
         this.logger.log(

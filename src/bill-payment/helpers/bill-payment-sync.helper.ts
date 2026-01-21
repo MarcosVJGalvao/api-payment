@@ -258,6 +258,7 @@ export class BillPaymentSyncHelper {
           clientId: payment.clientId,
           accountId: payment.accountId,
           billPaymentId: payment.id,
+          providerTimestamp: payment.paymentDate,
         });
 
         this.logger.log(

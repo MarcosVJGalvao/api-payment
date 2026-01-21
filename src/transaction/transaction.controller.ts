@@ -8,7 +8,7 @@ import { ApiGetTransaction } from './docs/api-get-transaction.decorator';
 import { ProviderAuthGuard } from '@/financial-providers/guards/provider-auth.guard';
 import type { RequestWithSession } from '@/financial-providers/hiperbanco/interfaces/request-with-session.interface';
 
-@ApiTags('Transactions')
+@ApiTags('Transações')
 @Controller('financial/transactions')
 @UseGuards(ProviderAuthGuard)
 @ApiBearerAuth('provider-auth')
