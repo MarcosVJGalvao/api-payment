@@ -67,6 +67,204 @@ export class SwaggerService {
     return this.document;
   }
 
+  /**
+   * Retorna um documento Swagger filtrado por tipo de autenticação
+   * @param authKey - Chave de autenticação (provider-auth, backoffice-auth, internal-auth)
+   * @returns Documento OpenAPI contendo apenas os paths e schemas que usam a autenticação especificada
+   */
+  getFilteredDocument(authKey: string): OpenAPIObject {
+    if (!this.document) {
+      throw new Error(
+        'Swagger document not generated. Call generateDocument() first.',
+      );
+    }
+
+    const filteredDocument = JSON.parse(
+      JSON.stringify(this.document),
+    ) as OpenAPIObject;
+
+    const filteredPaths: OpenAPIObject['paths'] = {};
+
+    for (const [path, pathItem] of Object.entries(this.document.paths || {})) {
+      const filteredPathItem: typeof pathItem = {};
+      let hasMatchingMethod = false;
+
+      for (const method of ['get', 'post', 'put', 'patch', 'delete'] as const) {
+        const operation = pathItem?.[method];
+        if (operation?.security) {
+          const hasAuthKey = operation.security.some(
+            (sec: Record<string, unknown>) => authKey in sec,
+          );
+          if (hasAuthKey) {
+            filteredPathItem[method] = operation;
+            hasMatchingMethod = true;
+          }
+        }
+      }
+
+      if (hasMatchingMethod) {
+        filteredPaths[path] = filteredPathItem;
+      }
+    }
+
+    filteredDocument.paths = filteredPaths;
+
+    const usedSchemas = this.collectUsedSchemas(filteredPaths);
+    filteredDocument.components = this.filterComponents(
+      filteredDocument.components,
+      usedSchemas,
+      authKey,
+    );
+
+    return filteredDocument;
+  }
+
+  /**
+   * Coleta todos os schemas referenciados nos paths filtrados
+   */
+  private collectUsedSchemas(
+    paths: OpenAPIObject['paths'],
+    allSchemas?: Record<string, unknown>,
+  ): Set<string> {
+    const usedSchemas = new Set<string>();
+    const schemasToProcess = new Set<string>();
+
+    const collectRefs = (obj: unknown): void => {
+      if (!obj || typeof obj !== 'object') return;
+
+      if (Array.isArray(obj)) {
+        obj.forEach(collectRefs);
+        return;
+      }
+
+      const record = obj as Record<string, unknown>;
+      if (record.$ref && typeof record.$ref === 'string') {
+        const match = record.$ref.match(/#\/components\/schemas\/(.+)/);
+        if (match) {
+          schemasToProcess.add(match[1]);
+        }
+      }
+
+      Object.values(record).forEach(collectRefs);
+    };
+
+    collectRefs(paths);
+
+    if (allSchemas) {
+      while (schemasToProcess.size > 0) {
+        const schemaName = schemasToProcess.values().next().value as string;
+        schemasToProcess.delete(schemaName);
+
+        if (!usedSchemas.has(schemaName) && allSchemas[schemaName]) {
+          usedSchemas.add(schemaName);
+          collectRefs(allSchemas[schemaName]);
+        }
+      }
+    } else {
+      schemasToProcess.forEach((s) => usedSchemas.add(s));
+    }
+
+    return usedSchemas;
+  }
+
+  /**
+   * Filtra os components para manter apenas os schemas e securitySchemes utilizados
+   */
+  private filterComponents(
+    components: OpenAPIObject['components'],
+    usedSchemas: Set<string>,
+    authKey?: string,
+  ): OpenAPIObject['components'] {
+    if (!components) return components;
+
+    const allSchemas = components.schemas || {};
+    const finalUsedSchemas = this.collectUsedSchemas(
+      {} as OpenAPIObject['paths'],
+      allSchemas,
+    );
+
+    usedSchemas.forEach((s) => finalUsedSchemas.add(s));
+
+    const schemaQueue = [...usedSchemas];
+    while (schemaQueue.length > 0) {
+      const schemaName = schemaQueue.pop()!;
+      if (allSchemas[schemaName]) {
+        const nestedRefs = this.extractSchemaRefs(allSchemas[schemaName]);
+        nestedRefs.forEach((ref) => {
+          if (!finalUsedSchemas.has(ref)) {
+            finalUsedSchemas.add(ref);
+            schemaQueue.push(ref);
+          }
+        });
+      }
+    }
+
+    const filteredSchemas: typeof allSchemas = {};
+    finalUsedSchemas.forEach((schemaName) => {
+      if (allSchemas[schemaName]) {
+        filteredSchemas[schemaName] = allSchemas[schemaName];
+      }
+    });
+
+    const filteredSecuritySchemes = authKey
+      ? this.filterSecuritySchemes(
+          components.securitySchemes as Record<string, unknown>,
+          authKey,
+        )
+      : components.securitySchemes;
+
+    return {
+      ...components,
+      schemas: filteredSchemas,
+      securitySchemes:
+        filteredSecuritySchemes as typeof components.securitySchemes,
+    };
+  }
+
+  /**
+   * Filtra os securitySchemes para manter apenas o authKey especificado
+   */
+  private filterSecuritySchemes(
+    securitySchemes: Record<string, unknown> | undefined,
+    authKey: string,
+  ): Record<string, unknown> | undefined {
+    if (!securitySchemes) return securitySchemes;
+
+    const filtered: Record<string, unknown> = {};
+    if (securitySchemes[authKey]) {
+      filtered[authKey] = securitySchemes[authKey];
+    }
+
+    return filtered;
+  }
+
+  /**
+   * Extrai referências de schemas de um objeto
+   */
+  private extractSchemaRefs(obj: unknown): Set<string> {
+    const refs = new Set<string>();
+
+    const extract = (o: unknown): void => {
+      if (!o || typeof o !== 'object') return;
+
+      if (Array.isArray(o)) {
+        o.forEach(extract);
+        return;
+      }
+
+      const record = o as Record<string, unknown>;
+      if (record.$ref && typeof record.$ref === 'string') {
+        const match = record.$ref.match(/#\/components\/schemas\/(.+)/);
+        if (match) refs.add(match[1]);
+      }
+
+      Object.values(record).forEach(extract);
+    };
+
+    extract(obj);
+    return refs;
+  }
+
   private normalizeSwagger(
     obj: SwaggerValue,
     parentKey?: string,

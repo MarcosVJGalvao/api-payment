@@ -82,12 +82,44 @@ async function bootstrap() {
     const swaggerService = app.get(SwaggerService);
     swaggerService.generateDocument(app);
 
+    const swaggerOptions = {
+      persistAuthorization: true,
+    };
+
     SwaggerModule.setup('api', app, swaggerService.getSwaggerDocument(), {
       jsonDocumentUrl: '/api/openapi.json',
-      swaggerOptions: {
-        persistAuthorization: true,
-      },
+      swaggerOptions,
     });
+
+    SwaggerModule.setup(
+      'api/provider',
+      app,
+      swaggerService.getFilteredDocument('provider-auth'),
+      {
+        jsonDocumentUrl: '/api/provider/openapi.json',
+        swaggerOptions,
+      },
+    );
+
+    SwaggerModule.setup(
+      'api/backoffice',
+      app,
+      swaggerService.getFilteredDocument('backoffice-auth'),
+      {
+        jsonDocumentUrl: '/api/backoffice/openapi.json',
+        swaggerOptions,
+      },
+    );
+
+    SwaggerModule.setup(
+      'api/internal',
+      app,
+      swaggerService.getFilteredDocument('internal-auth'),
+      {
+        jsonDocumentUrl: '/api/internal/openapi.json',
+        swaggerOptions,
+      },
+    );
 
     const port = configService.get<number>('PORT', 3000);
     await app.listen(port);
@@ -96,8 +128,22 @@ async function bootstrap() {
 
     console.log('\n✅  Application Successfully Started\n');
     console.log(`📍  Server:     http://localhost:${port}`);
-    console.log(`📚  Swagger UI: http://localhost:${port}/api`);
-    console.log(`📄  OpenAPI:    http://localhost:${port}/api/openapi.json`);
+    console.log(`📚  Swagger UI:`);
+    console.log(`    - Completo:    http://localhost:${port}/api`);
+    console.log(`    - Provider:    http://localhost:${port}/api/provider`);
+    console.log(`    - Backoffice:  http://localhost:${port}/api/backoffice`);
+    console.log(`    - Internal:    http://localhost:${port}/api/internal`);
+    console.log(`📄  OpenAPI JSON:`);
+    console.log(`    - Completo:    http://localhost:${port}/api/openapi.json`);
+    console.log(
+      `    - Provider:    http://localhost:${port}/api/provider/openapi.json`,
+    );
+    console.log(
+      `    - Backoffice:  http://localhost:${port}/api/backoffice/openapi.json`,
+    );
+    console.log(
+      `    - Internal:    http://localhost:${port}/api/internal/openapi.json`,
+    );
     console.log(`📊  Queues:     http://localhost:${port}/queues`);
     console.log(
       '\n═══════════════════════════════════════════════════════════\n',

@@ -6,9 +6,11 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Public } from '@/auth/decorators/public.decorator';
 import { ApiLoginBackofficeUser } from './docs/api-login-backoffice-user.decorator';
 import { ApiResetPassword } from './docs/api-reset-password.decorator';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('Backoffice Auth')
 @Controller('backoffice/auth')
+@ApiBearerAuth('backoffice-auth')
 export class BackofficeAuthController {
   constructor(private readonly authService: BackofficeAuthService) {}
 
