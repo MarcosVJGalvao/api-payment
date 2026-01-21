@@ -12,6 +12,7 @@ import { TransactionModule } from '@/transaction/transaction.module';
 import { FinancialProvidersModule } from '@/financial-providers/financial-providers.module';
 import { HiperbancoTedHelper } from './helpers/hiperbanco/hiperbanco-ted.helper';
 import { TedProviderHelper } from './helpers/ted-provider.helper';
+import { TedSyncHelper } from './helpers/ted-sync.helper';
 import { BaseQueryModule } from '@/common/base-query/base-query.module';
 import { ClientModule } from '@/client/client.module';
 import { PermissionsModule } from '@/permissions/permissions.module';
@@ -35,8 +36,12 @@ import { AccountModule } from '@/account/account.module';
     AccountModule,
   ],
   controllers: [TedController],
-  providers: [TedService, HiperbancoTedHelper, TedProviderHelper],
+  providers: [
+    TedService,
+    HiperbancoTedHelper,
+    TedProviderHelper,
+    TedSyncHelper,
+  ],
   exports: [TedService],
 })
 export class TedModule {}
-

@@ -11,6 +11,7 @@ import {
   PixTransferResponse,
   PixQrCodeGenerateResponse,
   PixQrCodeDecodeResponse,
+  PixTransferStatusResponse,
 } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { RegisterPixKeyDto } from '../dto/register-pix-key.dto';
 import { GenerateTotpDto } from '../dto/generate-totp.dto';
@@ -123,6 +124,28 @@ export class PixProviderHelper {
     switch (provider) {
       case FinancialProvider.HIPERBANCO:
         return this.hiperbancoHelper.transfer(payload, session, idempotencyKey);
+      default:
+        throw new CustomHttpException(
+          `Provider ${String(provider)} is not supported for PIX`,
+          HttpStatus.BAD_REQUEST,
+          ErrorCode.INVALID_INPUT,
+        );
+    }
+  }
+
+  async getTransferStatus(
+    provider: FinancialProvider,
+    accountNumber: string,
+    authenticationCode: string,
+    session: ProviderSession,
+  ): Promise<PixTransferStatusResponse> {
+    switch (provider) {
+      case FinancialProvider.HIPERBANCO:
+        return this.hiperbancoHelper.getTransfer(
+          accountNumber,
+          authenticationCode,
+          session,
+        );
       default:
         throw new CustomHttpException(
           `Provider ${String(provider)} is not supported for PIX`,

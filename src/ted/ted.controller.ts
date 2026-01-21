@@ -50,7 +50,7 @@ export class TedController {
     @Param('id') id: string,
     @Req() req: RequestWithSession,
   ) {
-    return this.tedService.findOne(id, req.accountId!);
+    return this.tedService.findOne(id, req.accountId!, req.providerSession);
   }
 
   @Post(':provider/transfer')

@@ -8,6 +8,7 @@ import { Account } from '@/account/entities/account.entity';
 import { TransactionService } from '@/transaction/transaction.service';
 import { TransactionType } from '@/transaction/enums/transaction-type.enum';
 import { TedProviderHelper } from './helpers/ted-provider.helper';
+import { TedSyncHelper } from './helpers/ted-sync.helper';
 import { PaymentSender } from '@/common/entities/payment-sender.entity';
 import { PaymentRecipient } from '@/common/entities/payment-recipient.entity';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
@@ -30,6 +31,7 @@ export class TedService {
     private readonly accountRepository: Repository<Account>,
     private readonly transactionService: TransactionService,
     private readonly providerHelper: TedProviderHelper,
+    private readonly syncHelper: TedSyncHelper,
     private readonly baseQueryService: BaseQueryService,
   ) {}
 
@@ -70,7 +72,11 @@ export class TedService {
   /**
    * Busca uma transferência TED por ID no banco de dados.
    */
-  async findOne(id: string, accountId: string): Promise<TedTransfer> {
+  async findOne(
+    id: string,
+    accountId: string,
+    session?: ProviderSession,
+  ): Promise<TedTransfer> {
     const tedTransfer = await this.tedTransferRepository.findOne({
       where: { id, accountId },
       relations: ['sender', 'recipient'],
@@ -82,6 +88,10 @@ export class TedService {
         HttpStatus.NOT_FOUND,
         ErrorCode.RESOURCE_NOT_FOUND,
       );
+    }
+
+    if (session) {
+      await this.syncHelper.syncTransferWithProvider(tedTransfer, session);
     }
 
     return tedTransfer;
@@ -125,7 +135,6 @@ export class TedService {
       );
     }
 
-    // 1. Criar PaymentSender a partir dos dados do onboarding da conta
     const sender = new PaymentSender();
     sender.documentNumber = onboarding.documentNumber;
     sender.name = onboarding.registerName;
@@ -140,7 +149,6 @@ export class TedService {
     recipient.accountNumber = createTedDto.recipient.account;
     recipient.accountType = createTedDto.recipient.accountType;
 
-    // 2. Criar registro de TedTransfer (CREATED)
     const tedTransfer = this.tedTransferRepository.create({
       amount: createTedDto.amount,
       description: createTedDto.description,
@@ -156,7 +164,6 @@ export class TedService {
     await this.tedTransferRepository.save(tedTransfer);
 
     try {
-      // 3. Montar objeto para enviar ao provedor
       const transferRequest: ITedTransferRequest = {
         amount: createTedDto.amount,
         description: createTedDto.description,
@@ -170,19 +177,15 @@ export class TedService {
         recipient: createTedDto.recipient,
       };
 
-      // 4. Chamar provedor usando o Helper Genérico
       const providerResponse = await this.providerHelper.createTransfer(
         provider,
         transferRequest,
         session,
       );
 
-      // 5. Atualizar registro com dados do provedor
-      tedTransfer.authenticationCode = providerResponse.authenticationCode;
       tedTransfer.providerTransactionId = providerResponse.transactionId;
       await this.tedTransferRepository.save(tedTransfer);
 
-      // 6. Criar Transação (CREATED)
       await this.transactionService.createFromWebhook({
         authenticationCode: providerResponse.authenticationCode,
         type: TransactionType.TED_OUT,

@@ -8,6 +8,7 @@ import {
   PixTransferResponse,
   PixQrCodeGenerateResponse,
   PixQrCodeDecodeResponse,
+  PixTransferStatusResponse,
 } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { HiperbancoEndpoint } from '@/financial-providers/hiperbanco/enums/hiperbanco-endpoint.enum';
 import { RegisterPixKeyDto } from '@/pix/dto/register-pix-key.dto';
@@ -129,6 +130,20 @@ export class HiperbancoPixHelper {
       payload,
       { headers },
     );
+  }
+
+  async getTransfer(
+    accountNumber: string,
+    authenticationCode: string,
+    session: ProviderSession,
+  ): Promise<PixTransferStatusResponse> {
+    const path = `${HiperbancoEndpoint.PIX_TRANSFER}/${accountNumber}/${authenticationCode}`;
+
+    return this.hiperbancoHttp.get<PixTransferStatusResponse>(path, {
+      headers: {
+        Authorization: `Bearer ${session.hiperbancoToken}`,
+      },
+    });
   }
 
   async generateStaticQrCode(

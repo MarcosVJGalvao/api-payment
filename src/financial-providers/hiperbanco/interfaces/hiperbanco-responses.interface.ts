@@ -330,6 +330,24 @@ export interface PixTransferResponse {
   type?: string;
 }
 
+/** Resposta da consulta de status de transferência Pix (GET) */
+export interface PixTransferStatusResponse {
+  companyKey: string;
+  authenticationCode: string;
+  endToEndId: string;
+  initializationType: string;
+  amount: number;
+  description?: string;
+  correlationId: string;
+  sender: PixTransferParticipant;
+  recipient: PixTransferParticipant;
+  channel: string;
+  status: string;
+  type: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ============ PIX QR Code ============
 
 /** Resposta da geração de QR Code (Estático e Dinâmico) */

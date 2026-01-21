@@ -4,6 +4,7 @@ import { PixController } from './pix.controller';
 import { PixService } from './pix.service';
 import { PixProviderHelper } from './helpers/pix-provider.helper';
 import { HiperbancoPixHelper } from './helpers/hiperbanco/hiperbanco-pix.helper';
+import { PixSyncHelper } from './helpers/pix-sync.helper';
 import { FinancialProvidersModule } from '@/financial-providers/financial-providers.module';
 import { AccountModule } from '@/account/account.module';
 import { PixTransfer } from './entities/pix-transfer.entity';
@@ -29,7 +30,12 @@ import { TransactionModule } from '@/transaction/transaction.module';
     TransactionModule,
   ],
   controllers: [PixController],
-  providers: [PixService, PixProviderHelper, HiperbancoPixHelper],
+  providers: [
+    PixService,
+    PixProviderHelper,
+    HiperbancoPixHelper,
+    PixSyncHelper,
+  ],
   exports: [PixService],
 })
 export class PixModule {}

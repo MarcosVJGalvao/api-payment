@@ -40,6 +40,7 @@ import { ProviderLoginType } from '@/financial-providers/enums/provider-login-ty
 import { FinancialProviderPipe } from '@/financial-providers/pipes/financial-provider.pipe';
 import { RequireClientPermission } from '@/common/decorators/require-client-permission.decorator';
 import type { RequestWithSession } from '@/financial-providers/hiperbanco/interfaces/request-with-session.interface';
+import { ApiGetPixTransfer } from './docs/api-get-pix-transfer.decorator';
 
 @ApiTags('PIX')
 @Controller('pix')
@@ -150,6 +151,16 @@ export class PixController {
       req.clientId!,
       req.providerSession,
     );
+  }
+
+  @Get(':provider/transfers/:id')
+  @ApiGetPixTransfer()
+  async findOne(
+    @Param('provider', FinancialProviderPipe) _provider: FinancialProvider,
+    @Param('id') id: string,
+    @Req() req: RequestWithSession,
+  ) {
+    return this.pixService.findOne(id, req.accountId!, req.providerSession);
   }
 
   @Post(':provider/qrcode/static')

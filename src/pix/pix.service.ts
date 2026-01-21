@@ -38,6 +38,7 @@ import {
 import { PaymentSender } from '@/common/entities/payment-sender.entity';
 import { PaymentRecipient } from '@/common/entities/payment-recipient.entity';
 import { parseDate } from '@/common/helpers/date.helpers';
+import { PixSyncHelper } from './helpers/pix-sync.helper';
 
 @Injectable()
 export class PixService {
@@ -52,6 +53,7 @@ export class PixService {
     @InjectRepository(PixQrCode)
     private readonly pixQrCodeRepository: Repository<PixQrCode>,
     private readonly transactionService: TransactionService,
+    private readonly syncHelper: PixSyncHelper,
   ) {}
 
   async getPixKeys(
@@ -364,6 +366,31 @@ export class PixService {
     }
   }
 
+  async findOne(
+    id: string,
+    accountId: string,
+    session?: ProviderSession,
+  ): Promise<PixTransfer> {
+    const pixTransfer = await this.pixTransferRepository.findOne({
+      where: { id, accountId },
+      relations: ['sender', 'recipient'],
+    });
+
+    if (!pixTransfer) {
+      throw new CustomHttpException(
+        'Pix Transfer not found',
+        HttpStatus.NOT_FOUND,
+        ErrorCode.RESOURCE_NOT_FOUND,
+      );
+    }
+
+    if (session) {
+      await this.syncHelper.syncTransferWithProvider(pixTransfer, session);
+    }
+
+    return pixTransfer;
+  }
+
   async generateStaticQrCode(
     provider: FinancialProvider,
     dto: GenerateStaticQrCodeDto,
@@ -443,7 +470,6 @@ export class PixService {
         session,
       );
 
-      // Criar entidade de pagador
       const payer = new PaymentSender();
       payer.name = dto.payer.name;
       payer.documentNumber = dto.payer.documentNumber;
