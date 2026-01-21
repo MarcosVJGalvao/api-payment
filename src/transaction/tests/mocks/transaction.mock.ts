@@ -1,5 +1,5 @@
 import { Transaction } from '../../entities/transaction.entity';
-import { CreateTransactionFromWebhook } from '../../transaction.service';
+import { CreateTransactionFromWebhook } from '../../interfaces/transaction-webhook.interface';
 import { TransactionType } from '../../enums/transaction-type.enum';
 import { TransactionStatus } from '../../enums/transaction-status.enum';
 

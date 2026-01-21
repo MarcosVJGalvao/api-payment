@@ -1,49 +1,32 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, HttpStatus } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { TransactionRepository } from './repositories/transaction.repository';
 import { Transaction } from './entities/transaction.entity';
-import { TransactionType } from './enums/transaction-type.enum';
 import { TransactionStatus } from './enums/transaction-status.enum';
-
-export interface CreateTransactionFromWebhook {
-  authenticationCode: string;
-  correlationId?: string;
-  idempotencyKey?: string;
-  entityId?: string;
-  type: TransactionType;
-  status: TransactionStatus;
-  amount: number;
-  currency?: string;
-  description?: string;
-  accountId?: string;
-  clientId: string;
-  providerTimestamp?: Date;
-
-  pixCashInId?: string;
-  pixTransferId?: string;
-  pixRefundId?: string;
-  pixQrCodeId?: string;
-  boletoId?: string;
-  billPaymentId?: string;
-  tedTransferId?: string;
-  tedCashInId?: string;
-  tedRefundId?: string;
-}
-
-export interface UpdateTransactionFromWebhook {
-  authenticationCode: string;
-  status: TransactionStatus;
-  correlationId?: string;
-  idempotencyKey?: string;
-  entityId?: string;
-  description?: string;
-  providerTimestamp?: Date;
-}
+import { BaseQueryService } from '@/common/base-query/service/base-query.service';
+import { GetTransactionsQueryDto } from './dto/get-transactions-query.dto';
+import { PaginationResult } from '@/common/base-query/interfaces/pagination-result.interface';
+import { FilterOperator } from '@/common/base-query/enums/filter-operator.enum';
+import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
+import { ErrorCode } from '@/common/errors/enums/error-code.enum';
+import {
+  CreateTransactionFromWebhook,
+  UpdateTransactionFromWebhook,
+} from './interfaces/transaction-webhook.interface';
+import { getDetailedStatuses } from './helpers/transaction-status.helper';
+import { FilterConfig } from '@/common/base-query/interfaces/query-options.interface';
 
 @Injectable()
 export class TransactionService {
   private readonly logger = new Logger(TransactionService.name);
 
-  constructor(private readonly transactionRepository: TransactionRepository) {}
+  constructor(
+    private readonly transactionRepository: TransactionRepository,
+    @InjectRepository(Transaction)
+    private readonly typeOrmRepository: Repository<Transaction>,
+    private readonly baseQueryService: BaseQueryService,
+  ) {}
 
   async createFromWebhook(
     data: CreateTransactionFromWebhook,
@@ -140,5 +123,87 @@ export class TransactionService {
 
   async findByAccountId(accountId: string): Promise<Transaction[]> {
     return this.transactionRepository.findByAccountId(accountId);
+  }
+
+  async findAll(
+    accountId: string,
+    clientId: string,
+    query: GetTransactionsQueryDto,
+  ): Promise<PaginationResult<Transaction>> {
+    const queryWithFilters = { ...query, accountId, clientId };
+
+    const filterConfigs: FilterConfig[] = [
+      {
+        field: 'accountId',
+        operator: FilterOperator.EQUALS,
+      },
+      {
+        field: 'clientId',
+        operator: FilterOperator.EQUALS,
+      },
+      {
+        field: 'type',
+        operator: FilterOperator.EQUALS,
+      },
+      {
+        field: 'detailedStatus',
+        mapField: 'status',
+        operator: FilterOperator.EQUALS,
+      },
+      {
+        field: 'status',
+        ignore: true,
+      },
+    ];
+
+    const queryOptions = this.baseQueryService.buildQueryOptions(
+      this.typeOrmRepository,
+      queryWithFilters,
+      {
+        searchFields: ['authenticationCode', 'description'],
+        defaultSortBy: 'createdAt',
+        filters: filterConfigs,
+      },
+    );
+
+    if (!queryOptions.filters) {
+      queryOptions.filters = [];
+    }
+
+    if (query.status) {
+      const detailedStatuses = getDetailedStatuses(query.status);
+      queryOptions.filters.push({
+        field: 'status',
+        operator: FilterOperator.IN,
+        value: detailedStatuses,
+      });
+    }
+
+    const transaction = await this.baseQueryService.findAll(
+      this.typeOrmRepository,
+      queryOptions,
+    );
+
+    return transaction;
+  }
+
+  async findOne(
+    id: string,
+    accountId: string,
+    clientId: string,
+  ): Promise<Transaction> {
+    const transaction = await this.typeOrmRepository.findOne({
+      where: { id, accountId, clientId },
+    });
+
+    if (!transaction) {
+      throw new CustomHttpException(
+        'Transaction not found',
+        HttpStatus.NOT_FOUND,
+        ErrorCode.TRANSACTION_NOT_FOUND,
+      );
+    }
+
+    return transaction;
   }
 }
