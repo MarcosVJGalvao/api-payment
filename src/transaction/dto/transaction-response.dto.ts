@@ -103,14 +103,14 @@ export class TransactionResponseDto {
     this.providerTimestamp = transaction.providerTimestamp;
 
     // Relations
-    this.pixCashIn = transaction.pixCashIn;
-    this.pixTransfer = transaction.pixTransfer;
-    this.pixRefund = transaction.pixRefund;
-    this.boleto = transaction.boleto;
-    this.billPayment = transaction.billPayment;
-    this.pixQrCode = transaction.pixQrCode;
-    this.tedTransfer = transaction.tedTransfer;
-    this.tedCashIn = transaction.tedCashIn;
-    this.tedRefund = transaction.tedRefund;
+    this.pixCashIn = transaction.pixCashIn || undefined;
+    this.pixTransfer = transaction.pixTransfer || undefined;
+    this.pixRefund = transaction.pixRefund || undefined;
+    this.boleto = transaction.boleto || undefined;
+    this.billPayment = transaction.billPayment || undefined;
+    this.pixQrCode = transaction.pixQrCode || undefined;
+    this.tedTransfer = transaction.tedTransfer || undefined;
+    this.tedCashIn = transaction.tedCashIn || undefined;
+    this.tedRefund = transaction.tedRefund || undefined;
   }
 }
