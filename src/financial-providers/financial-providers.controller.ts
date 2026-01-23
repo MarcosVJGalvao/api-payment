@@ -8,7 +8,7 @@ import {
   ParseEnumPipe,
   Req,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { FinancialCredentialsService } from './services/financial-credentials.service';
 import { HiperbancoAuthService } from './hiperbanco/hiperbanco-auth.service';
 import { CreateProviderCredentialDto } from './dto/create-provider-credential.dto';
@@ -80,6 +80,7 @@ export class FinancialProvidersController {
   @Post('hiperbanco/auth/bank')
   @RequireClient()
   @RequireClientPermission('auth:bank')
+  @ApiBearerAuth('provider-auth')
   @ApiBankLogin()
   async loginBank(@Body() dto: BankLoginDto, @Req() req: RequestWithClient) {
     return this.hiperbancoAuth.loginApiBank(dto, req.clientId!);
