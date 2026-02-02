@@ -228,6 +228,19 @@ export class PixWebhookService {
       });
 
       if (!pixCashIn) {
+        const recipientAccountNumber = data.recipient?.account?.number;
+        if (recipientAccountNumber) {
+          const account = await this.accountService.findByNumber(
+            recipientAccountNumber,
+          );
+          if (!account) {
+            this.logger.warn(
+              `PIX_CASH_IN_WAS_CLEARED: Account not found for number ${recipientAccountNumber}, ignoring event.`,
+            );
+            continue;
+          }
+        }
+
         this.logger.warn(
           `PixCashIn not found for CLEARED: ${authenticationCode} - will retry`,
         );
@@ -454,6 +467,21 @@ export class PixWebhookService {
         if (transfer) relatedPixTransferId = transfer.id;
       }
 
+      if (!relatedPixCashInId && !relatedPixTransferId) {
+        const recipientAccountNumber = data.recipient?.account?.number;
+        if (recipientAccountNumber) {
+          const account = await this.accountService.findByNumber(
+            recipientAccountNumber,
+          );
+          if (!account) {
+            this.logger.warn(
+              `PIX_REFUND_WAS_RECEIVED: Account not found for number ${recipientAccountNumber}, ignoring event.`,
+            );
+            continue;
+          }
+        }
+      }
+
       const pixRefund = this.pixRefundRepository.create({
         authenticationCode: data.authenticationCode,
         correlationId: event.correlationId,
@@ -540,6 +568,19 @@ export class PixWebhookService {
       });
 
       if (!pixRefund) {
+        const recipientAccountNumber = data.recipient?.account?.number;
+        if (recipientAccountNumber) {
+          const account = await this.accountService.findByNumber(
+            recipientAccountNumber,
+          );
+          if (!account) {
+            this.logger.warn(
+              `PIX_REFUND_WAS_CLEARED: Account not found for number ${recipientAccountNumber}, ignoring event.`,
+            );
+            continue;
+          }
+        }
+
         this.logger.warn(
           `PixRefund not found for CLEARED: ${data.authenticationCode} - will retry`,
         );

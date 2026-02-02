@@ -11,9 +11,9 @@ import { mapWebhookEventToTransactionStatus } from '../helpers/transaction-statu
 import { canProcessWebhook } from '../helpers/webhook-state-machine.helper';
 import { WebhookEventLogService } from './webhook-event-log.service';
 import { WebhookEvent } from '../enums/webhook-event.enum';
-import { TransactionNotFoundRetryableException } from '@/common/errors/exceptions/transaction-not-found-retryable.exception';
 import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
 import { parseDate } from '@/common/helpers/date.helpers';
+import { AccountService } from '@/account/account.service';
 
 @Injectable()
 export class BoletoWebhookService {
@@ -24,6 +24,7 @@ export class BoletoWebhookService {
     private readonly boletoRepository: Repository<Boleto>,
     private readonly transactionService: TransactionService,
     private readonly webhookEventLogService: WebhookEventLogService,
+    private readonly accountService: AccountService,
   ) {}
 
   async handleRegistered(
@@ -44,12 +45,9 @@ export class BoletoWebhookService {
 
       if (!boleto) {
         this.logger.warn(
-          `Boleto not found for REGISTERED: ${data.authenticationCode} - will retry`,
+          `Boleto not found for REGISTERED: ${data.authenticationCode} - skipping event`,
         );
-        throw new TransactionNotFoundRetryableException(
-          data.authenticationCode,
-          'BOLETO_WAS_REGISTERED',
-        );
+        continue;
       }
 
       boleto.authenticationCode = data.authenticationCode;
@@ -99,12 +97,9 @@ export class BoletoWebhookService {
 
       if (!boleto) {
         this.logger.warn(
-          `Boleto not found for CASH_IN_RECEIVED: ${data.authenticationCode} - will retry`,
+          `Boleto not found for CASH_IN_RECEIVED: ${data.authenticationCode} - skipping event`,
         );
-        throw new TransactionNotFoundRetryableException(
-          data.authenticationCode,
-          'BOLETO_CASH_IN_WAS_RECEIVED',
-        );
+        continue;
       }
 
       const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
@@ -186,12 +181,9 @@ export class BoletoWebhookService {
 
       if (!boleto) {
         this.logger.warn(
-          `Boleto not found for CASH_IN_CLEARED: ${data.authenticationCode} - will retry`,
+          `Boleto not found for CASH_IN_CLEARED: ${data.authenticationCode} - skipping event`,
         );
-        throw new TransactionNotFoundRetryableException(
-          data.authenticationCode,
-          'BOLETO_CASH_IN_WAS_CLEARED',
-        );
+        continue;
       }
 
       const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(
@@ -259,12 +251,9 @@ export class BoletoWebhookService {
 
       if (!boleto) {
         this.logger.warn(
-          `Boleto not found for CANCELLED: ${data.authenticationCode} - will retry`,
+          `Boleto not found for CANCELLED: ${data.authenticationCode} - skipping event`,
         );
-        throw new TransactionNotFoundRetryableException(
-          data.authenticationCode,
-          'BOLETO_WAS_CANCELLED',
-        );
+        continue;
       }
 
       const lastEvent = await this.webhookEventLogService.getLastProcessedEvent(

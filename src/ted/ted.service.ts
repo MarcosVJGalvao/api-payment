@@ -183,8 +183,10 @@ export class TedService {
         session,
       );
 
-      tedTransfer.providerTransactionId = providerResponse.transactionId;
-      await this.tedTransferRepository.save(tedTransfer);
+      await this.tedTransferRepository.update(tedTransfer.id, {
+        authenticationCode: providerResponse.authenticationCode,
+        providerTransactionId: providerResponse.transactionId,
+      });
 
       await this.transactionService.createFromWebhook({
         authenticationCode: providerResponse.authenticationCode,
@@ -208,7 +210,6 @@ export class TedService {
         error instanceof Error ? error.stack : undefined,
       );
 
-      // Marcar como falha se der erro na chamada
       tedTransfer.status = TedTransferStatus.FAILED;
       await this.tedTransferRepository.save(tedTransfer);
 

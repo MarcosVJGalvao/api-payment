@@ -332,6 +332,19 @@ export class TedWebhookService {
       });
 
       if (!tedCashIn) {
+        const recipientAccountNumber = data.recipient?.account?.number;
+        if (recipientAccountNumber) {
+          const account = await this.accountService.findByNumber(
+            recipientAccountNumber,
+          );
+          if (!account) {
+            this.logger.warn(
+              `TED_CASH_IN_WAS_CLEARED: Account not found for number ${recipientAccountNumber}, ignoring event.`,
+            );
+            continue;
+          }
+        }
+
         this.logger.warn(
           `TedCashIn not found for CLEARED: ${authenticationCode} - will retry`,
         );
@@ -473,7 +486,7 @@ export class TedWebhookService {
         correlationId: event.correlationId,
         idempotencyKey: event.idempotencyKey,
         entityId: event.entityId,
-        type: TransactionType.TED_IN, // Refund is money coming back
+        type: TransactionType.TED_IN,
         status: mapWebhookEventToTransactionStatus(
           WebhookEvent.TED_REFUND_WAS_RECEIVED,
         ),
