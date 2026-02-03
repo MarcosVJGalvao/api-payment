@@ -31,7 +31,7 @@ export const typeOrmConfig = (
       multipleStatements: true,
       timezone: configService.get<string>('TIME_ZONE'),
       dateStrings: ['DATE'],
-      connectionLimit: 10,
+      connectionLimit: 20,
       waitForConnections: true,
       idleTimeout: 30000,
       enableKeepAlive: true,

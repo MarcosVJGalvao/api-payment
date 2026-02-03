@@ -11,6 +11,8 @@ import { tap, catchError, switchMap } from 'rxjs/operators';
 import { Reflector } from '@nestjs/core';
 import { DataSource, EntityTarget, ObjectLiteral } from 'typeorm';
 import { Request } from 'express';
+import { InjectQueue } from '@nestjs/bull';
+import type { Queue } from 'bull';
 import { AuditService } from '../services/audit.service';
 import { AUDIT_KEY, AuditOptions } from '../decorators/audit.decorator';
 import { IAuditLogData } from '../interfaces/audit-log.interface';
@@ -51,6 +53,7 @@ export class AuditInterceptor implements NestInterceptor {
     private readonly auditService: AuditService,
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
+    @InjectQueue('audit') private readonly auditQueue: Queue,
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
@@ -290,12 +293,14 @@ export class AuditInterceptor implements NestInterceptor {
                 `Validation failed for audit log data in error handler. Skipping persistence. Action: ${auditLogData.action}, EntityType: ${auditLogData.entityType}, Status: ${auditLogData.status}`,
               );
             } else {
-              this.auditService.log(auditLogData).catch((logError) => {
-                this.logger.error(
-                  `Failed to create audit log in error handler: action=${auditLogData.action}, entityType=${auditLogData.entityType}, error=${logError.message}, stack=${logError.stack?.substring(0, 500)}`,
-                  logError.stack,
-                );
-              });
+              this.auditQueue
+                .add('log', auditLogData, { removeOnComplete: true })
+                .catch((logError) => {
+                  this.logger.error(
+                    `Failed to add audit log to queue in error handler: action=${auditLogData.action}, entityType=${auditLogData.entityType}, error=${logError.message}`,
+                    logError.stack,
+                  );
+                });
             }
 
             return throwError(() => error);
@@ -750,11 +755,13 @@ export class AuditInterceptor implements NestInterceptor {
       return;
     }
 
-    this.auditService.log(auditLogData).catch((error) => {
-      this.logger.error(
-        `Failed to create audit log in processAuditLogSync: action=${auditLogData.action}, entityType=${auditLogData.entityType}, error=${error.message}, stack=${error.stack?.substring(0, 500)}`,
-        error.stack,
-      );
-    });
+    this.auditQueue
+      .add('log', auditLogData, { removeOnComplete: true })
+      .catch((error) => {
+        this.logger.error(
+          `Failed to add audit log to queue in processAuditLogSync: action=${auditLogData.action}, entityType=${auditLogData.entityType}, error=${error.message}`,
+          error.stack,
+        );
+      });
   }
 }

@@ -21,7 +21,7 @@ jest.mock('../helpers/permission.helper');
 describe('PermissionService', () => {
   let service: PermissionService;
   let permissionRepositoryMock: any;
-  let redisServiceMock: any;
+  let cacheServiceMock: any;
   let configServiceMock: any;
   let baseQueryServiceMock: any;
 
@@ -29,7 +29,7 @@ describe('PermissionService', () => {
     const factory = await createPermissionServiceTestFactory();
     service = factory.permissionService;
     permissionRepositoryMock = factory.permissionRepositoryMock;
-    redisServiceMock = factory.redisServiceMock;
+    cacheServiceMock = factory.cacheServiceMock;
     configServiceMock = factory.configServiceMock;
     baseQueryServiceMock = factory.baseQueryServiceMock;
 
@@ -179,14 +179,14 @@ describe('PermissionService', () => {
     it('should delete user permissions and roles cache', async () => {
       const userId = '550e8400-e29b-41d4-a716-446655440010';
 
-      redisServiceMock.del.mockResolvedValue(undefined);
+      cacheServiceMock.del.mockResolvedValue(undefined);
 
       await service.invalidateUserCache(userId);
 
-      expect(redisServiceMock.del).toHaveBeenCalledWith(
+      expect(cacheServiceMock.del).toHaveBeenCalledWith(
         `user_permissions:${userId}`,
       );
-      expect(redisServiceMock.del).toHaveBeenCalledWith(`user_roles:${userId}`);
+      expect(cacheServiceMock.del).toHaveBeenCalledWith(`user_roles:${userId}`);
     });
   });
 

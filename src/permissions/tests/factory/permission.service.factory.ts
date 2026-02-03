@@ -6,7 +6,7 @@ import { Permission } from '../../entities/permission.entity';
 import { Role } from '../../entities/role.entity';
 import { ClientRole } from '../../entities/client-role.entity';
 import { ClientPermission } from '../../entities/client-permission.entity';
-import { RedisService } from '@/common/redis/redis.service';
+import { CacheService } from '@/common/redis/cache.service';
 import { BaseQueryService } from '@/common/base-query/service/base-query.service';
 
 const mockRepository = () => ({
@@ -18,7 +18,7 @@ const mockRepository = () => ({
 });
 
 export const createPermissionServiceTestFactory = async () => {
-  const redisServiceMock = {
+  const cacheServiceMock = {
     get: jest.fn(),
     set: jest.fn(),
     del: jest.fn(),
@@ -53,8 +53,8 @@ export const createPermissionServiceTestFactory = async () => {
         useValue: mockRepository(),
       },
       {
-        provide: RedisService,
-        useValue: redisServiceMock,
+        provide: CacheService,
+        useValue: cacheServiceMock,
       },
       {
         provide: ConfigService,
@@ -71,7 +71,7 @@ export const createPermissionServiceTestFactory = async () => {
     permissionService: module.get<PermissionService>(PermissionService),
     permissionRepositoryMock: module.get(getRepositoryToken(Permission)),
     roleRepositoryMock: module.get(getRepositoryToken(Role)),
-    redisServiceMock,
+    cacheServiceMock, // Renamed from redisServiceMock
     configServiceMock,
     baseQueryServiceMock,
   };

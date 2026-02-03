@@ -9,7 +9,7 @@ import { AuditAction } from '../enums/audit-action.enum';
 import { AuditLogStatus } from '../enums/audit-log-status.enum';
 
 @Entity('audit_log')
-@Index(['entityType', 'entityId'])
+@Index(['entityType', 'entityId', 'createdAt'])
 @Index(['userId'])
 @Index(['action'])
 @Index(['createdAt'])
