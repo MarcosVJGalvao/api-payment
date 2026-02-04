@@ -3,6 +3,7 @@ import {
   QueryOptions,
   FilterCondition,
 } from '../interfaces/query-options.interface';
+import { SortOrder } from '../enums/sort-order.enum';
 import {
   PaginationResult,
   PaginationMeta,
@@ -23,7 +24,7 @@ export async function executeQuery<T extends ObjectLiteral>(
     search,
     searchFields,
     sortBy,
-    sortOrder = 'ASC',
+    sortOrder = SortOrder.ASC,
     filters = [],
     relations = [],
     select,
@@ -77,7 +78,7 @@ export async function executeQuery<T extends ObjectLiteral>(
       queryBuilder.orderBy(`${alias}.${sortBy}`, sortOrder);
     }
   } else {
-    queryBuilder.orderBy(`${alias}.createdAt`, 'DESC');
+    queryBuilder.orderBy(`${alias}.createdAt`, SortOrder.DESC);
   }
 
   const skip = (page - 1) * limit;

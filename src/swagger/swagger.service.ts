@@ -79,9 +79,11 @@ export class SwaggerService {
       );
     }
 
-    const filteredDocument = JSON.parse(
-      JSON.stringify(this.document),
-    ) as OpenAPIObject;
+    const filteredDocument: OpenAPIObject = {
+      ...this.document,
+      paths: {},
+      components: { ...this.document.components },
+    };
 
     const filteredPaths: OpenAPIObject['paths'] = {};
 

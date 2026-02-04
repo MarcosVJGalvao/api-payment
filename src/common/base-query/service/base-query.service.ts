@@ -12,6 +12,7 @@ import {
   getSearchableFieldsFromDto,
   buildFiltersFromDto,
 } from '../helpers/dto.helpers';
+import { SortOrder } from '../enums/sort-order.enum';
 import {
   validateSelectRelations,
   validateQueryOptions,
@@ -32,6 +33,7 @@ export class BaseQueryService {
   ): QueryOptions {
     const relations: string[] = options.relations ?? [];
     const defaultSortBy = options.defaultSortBy ?? 'createdAt';
+    const defaultSortOrder = options.defaultSortOrder ?? SortOrder.ASC;
     const searchFields: string[] = options.searchFields ?? [];
     const dateField = options.dateField ?? 'createdAt';
     const filterConfigs: FilterConfig[] = options.filters ?? [];
@@ -95,7 +97,7 @@ export class BaseQueryService {
       searchFields:
         finalSearchFields.length > 0 ? finalSearchFields : undefined,
       sortBy: finalSortBy,
-      sortOrder: dto.sortOrder,
+      sortOrder: dto.sortOrder || defaultSortOrder,
       filters,
       relations,
       select,

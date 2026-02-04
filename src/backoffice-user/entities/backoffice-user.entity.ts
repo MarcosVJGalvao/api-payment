@@ -11,11 +11,7 @@ import {
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { Client } from '@/client/entities/client.entity';
-
-export enum BackofficeUserStatus {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-}
+import { StatusEnum } from '@/common/enums/status.enum';
 
 @Entity('backoffice_users')
 @Index(['email', 'clientId'], { unique: true })
@@ -35,10 +31,10 @@ export class BackofficeUser {
 
   @Column({
     type: 'enum',
-    enum: BackofficeUserStatus,
-    default: BackofficeUserStatus.ACTIVE,
+    enum: StatusEnum,
+    default: StatusEnum.ACTIVE,
   })
-  status: BackofficeUserStatus;
+  status: StatusEnum;
 
   @Column({
     type: 'varchar',

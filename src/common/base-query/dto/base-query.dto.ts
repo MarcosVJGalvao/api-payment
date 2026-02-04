@@ -12,16 +12,20 @@ import {
 } from 'class-validator';
 import { RequireBothDatesConstraint } from '../validators/require-both-dates.validator';
 import { ValidateDateRangeConstraint } from '../validators/date-range.validator';
+import { SortOrder } from '../enums/sort-order.enum';
 
 export class BaseQueryDto {
-  @ApiPropertyOptional({ default: 1 })
+  @ApiPropertyOptional({ default: 1, description: 'Página atual' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   page?: number = 1;
 
-  @ApiPropertyOptional({ default: 10 })
+  @ApiPropertyOptional({
+    default: 10,
+    description: 'Limite de itens por página',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -37,7 +41,9 @@ export class BaseQueryDto {
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Data inicial para filtragem',
+  })
   @IsOptional()
   @IsDateString()
   @Validate(RequireBothDatesConstraint, {
@@ -48,7 +54,9 @@ export class BaseQueryDto {
   })
   startDate?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Data final para filtragem',
+  })
   @IsOptional()
   @IsDateString()
   @Validate(RequireBothDatesConstraint, {
@@ -59,13 +67,19 @@ export class BaseQueryDto {
   })
   endDate?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Campo para ordenação',
+  })
   @IsOptional()
   @IsString()
   sortBy?: string;
 
-  @ApiPropertyOptional({ enum: ['ASC', 'DESC'] })
+  @ApiPropertyOptional({
+    description: 'Ordem de ordenação',
+    enum: SortOrder,
+    default: SortOrder.ASC,
+  })
   @IsOptional()
-  @IsEnum(['ASC', 'DESC'])
-  sortOrder?: 'ASC' | 'DESC' = 'ASC';
+  @IsEnum(SortOrder)
+  sortOrder?: SortOrder;
 }

@@ -6,7 +6,7 @@ import { ResetPasswordDto } from '@/backoffice-user/dto/reset-password.dto';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import * as bcrypt from 'bcrypt';
-import { BackofficeUserStatus } from '../entities/backoffice-user.entity';
+import { StatusEnum } from '@/common/enums/status.enum';
 
 @Injectable()
 export class BackofficeAuthService {
@@ -25,7 +25,7 @@ export class BackofficeAuthService {
       );
     }
 
-    if (user.status !== BackofficeUserStatus.ACTIVE) {
+    if (user.status !== StatusEnum.ACTIVE) {
       throw new CustomHttpException(
         'User is inactive',
         HttpStatus.FORBIDDEN,

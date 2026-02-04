@@ -19,7 +19,7 @@ export function ApiLoginInternalUser() {
         'Login Interno': {
           summary: 'Autenticar usuário interno do sistema',
           value: {
-            email: 'sistema@api-payments.com',
+            username: 'sistema',
             password: 'SenhaInterna123!',
           },
         },
@@ -46,7 +46,7 @@ export function ApiLoginInternalUser() {
               summary: 'Credenciais inválidas',
               value: {
                 errorCode: 'INVALID_CREDENTIALS',
-                message: 'Invalid email or password',
+                message: 'Invalid username or password',
                 correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
               },
             },

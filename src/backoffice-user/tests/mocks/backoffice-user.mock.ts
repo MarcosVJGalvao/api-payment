@@ -1,8 +1,6 @@
-import {
-  BackofficeUser,
-  BackofficeUserStatus,
-} from '../../entities/backoffice-user.entity';
+import { BackofficeUser } from '../../entities/backoffice-user.entity';
 import { CreateBackofficeUserDto } from '../../dto/create-backoffice-user.dto';
+import { StatusEnum } from '@/common/enums/status.enum';
 
 export const mockBackofficeUser = (): BackofficeUser => {
   const user = new BackofficeUser();
@@ -12,7 +10,7 @@ export const mockBackofficeUser = (): BackofficeUser => {
   user.password = '$2b$10$hashedpassword';
   user.secretAnswer = '$2b$10$hashedsecret';
   user.clientId = 'uuid-client-1';
-  user.status = BackofficeUserStatus.ACTIVE;
+  user.status = StatusEnum.ACTIVE;
   user.createdAt = new Date();
   user.updatedAt = new Date();
   user.deletedAt = undefined;

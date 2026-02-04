@@ -1,4 +1,5 @@
 import { FilterOperator } from '../enums/filter-operator.enum';
+import { SortOrder } from '../enums/sort-order.enum';
 import { FilterValue } from '../types/filter-value.type';
 
 export interface FilterCondition {
@@ -19,6 +20,8 @@ export interface FilterConfig {
 export interface BuildQueryOptions {
   relations?: string[];
   defaultSortBy?: string;
+  /** @default 'ASC' */
+  defaultSortOrder?: SortOrder;
   searchFields?: string[];
   dateField?: string;
   filters?: FilterConfig[];
@@ -32,7 +35,7 @@ export interface QueryOptions {
   search?: string;
   searchFields?: string[];
   sortBy?: string;
-  sortOrder?: 'ASC' | 'DESC';
+  sortOrder?: SortOrder;
   filters?: FilterCondition[];
   relations?: string[];
   select?: string[];
