@@ -34,6 +34,8 @@ import { TedRefund } from '@/ted/entities/ted-refund.entity';
 @Index(['tedCashInId'])
 @Index(['tedRefundId'])
 @Index(['clientId', 'status', 'createdAt'])
+@Index(['accountId', 'createdAt'])
+@Index(['accountId', 'type', 'createdAt'])
 export class Transaction {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -16,17 +16,59 @@ import {
 } from './interfaces/transaction-webhook.interface';
 import { getDetailedStatuses } from './helpers/transaction-status.helper';
 import { FilterConfig } from '@/common/base-query/interfaces/query-options.interface';
+import { hydrateTransactionRelations } from './helpers/transaction-hydration.helper';
+import { IHydrationRepositories } from './interfaces/hydration-repositories.interface';
+import { PixCashIn } from '@/pix/entities/pix-cash-in.entity';
+import { PixTransfer } from '@/pix/entities/pix-transfer.entity';
+import { PixRefund } from '@/pix/entities/pix-refund.entity';
+import { PixQrCode } from '@/pix/entities/pix-qr-code.entity';
+import { Boleto } from '@/boleto/entities/boleto.entity';
+import { BillPayment } from '@/bill-payment/entities/bill-payment.entity';
+import { TedTransfer } from '@/ted/entities/ted-transfer.entity';
+import { TedCashIn } from '@/ted/entities/ted-cash-in.entity';
+import { TedRefund } from '@/ted/entities/ted-refund.entity';
 
 @Injectable()
 export class TransactionService {
   private readonly logger = new Logger(TransactionService.name);
+  private readonly hydrationRepositories: IHydrationRepositories;
 
   constructor(
     private readonly transactionRepository: TransactionRepository,
     @InjectRepository(Transaction)
     private readonly typeOrmRepository: Repository<Transaction>,
     private readonly baseQueryService: BaseQueryService,
-  ) {}
+    @InjectRepository(PixCashIn)
+    private readonly pixCashInRepository: Repository<PixCashIn>,
+    @InjectRepository(PixTransfer)
+    private readonly pixTransferRepository: Repository<PixTransfer>,
+    @InjectRepository(PixRefund)
+    private readonly pixRefundRepository: Repository<PixRefund>,
+    @InjectRepository(PixQrCode)
+    private readonly pixQrCodeRepository: Repository<PixQrCode>,
+    @InjectRepository(Boleto)
+    private readonly boletoRepository: Repository<Boleto>,
+    @InjectRepository(BillPayment)
+    private readonly billPaymentRepository: Repository<BillPayment>,
+    @InjectRepository(TedTransfer)
+    private readonly tedTransferRepository: Repository<TedTransfer>,
+    @InjectRepository(TedCashIn)
+    private readonly tedCashInRepository: Repository<TedCashIn>,
+    @InjectRepository(TedRefund)
+    private readonly tedRefundRepository: Repository<TedRefund>,
+  ) {
+    this.hydrationRepositories = {
+      pixCashIn: this.pixCashInRepository,
+      pixTransfer: this.pixTransferRepository,
+      pixRefund: this.pixRefundRepository,
+      pixQrCode: this.pixQrCodeRepository,
+      boleto: this.boletoRepository,
+      billPayment: this.billPaymentRepository,
+      tedTransfer: this.tedTransferRepository,
+      tedCashIn: this.tedCashInRepository,
+      tedRefund: this.tedRefundRepository,
+    };
+  }
 
   async createFromWebhook(
     data: CreateTransactionFromWebhook,
@@ -163,27 +205,7 @@ export class TransactionService {
         searchFields: ['authenticationCode', 'description'],
         defaultSortBy: 'createdAt',
         filters: filterConfigs,
-        relations: [
-          'pixCashIn',
-          'pixCashIn.sender',
-          'pixCashIn.recipient',
-          'pixTransfer',
-          'pixTransfer.sender',
-          'pixTransfer.recipient',
-          'pixRefund',
-          'boleto',
-          'boleto.payer',
-          'billPayment',
-          'billPayment.recipient',
-          'pixQrCode',
-          'tedTransfer',
-          'tedTransfer.sender',
-          'tedTransfer.recipient',
-          'tedCashIn',
-          'tedCashIn.sender',
-          'tedCashIn.recipient',
-          'tedRefund',
-        ],
+        relations: [],
       },
     );
 
@@ -200,12 +222,19 @@ export class TransactionService {
       });
     }
 
-    const transaction = await this.baseQueryService.findAll(
+    const result = await this.baseQueryService.findAll(
       this.typeOrmRepository,
       queryOptions,
     );
 
-    return transaction;
+    if (result.data.length > 0) {
+      await hydrateTransactionRelations(
+        result.data,
+        this.hydrationRepositories,
+      );
+    }
+
+    return result;
   }
 
   async findOne(
@@ -215,27 +244,6 @@ export class TransactionService {
   ): Promise<Transaction> {
     const transaction = await this.typeOrmRepository.findOne({
       where: { id, accountId, clientId },
-      relations: [
-        'pixCashIn',
-        'pixCashIn.sender',
-        'pixCashIn.recipient',
-        'pixTransfer',
-        'pixTransfer.sender',
-        'pixTransfer.recipient',
-        'pixRefund',
-        'boleto',
-        'boleto.payer',
-        'billPayment',
-        'billPayment.recipient',
-        'pixQrCode',
-        'tedTransfer',
-        'tedTransfer.sender',
-        'tedTransfer.recipient',
-        'tedCashIn',
-        'tedCashIn.sender',
-        'tedCashIn.recipient',
-        'tedRefund',
-      ],
     });
 
     if (!transaction) {
@@ -245,6 +253,11 @@ export class TransactionService {
         ErrorCode.TRANSACTION_NOT_FOUND,
       );
     }
+
+    await hydrateTransactionRelations(
+      [transaction],
+      this.hydrationRepositories,
+    );
 
     return transaction;
   }

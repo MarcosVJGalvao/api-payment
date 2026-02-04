@@ -9,6 +9,13 @@ export const typeOrmConfig = (
     getDatabaseConfig(configService);
   const sslMode = configService.get<string>('DB_SSL_MODE');
 
+  const defaultPoolMax = process.env.NODE_ENV === 'production' ? 20 : 5;
+  const connectionLimit = configService.get<number>(
+    'DB_POOL_MAX',
+    defaultPoolMax,
+  );
+  const idleTimeout = configService.get<number>('DB_IDLE_TIMEOUT', 10000);
+
   return {
     type: 'mysql',
     host,
@@ -31,9 +38,9 @@ export const typeOrmConfig = (
       multipleStatements: true,
       timezone: configService.get<string>('TIME_ZONE'),
       dateStrings: ['DATE'],
-      connectionLimit: process.env.NODE_ENV === 'production' ? 20 : 5,
+      connectionLimit,
       waitForConnections: true,
-      idleTimeout: 30000,
+      idleTimeout,
       enableKeepAlive: true,
       keepAliveInitialDelay: 10000,
     },
