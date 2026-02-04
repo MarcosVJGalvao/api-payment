@@ -23,6 +23,7 @@ export interface BuildQueryOptions {
   /** @default 'ASC' */
   defaultSortOrder?: SortOrder;
   searchFields?: string[];
+  sortableFields?: string[];
   dateField?: string;
   filters?: FilterConfig[];
   select?: string[];

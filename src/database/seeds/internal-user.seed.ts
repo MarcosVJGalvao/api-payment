@@ -1,5 +1,5 @@
 import { DataSource } from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import { hashData } from '@/common/helpers/password.helper';
 import { InternalUser } from '@/internal-user/entities/internal-user.entity';
 
 export const internalUsers = [
@@ -24,8 +24,7 @@ export async function seedInternalUsers(
 
     if (!existingUser) {
       // Hash password
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
+      const hashedPassword = await hashData(userData.password);
 
       const user = userRepository.create({
         username: userData.username,

@@ -35,6 +35,7 @@ export class BaseQueryService {
     const defaultSortBy = options.defaultSortBy ?? 'createdAt';
     const defaultSortOrder = options.defaultSortOrder ?? SortOrder.ASC;
     const searchFields: string[] = options.searchFields ?? [];
+    const sortableFields: string[] = options.sortableFields ?? [];
     const dateField = options.dateField ?? 'createdAt';
     const filterConfigs: FilterConfig[] = options.filters ?? [];
     const select: string[] = options.select ?? [];
@@ -84,6 +85,7 @@ export class BaseQueryService {
 
     validateQueryOptions(repository, {
       sortBy: finalSortBy,
+      sortableFields,
       searchFields:
         finalSearchFields.length > 0 ? finalSearchFields : undefined,
       dateField,

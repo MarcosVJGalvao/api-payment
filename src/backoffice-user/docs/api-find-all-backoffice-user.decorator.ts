@@ -2,15 +2,37 @@ import { applyDecorators } from '@nestjs/common';
 import {
   ApiExtraModels,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   getSchemaPath,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 import { StatusEnum } from '@/common/enums/status.enum';
+import { SortOrder } from '@/common/base-query/enums/sort-order.enum';
+import { BackofficeUserSortField } from '../enums/backoffice-user-sort.enum';
 
 export function ApiFindAllBackofficeUser() {
   return applyDecorators(
     ApiExtraModels(ErrorResponseDto),
+    ApiQuery({
+      name: 'sortBy',
+      required: false,
+      type: String,
+      default: 'createdAt',
+      enum: Object.values(BackofficeUserSortField),
+    }),
+    ApiQuery({
+      name: 'sortOrder',
+      required: false,
+      enum: SortOrder,
+      default: SortOrder.DESC,
+    }),
+    ApiQuery({
+      name: 'limit',
+      required: false,
+      type: Number,
+      default: 10,
+    }),
     ApiOperation({
       summary: 'Listar usuários Backoffice',
       description:

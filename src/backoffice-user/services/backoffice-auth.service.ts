@@ -5,7 +5,7 @@ import { LoginBackofficeUserDto } from '@/backoffice-user/dto/login-backoffice-u
 import { ResetPasswordDto } from '@/backoffice-user/dto/reset-password.dto';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
-import * as bcrypt from 'bcrypt';
+import { compareData } from '@/common/helpers/password.helper';
 import { StatusEnum } from '@/common/enums/status.enum';
 
 @Injectable()
@@ -33,7 +33,7 @@ export class BackofficeAuthService {
       );
     }
 
-    const isPasswordValid = await bcrypt.compare(
+    const isPasswordValid = await compareData(
       String(dto.password),
       user.password,
     );
@@ -58,11 +58,10 @@ export class BackofficeAuthService {
   async resetPassword(dto: ResetPasswordDto) {
     const user = await this.userService.findByEmail(dto.email);
     if (!user) {
-      // Security: Don't reveal if user exists
       return;
     }
 
-    const isAnswerValid = await bcrypt.compare(
+    const isAnswerValid = await compareData(
       String(dto.secretAnswer).toLowerCase(),
       user.secretAnswer,
     );
@@ -70,11 +69,10 @@ export class BackofficeAuthService {
       throw new CustomHttpException(
         'Invalid secret answer',
         HttpStatus.UNAUTHORIZED,
-        ErrorCode.INVALID_CREDENTIALS, // Generic error
+        ErrorCode.INVALID_CREDENTIALS,
       );
     }
 
-    // Update password
     await this.userService.updatePassword(user.id, dto.newPassword);
   }
 }
