@@ -9,7 +9,7 @@ import { ClientService } from '@/client/client.service';
 import { HiperbancoWebhookHelper } from './helpers/hiperbanco/hiperbanco-webhook.helper';
 import { WebhookRepository } from './repositories/webhook.repository';
 import { ProviderLoginType } from '@/financial-providers/enums/provider-login-type.enum';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { RegisterWebhookResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
@@ -62,7 +62,7 @@ export class WebhookProcessor {
         sessionId: 'SHARED_BACKOFFICE_SESSION', // Dummy ID
         providerSlug: provider,
         clientId: 'SHARED_BACKOFFICE', // This session is system-wide
-        hiperbancoToken: token,
+        accessToken: token,
         createdAt: Date.now(),
         expiresAt: Date.now() + 3600 * 1000,
         loginType: ProviderLoginType.BACKOFFICE,

@@ -1,0 +1,8 @@
+export enum BillPaymentWebhookEventType {
+  RECEIVED = 'RECEIVED',
+  CREATED = 'CREATED',
+  CONFIRMED = 'CONFIRMED',
+  FAILED = 'FAILED',
+  CANCELLED = 'CANCELLED',
+  REFUSED = 'REFUSED',
+}

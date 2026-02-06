@@ -4,12 +4,14 @@ import { BaseQueryService } from '@/common/base-query/service/base-query.service
 import { TransactionService } from '../../transaction.service';
 import { TransactionRepository } from '../../repositories/transaction.repository';
 import { Transaction } from '../../entities/transaction.entity';
+import { TransactionHydratorService } from '../../services/transaction-hydrator.service';
 
 export type TransactionServiceTestFactory = {
   transactionService: TransactionService;
   transactionRepositoryMock: Record<string, jest.Mock>;
   typeOrmRepositoryMock: Record<string, jest.Mock>;
   baseQueryServiceMock: Record<string, jest.Mock>;
+  transactionHydratorMock: Record<string, jest.Mock>;
 };
 
 export const createTransactionServiceTestFactory =
@@ -33,6 +35,10 @@ export const createTransactionServiceTestFactory =
       findAll: jest.fn(),
     };
 
+    const transactionHydratorMock = {
+      hydrate: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TransactionService,
@@ -48,6 +54,10 @@ export const createTransactionServiceTestFactory =
           provide: BaseQueryService,
           useValue: baseQueryServiceMock,
         },
+        {
+          provide: TransactionHydratorService,
+          useValue: transactionHydratorMock,
+        },
       ],
     }).compile();
 
@@ -56,5 +66,6 @@ export const createTransactionServiceTestFactory =
       transactionRepositoryMock,
       typeOrmRepositoryMock,
       baseQueryServiceMock,
+      transactionHydratorMock,
     };
   };

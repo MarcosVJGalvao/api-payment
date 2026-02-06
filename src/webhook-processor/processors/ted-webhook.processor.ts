@@ -2,38 +2,26 @@ import { Process, Processor, OnQueueFailed } from '@nestjs/bull';
 import type { Job } from 'bull';
 import { Logger } from '@nestjs/common';
 import { TedWebhookService } from '../services/ted-webhook.service';
+import { toPayload } from '../helpers/payload.helper';
 import { WebhookEventLogService } from '../services/webhook-event-log.service';
-import { WebhookPayload } from '../interfaces/webhook-base.interface';
-import {
-  TedCashOutData,
-  TedCashInData,
-  TedRefundData,
-} from '../interfaces/ted-webhook.interface';
 import { TransactionNotFoundRetryableException } from '@/common/errors/exceptions/transaction-not-found-retryable.exception';
 import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
 import { WebhookEvent } from '../enums/webhook-event.enum';
 import { parseDate } from '@/common/helpers/date.helpers';
+import { isRecord } from '@/common/errors/helpers/type.helpers';
+import { TedWebhookEventType } from '../enums/ted-webhook-event-type.enum';
+import type { TedWebhookJob } from '../interfaces/ted-webhook-job.type';
 
-export type TedWebhookEventType =
-  | 'CASH_OUT_APPROVED'
-  | 'CASH_OUT_DONE'
-  | 'CASH_OUT_CANCELED'
-  | 'CASH_OUT_REPROVED'
-  | 'CASH_OUT_UNDONE'
-  | 'CASH_IN_RECEIVED'
-  | 'CASH_IN_CLEARED'
-  | 'REFUND_RECEIVED'
-  | 'REFUND_CLEARED';
+function getAuthenticationCode(data: unknown): string | undefined {
+  if (!isRecord(data)) {
+    return undefined;
+  }
 
-export interface TedWebhookJob {
-  eventType: TedWebhookEventType;
-  events:
-    | WebhookPayload<TedCashOutData>[]
-    | WebhookPayload<TedCashInData>[]
-    | WebhookPayload<TedRefundData>[];
-  clientId: string;
-  validPublicKey: boolean;
+  const value = data['authenticationCode'];
+  return typeof value === 'string' ? value : undefined;
 }
+
+// Mantido fora do processor: enums/job types estão em `enums/` e `interfaces/`.
 
 @Processor('webhook-ted')
 export class TedWebhookProcessor {
@@ -46,86 +34,93 @@ export class TedWebhookProcessor {
 
   @Process()
   async handleJob(job: Job<TedWebhookJob>): Promise<void> {
-    const { eventType, events, clientId, validPublicKey } = job.data;
+    const data = job.data;
 
     this.logger.log(
-      `Processing ${eventType} webhook job (ID: ${job.id}, Attempt: ${job.attemptsMade + 1})`,
+      `Processing ${data.eventType} webhook job (ID: ${job.id}, Attempt: ${job.attemptsMade + 1})`,
     );
 
     try {
-      switch (eventType) {
+      switch (data.eventType) {
         // Cash-Out events
-        case 'CASH_OUT_APPROVED':
+        case TedWebhookEventType.CASH_OUT_APPROVED:
           await this.tedWebhookService.handleCashOutApproved(
-            events as WebhookPayload<TedCashOutData>[],
-            clientId,
-            validPublicKey,
+            data.events,
+            data.clientId,
+            data.providerSlug,
+            data.validPublicKey,
           );
           break;
-        case 'CASH_OUT_DONE':
+        case TedWebhookEventType.CASH_OUT_DONE:
           await this.tedWebhookService.handleCashOutDone(
-            events as WebhookPayload<TedCashOutData>[],
-            clientId,
-            validPublicKey,
+            data.events,
+            data.clientId,
+            data.providerSlug,
+            data.validPublicKey,
           );
           break;
-        case 'CASH_OUT_CANCELED':
+        case TedWebhookEventType.CASH_OUT_CANCELED:
           await this.tedWebhookService.handleCashOutCanceled(
-            events as WebhookPayload<TedCashOutData>[],
-            clientId,
-            validPublicKey,
+            data.events,
+            data.clientId,
+            data.providerSlug,
+            data.validPublicKey,
           );
           break;
-        case 'CASH_OUT_REPROVED':
+        case TedWebhookEventType.CASH_OUT_REPROVED:
           await this.tedWebhookService.handleCashOutReproved(
-            events as WebhookPayload<TedCashOutData>[],
-            clientId,
-            validPublicKey,
+            data.events,
+            data.clientId,
+            data.providerSlug,
+            data.validPublicKey,
           );
           break;
-        case 'CASH_OUT_UNDONE':
+        case TedWebhookEventType.CASH_OUT_UNDONE:
           await this.tedWebhookService.handleCashOutUndone(
-            events as WebhookPayload<TedCashOutData>[],
-            clientId,
-            validPublicKey,
+            data.events,
+            data.clientId,
+            data.providerSlug,
+            data.validPublicKey,
           );
           break;
         // Cash-In events
-        case 'CASH_IN_RECEIVED':
+        case TedWebhookEventType.CASH_IN_RECEIVED:
           await this.tedWebhookService.handleCashInReceived(
-            events as WebhookPayload<TedCashInData>[],
-            clientId,
-            validPublicKey,
+            data.events,
+            data.clientId,
+            data.providerSlug,
+            data.validPublicKey,
           );
           break;
-        case 'CASH_IN_CLEARED':
+        case TedWebhookEventType.CASH_IN_CLEARED:
           await this.tedWebhookService.handleCashInCleared(
-            events as WebhookPayload<TedCashInData>[],
-            clientId,
-            validPublicKey,
+            data.events,
+            data.clientId,
+            data.providerSlug,
+            data.validPublicKey,
           );
           break;
         // Refund events
-        case 'REFUND_RECEIVED':
+        case TedWebhookEventType.REFUND_RECEIVED:
           await this.tedWebhookService.handleRefundReceived(
-            events as WebhookPayload<TedRefundData>[],
-            clientId,
-            validPublicKey,
+            data.events,
+            data.clientId,
+            data.providerSlug,
+            data.validPublicKey,
           );
           break;
-        case 'REFUND_CLEARED':
+        case TedWebhookEventType.REFUND_CLEARED:
           await this.tedWebhookService.handleRefundCleared(
-            events as WebhookPayload<TedRefundData>[],
-            clientId,
-            validPublicKey,
+            data.events,
+            data.clientId,
+            data.providerSlug,
+            data.validPublicKey,
           );
           break;
-        default:
-          this.logger.warn(`Unknown event type: ${String(eventType)}`);
       }
 
       this.logger.log(
-        `Successfully processed ${eventType} webhook job (ID: ${job.id})`,
+        `Successfully processed ${data.eventType} webhook job (ID: ${job.id})`,
       );
     } catch (error) {
       if (error instanceof TransactionNotFoundRetryableException) {
@@ -143,7 +138,7 @@ export class TedWebhookProcessor {
       }
 
       this.logger.error(
-        `Error processing ${eventType} webhook: ${error instanceof Error ? error.message : String(error)}`,
+        `Error processing ${data.eventType} webhook: ${error instanceof Error ? error.message : String(error)}`,
         error instanceof Error ? error.stack : undefined,
       );
       throw error;
@@ -187,21 +182,27 @@ export class TedWebhookProcessor {
       };
 
       for (const event of events) {
-        const data = event.data as { authenticationCode: string };
+        const authenticationCode = getAuthenticationCode(event.data);
         try {
+          if (!authenticationCode) {
+            this.logger.warn(
+              `Missing authenticationCode in failed webhook payload for event ${eventType}`,
+            );
+            continue;
+          }
           await this.webhookEventLogService.logEvent({
-            authenticationCode: data.authenticationCode,
+            authenticationCode,
             entityType: entityTypeMap[eventType],
             entityId: undefined,
             eventName: eventNameMap[eventType],
             wasProcessed: false,
             skipReason: `Failed after ${maxAttempts} attempts: ${error.message}`,
-            payload: event as unknown as Record<string, unknown>,
+            payload: toPayload(event),
             providerTimestamp: parseDate(event.timestamp),
             clientId,
           });
           this.logger.log(
-            `Logged failed webhook to event log: ${data.authenticationCode}`,
+            `Logged failed webhook to event log: ${authenticationCode}`,
           );
         } catch (logError) {
           this.logger.error(

@@ -18,8 +18,13 @@ import {
   TedCashInData,
   TedRefundData,
 } from '../interfaces/ted-webhook.interface';
-import type { TedWebhookJob } from '../processors/ted-webhook.processor';
-import { enqueueWebhookEvent } from '../helpers/enqueue-webhook.helper';
+import {
+  enqueueWebhookEvent,
+  WebhookJobBase,
+} from '../helpers/enqueue-webhook.helper';
+import { TedWebhookNormalizerRegistry } from '../registries/ted-webhook-normalizer.registry';
+import { parseFinancialProvider } from '../helpers/provider-slug.helper';
+import { isRecord } from '@/common/errors/helpers/type.helpers';
 
 @ApiTags('Webhooks - TED')
 @Controller('webhook/:provider/ted')
@@ -27,8 +32,17 @@ import { enqueueWebhookEvent } from '../helpers/enqueue-webhook.helper';
 export class TedWebhookController {
   constructor(
     @InjectQueue('webhook-ted')
-    private readonly webhookQueue: Queue<TedWebhookJob>,
+    private readonly webhookQueue: Queue<WebhookJobBase>,
+    private readonly normalizerRegistry: TedWebhookNormalizerRegistry,
   ) {}
+
+  private getProvider(request: Request) {
+    return parseFinancialProvider(String(request.params?.provider || ''));
+  }
+
+  private getHeaders(request: Request): Record<string, unknown> {
+    return isRecord(request.headers) ? request.headers : {};
+  }
 
   // ============ Cash-Out Webhooks ============
 
@@ -40,10 +54,15 @@ export class TedWebhookController {
     @Body() events: WebhookPayload<TedCashOutData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeCashOutApproved(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CASH_OUT_APPROVED',
-      events,
+      normalized,
       request,
     );
   }
@@ -56,10 +75,15 @@ export class TedWebhookController {
     @Body() events: WebhookPayload<TedCashOutData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeCashOutDone(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CASH_OUT_DONE',
-      events,
+      normalized,
       request,
     );
   }
@@ -72,10 +96,15 @@ export class TedWebhookController {
     @Body() events: WebhookPayload<TedCashOutData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeCashOutCanceled(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CASH_OUT_CANCELED',
-      events,
+      normalized,
       request,
     );
   }
@@ -88,10 +117,15 @@ export class TedWebhookController {
     @Body() events: WebhookPayload<TedCashOutData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeCashOutReproved(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CASH_OUT_REPROVED',
-      events,
+      normalized,
       request,
     );
   }
@@ -104,10 +138,15 @@ export class TedWebhookController {
     @Body() events: WebhookPayload<TedCashOutData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeCashOutUndone(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CASH_OUT_UNDONE',
-      events,
+      normalized,
       request,
     );
   }
@@ -122,10 +161,15 @@ export class TedWebhookController {
     @Body() events: WebhookPayload<TedCashInData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeCashInReceived(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CASH_IN_RECEIVED',
-      events,
+      normalized,
       request,
     );
   }
@@ -138,10 +182,15 @@ export class TedWebhookController {
     @Body() events: WebhookPayload<TedCashInData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeCashInCleared(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CASH_IN_CLEARED',
-      events,
+      normalized,
       request,
     );
   }
@@ -156,10 +205,15 @@ export class TedWebhookController {
     @Body() events: WebhookPayload<TedRefundData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeRefundReceived(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'REFUND_RECEIVED',
-      events,
+      normalized,
       request,
     );
   }
@@ -172,10 +226,15 @@ export class TedWebhookController {
     @Body() events: WebhookPayload<TedRefundData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeRefundCleared(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'REFUND_CLEARED',
-      events,
+      normalized,
       request,
     );
   }

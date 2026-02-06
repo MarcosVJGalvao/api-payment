@@ -19,7 +19,6 @@ import { IAuditLogData } from '../interfaces/audit-log.interface';
 import { SanitizeDataHelper } from '../helpers/sanitize-data.helper';
 import { AuditLogStatus } from '../enums/audit-log-status.enum';
 import { AuditAction } from '../enums/audit-action.enum';
-import { JwtPayload } from '@/auth/interfaces/jwt-payload.interface';
 import { JwtService } from '@nestjs/jwt';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import {
@@ -27,8 +26,25 @@ import {
   processUnhandledError,
 } from '@/common/errors/helpers/error.helpers';
 import { extractMessage } from '@/common/errors/helpers/message.helpers';
+import { isRecord } from '@/common/errors/helpers/type.helpers';
 
 import { Webhook } from '@/webhook/entities/webhook.entity';
+
+function hasErrorCode(value: unknown): value is { errorCode?: unknown } {
+  return typeof value === 'object' && value !== null && 'errorCode' in value;
+}
+
+function hasErroCode(value: unknown): value is { erroCode?: unknown } {
+  return typeof value === 'object' && value !== null && 'erroCode' in value;
+}
+
+function getStringField(
+  record: Record<string, unknown>,
+  key: string,
+): string | undefined {
+  const value = record[key];
+  return typeof value === 'string' ? value : undefined;
+}
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
@@ -39,9 +55,10 @@ export class AuditInterceptor implements NestInterceptor {
     // User: 'user',
   };
 
-  private readonly entityClassMap: Record<string, any> = {
-    Webhook: Webhook,
-  };
+  private readonly entityClassMap: Record<string, EntityTarget<ObjectLiteral>> =
+    {
+      Webhook: Webhook,
+    };
 
   private readonly entityRelationsMap: Record<string, string[]> = {
     // Add entity relations here as you create modules
@@ -57,7 +74,9 @@ export class AuditInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const request = context.switchToHttp().getRequest();
+    const request = context
+      .switchToHttp()
+      .getRequest<Request & { correlationId?: string }>();
     const handler = context.getHandler();
     const auditOptions = this.reflector.get<AuditOptions>(AUDIT_KEY, handler);
 
@@ -65,19 +84,35 @@ export class AuditInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    const user = request.user as JwtPayload | undefined;
+    const userRecord = isRecord(request.user) ? request.user : undefined;
     // Suporta tanto 'userId' (auth padrão) quanto 'sub' (backoffice JWT)
-    let userId = user?.userId || user?.sub;
-    let username = user?.username || user?.email;
+    const directUserId = userRecord
+      ? getStringField(userRecord, 'userId')
+      : undefined;
+    const subUserId = userRecord
+      ? getStringField(userRecord, 'sub')
+      : undefined;
+    let userId = directUserId || subUserId;
+    const directUsername = userRecord
+      ? getStringField(userRecord, 'username')
+      : undefined;
+    const emailUsername = userRecord
+      ? getStringField(userRecord, 'email')
+      : undefined;
+    let username = directUsername || emailUsername;
 
     // Se não encontrou userId no request.user, tenta extrair do providerSession (para autenticação de provider)
     if (!userId && 'providerSession' in request && request.providerSession) {
       const providerSession = request.providerSession;
-      if ('userId' in providerSession && providerSession.userId) {
-        userId = String(providerSession.userId);
-      } else if ('accountId' in providerSession && providerSession.accountId) {
-        // Se não tiver userId, usa accountId como identificador alternativo
-        userId = String(providerSession.accountId);
+      if (isRecord(providerSession)) {
+        const sessionUserId = getStringField(providerSession, 'userId');
+        const sessionAccountId = getStringField(providerSession, 'accountId');
+        if (sessionUserId) {
+          userId = sessionUserId;
+        } else if (sessionAccountId) {
+          // Se não tiver userId, usa accountId como identificador alternativo
+          userId = sessionAccountId;
+        }
       }
     }
 
@@ -109,13 +144,9 @@ export class AuditInterceptor implements NestInterceptor {
       );
     }
 
-    const correlationId = request['correlationId'] as string | undefined;
-    const ipAddress = this.auditService.extractIpAddress(
-      request as unknown as Request,
-    );
-    const userAgent = this.auditService.extractUserAgent(
-      request as unknown as Request,
-    );
+    const correlationId = request.correlationId;
+    const ipAddress = this.auditService.extractIpAddress(request);
+    const userAgent = this.auditService.extractUserAgent(request);
 
     const entityIdParam = auditOptions.entityIdParam || 'id';
     const entityId = this.extractEntityId(request, entityIdParam);
@@ -133,20 +164,19 @@ export class AuditInterceptor implements NestInterceptor {
     if (auditOptions.captureNewValues) {
       const body = request.body;
       if (body) {
-        let sanitizedBody = SanitizeDataHelper.sanitize(body) as Record<
-          string,
-          unknown
-        >;
+        const sanitizedBody = SanitizeDataHelper.sanitize(body);
+        let sanitizedRecord = isRecord(sanitizedBody) ? sanitizedBody : {};
 
         if (auditOptions.ignoreFields && auditOptions.ignoreFields.length > 0) {
-          sanitizedBody = SanitizeDataHelper.removeFields(
-            sanitizedBody,
+          const removed = SanitizeDataHelper.removeFields(
+            sanitizedRecord,
             auditOptions.ignoreFields,
-          ) as Record<string, unknown>;
+          );
+          sanitizedRecord = isRecord(removed) ? removed : {};
         }
 
         newValues =
-          Object.keys(sanitizedBody).length > 0 ? sanitizedBody : undefined;
+          Object.keys(sanitizedRecord).length > 0 ? sanitizedRecord : undefined;
       }
     }
 
@@ -177,23 +207,25 @@ export class AuditInterceptor implements NestInterceptor {
                 if (accessToken) {
                   try {
                     const decoded = this.jwtService.decode(String(accessToken));
-                    if (
-                      decoded &&
-                      typeof decoded === 'object' &&
-                      'userId' in decoded &&
-                      decoded.userId
-                    ) {
-                      const payload = decoded as JwtPayload;
-                      if (!auditLogData.userId) {
-                        auditLogData.userId = payload.userId;
+                    if (isRecord(decoded)) {
+                      const decodedUserId = getStringField(decoded, 'userId');
+                      const decodedUsername = getStringField(
+                        decoded,
+                        'username',
+                      );
+
+                      if (decodedUserId) {
+                        if (!auditLogData.userId) {
+                          auditLogData.userId = decodedUserId;
+                        }
+
+                        if (!auditLogData.entityId) {
+                          auditLogData.entityId = decodedUserId;
+                        }
                       }
 
-                      if (!auditLogData.entityId) {
-                        auditLogData.entityId = payload.userId;
-                      }
-
-                      if (!auditLogData.username && payload.username) {
-                        auditLogData.username = payload.username;
+                      if (!auditLogData.username && decodedUsername) {
+                        auditLogData.username = decodedUsername;
                       }
                     }
                   } catch (error) {
@@ -233,20 +265,10 @@ export class AuditInterceptor implements NestInterceptor {
                 ? extractedMessage.join('; ')
                 : String(extractedMessage);
 
-              if (
-                exceptionResponse &&
-                typeof exceptionResponse === 'object' &&
-                exceptionResponse !== null
-              ) {
-                if ('errorCode' in exceptionResponse) {
-                  auditLogData.errorCode = String(
-                    (exceptionResponse as any).errorCode,
-                  );
-                } else if ('erroCode' in exceptionResponse) {
-                  auditLogData.errorCode = String(
-                    (exceptionResponse as any).erroCode,
-                  );
-                }
+              if (hasErrorCode(exceptionResponse)) {
+                auditLogData.errorCode = String(exceptionResponse.errorCode);
+              } else if (hasErroCode(exceptionResponse)) {
+                auditLogData.errorCode = String(exceptionResponse.erroCode);
               }
 
               if (!auditLogData.errorCode) {
@@ -255,7 +277,9 @@ export class AuditInterceptor implements NestInterceptor {
                 auditLogData.errorCode = String(mappedErrorCode);
               }
             } else {
-              const errorResult = processUnhandledError(error as Error);
+              const errorResult = processUnhandledError(
+                error instanceof Error ? error : new Error(String(error)),
+              );
               auditLogData.errorMessage = String(errorResult.message);
               auditLogData.errorCode = String(errorResult.errorCode);
             }
@@ -450,14 +474,12 @@ export class AuditInterceptor implements NestInterceptor {
         return undefined;
       }
 
-      const repository = this.dataSource.getRepository(
-        EntityClass as EntityTarget<ObjectLiteral>,
-      );
+      const repository = this.dataSource.getRepository(EntityClass);
 
       const relations = this.entityRelationsMap[entityType] || [];
 
       const entity = await repository.findOne({
-        where: { id: entityId } as any,
+        where: { id: entityId },
         relations: relations.length > 0 ? relations : undefined,
       });
 
@@ -467,15 +489,17 @@ export class AuditInterceptor implements NestInterceptor {
 
       const entityObject = this.transformEntityToObject(entity);
 
-      let sanitizedOldValues = SanitizeDataHelper.sanitize(
-        entityObject,
-      ) as Record<string, unknown>;
+      const sanitizedOldValues = SanitizeDataHelper.sanitize(entityObject);
+      let sanitizedRecord = isRecord(sanitizedOldValues)
+        ? sanitizedOldValues
+        : {};
 
       if (ignoreFields && ignoreFields.length > 0) {
-        sanitizedOldValues = SanitizeDataHelper.removeFields(
-          sanitizedOldValues,
+        const removed = SanitizeDataHelper.removeFields(
+          sanitizedRecord,
           ignoreFields,
-        ) as Record<string, unknown>;
+        );
+        sanitizedRecord = isRecord(removed) ? removed : {};
       }
 
       const internalFields = [
@@ -487,11 +511,11 @@ export class AuditInterceptor implements NestInterceptor {
         'updated_at',
         'deleted_at',
       ];
-      this.removeInternalFields(sanitizedOldValues, internalFields);
+      this.removeInternalFields(sanitizedRecord, internalFields);
 
-      const fieldsCount = this.countFields(sanitizedOldValues);
+      const fieldsCount = this.countFields(sanitizedRecord);
       if (fieldsCount > 0) {
-        return sanitizedOldValues;
+        return sanitizedRecord;
       } else {
         return undefined;
       }
@@ -587,8 +611,31 @@ export class AuditInterceptor implements NestInterceptor {
    * @param obj - Objeto a ser contado
    * @returns Número de campos
    */
-  private countFields(obj: any): number {
-    if (!obj || typeof obj !== 'object') return 0;
+  private countFields(obj: unknown): number {
+    if (obj === null || obj === undefined) {
+      return 0;
+    }
+
+    if (Array.isArray(obj)) {
+      if (obj.length === 0) {
+        return 0;
+      }
+
+      let count = 0;
+      for (const item of obj) {
+        if (item && typeof item === 'object') {
+          count += this.countFields(item);
+        } else if (item !== null && item !== undefined) {
+          count++;
+        }
+      }
+
+      return count;
+    }
+
+    if (!isRecord(obj)) {
+      return 0;
+    }
 
     let count = 0;
 
@@ -598,31 +645,18 @@ export class AuditInterceptor implements NestInterceptor {
 
         if (value === null || value === undefined) {
           continue;
-        } else if (typeof value === 'object' && !Array.isArray(value)) {
-          const nestedCount = this.countFields(
-            value as Record<string, unknown>,
-          );
+        } else if (isRecord(value)) {
+          const nestedCount = this.countFields(value);
           if (nestedCount > 0) {
             count += nestedCount;
-          } else if (
-            Object.keys(value as Record<string, unknown>).length === 0
-          ) {
+          } else if (Object.keys(value).length === 0) {
             continue;
           } else {
             count++;
           }
         } else if (Array.isArray(value)) {
-          if (value.length === 0) {
-            continue;
-          }
-          value.forEach((item) => {
-            if (item && typeof item === 'object') {
-              count += this.countFields(item);
-            } else if (item !== null && item !== undefined) {
-              count++;
-            }
-          });
-        } else {
+          count += this.countFields(value);
+        } else if (value !== null && value !== undefined) {
           count++;
         }
       }
@@ -712,22 +746,23 @@ export class AuditInterceptor implements NestInterceptor {
 
     if (auditOptions.captureNewValues && response) {
       try {
-        let sanitizedResponse = SanitizeDataHelper.sanitize(response) as Record<
-          string,
-          unknown
-        >;
+        const sanitizedResponse = SanitizeDataHelper.sanitize(response);
+        let sanitizedRecord = isRecord(sanitizedResponse)
+          ? sanitizedResponse
+          : {};
 
         if (auditOptions.ignoreFields && auditOptions.ignoreFields.length > 0) {
-          sanitizedResponse = SanitizeDataHelper.removeFields(
-            sanitizedResponse,
+          const removed = SanitizeDataHelper.removeFields(
+            sanitizedRecord,
             auditOptions.ignoreFields,
-          ) as Record<string, unknown>;
+          );
+          sanitizedRecord = isRecord(removed) ? removed : {};
         }
 
-        if (Object.keys(sanitizedResponse).length > 0) {
+        if (Object.keys(sanitizedRecord).length > 0) {
           auditLogData.newValues = {
             ...auditLogData.newValues,
-            ...sanitizedResponse,
+            ...sanitizedRecord,
           };
         }
       } catch (error) {

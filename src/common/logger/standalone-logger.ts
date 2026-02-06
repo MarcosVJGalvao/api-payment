@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 import { CloudLoggingTransport } from './cloud-logging.transport';
 import {
   CloudLoggingFactory,
-  CloudLoggingProviderType,
+  parseCloudLoggingProviderType,
 } from './providers/cloud-logging.factory';
 import { createLoggerFormat } from './helpers/logger-format.helper';
 
@@ -36,8 +36,22 @@ export function createStandaloneLogger(): winston.Logger {
     logDestination === 'both' ||
     logDestination === 'oci'
   ) {
-    const providerType = (process.env.CLOUD_LOGGING_PROVIDER ||
-      'oci') as CloudLoggingProviderType;
+    const providerType = parseCloudLoggingProviderType(
+      process.env.CLOUD_LOGGING_PROVIDER,
+    );
+    if (!providerType) {
+      process.stdout.write(
+        `[Standalone Logger] Unknown cloud provider '${process.env.CLOUD_LOGGING_PROVIDER}'\n`,
+      );
+      if (transports.length === 0) {
+        transports.push(
+          new winston.transports.Console({
+            format: format,
+          }),
+        );
+      }
+      return winston.createLogger({ format, transports });
+    }
 
     try {
       const cloudProvider = CloudLoggingFactory.createStandalone(providerType);

@@ -12,11 +12,12 @@ function extractIds(
   transactions: Transaction[],
   field: keyof Transaction,
 ): string[] {
-  return [
-    ...new Set(
-      transactions.map((t) => t[field] as string | undefined).filter(Boolean),
-    ),
-  ] as string[];
+  const ids = transactions
+    .map((transaction) => transaction[field])
+    .filter(
+      (value): value is string => typeof value === 'string' && value !== '',
+    );
+  return Array.from(new Set(ids));
 }
 
 /**

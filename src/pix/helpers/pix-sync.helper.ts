@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { PixTransfer } from '../entities/pix-transfer.entity';
 import { PixProviderHelper } from './pix-provider.helper';
 import { TransactionService } from '@/transaction/transaction.service';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { PixTransferStatus } from '../enums/pix-transfer-status.enum';
 import { mapPixTransferStatusToTransactionStatus } from '@/common/helpers/status-mapper.helper';
 

@@ -20,8 +20,10 @@ export interface FilterConfig {
 export interface BuildQueryOptions {
   relations?: string[];
   defaultSortBy?: string;
-  /** @default 'ASC' */
+  /** @default 'DESC' */
   defaultSortOrder?: SortOrder;
+  /** @default 100 */
+  maxLimit?: number;
   searchFields?: string[];
   sortableFields?: string[];
   dateField?: string;

@@ -8,7 +8,7 @@ import { AccountService } from '@/account/account.service';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { ProviderJwtService } from '../services/provider-jwt.service';
-import { ProviderSession } from '../hiperbanco/interfaces/provider-session.interface';
+import { ProviderSession } from '../contracts/provider-session';
 
 export interface RequestWithAccount {
   clientId?: string;

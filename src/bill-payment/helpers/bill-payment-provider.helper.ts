@@ -1,9 +1,7 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
-import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
-import { ErrorCode } from '@/common/errors/enums/error-code.enum';
-import { HiperbancoBillPaymentHelper } from './hiperbanco/hiperbanco-bill-payment.helper';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
+import { BillPaymentProviderRegistry } from '@/financial-providers/registry/bill-payment-provider.registry';
 import {
   BillPaymentValidateResponse,
   BillPaymentConfirmResponse,
@@ -16,7 +14,7 @@ import { ConfirmBillPaymentDto } from '../dto/confirm-bill-payment.dto';
  */
 @Injectable()
 export class BillPaymentProviderHelper {
-  constructor(private readonly hiperbancoHelper: HiperbancoBillPaymentHelper) {}
+  constructor(private readonly registry: BillPaymentProviderRegistry) {}
 
   /**
    * Valida um título no provedor especificado.
@@ -30,16 +28,7 @@ export class BillPaymentProviderHelper {
     digitable: string,
     session: ProviderSession,
   ): Promise<BillPaymentValidateResponse> {
-    switch (provider) {
-      case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.validateBill(digitable, session);
-      default:
-        throw new CustomHttpException(
-          `Provider ${provider} is not supported`,
-          HttpStatus.BAD_REQUEST,
-          ErrorCode.INVALID_INPUT,
-        );
-    }
+    return this.registry.get(provider).validateBill(digitable, session);
   }
 
   /**
@@ -54,16 +43,7 @@ export class BillPaymentProviderHelper {
     dto: ConfirmBillPaymentDto,
     session: ProviderSession,
   ): Promise<BillPaymentConfirmResponse> {
-    switch (provider) {
-      case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.confirmPayment(dto, session);
-      default:
-        throw new CustomHttpException(
-          `Provider ${provider} is not supported`,
-          HttpStatus.BAD_REQUEST,
-          ErrorCode.INVALID_INPUT,
-        );
-    }
+    return this.registry.get(provider).confirmPayment(dto, session);
   }
 
   /**
@@ -82,20 +62,8 @@ export class BillPaymentProviderHelper {
     authenticationCode: string,
     session: ProviderSession,
   ): Promise<BillPaymentDetailResponse> {
-    switch (provider) {
-      case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.getPaymentDetail(
-          bankBranch,
-          bankAccount,
-          authenticationCode,
-          session,
-        );
-      default:
-        throw new CustomHttpException(
-          `Provider ${provider} is not supported`,
-          HttpStatus.BAD_REQUEST,
-          ErrorCode.INVALID_INPUT,
-        );
-    }
+    return this.registry
+      .get(provider)
+      .getPaymentDetail(bankBranch, bankAccount, authenticationCode, session);
   }
 }

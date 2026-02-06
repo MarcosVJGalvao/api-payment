@@ -1,5 +1,5 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { ProviderSession } from '../hiperbanco/interfaces/provider-session.interface';
+import { ProviderSession } from '../contracts/provider-session';
 
 export const CurrentSession = createParamDecorator(
   (data: unknown, ctx: ExecutionContext): ProviderSession => {

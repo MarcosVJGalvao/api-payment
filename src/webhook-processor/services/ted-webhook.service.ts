@@ -10,7 +10,6 @@ import { TedRefundStatus } from '@/ted/enums/ted-refund-status.enum';
 import { TransactionService } from '@/transaction/transaction.service';
 import { TransactionType } from '@/transaction/enums/transaction-type.enum';
 import { AccountService } from '@/account/account.service';
-import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { WebhookPayload } from '../interfaces/webhook-base.interface';
 import {
   TedCashOutData,
@@ -20,10 +19,12 @@ import {
 import { mapWebhookEventToTransactionStatus } from '../helpers/transaction-status-mapper.helper';
 import { canProcessWebhook } from '../helpers/webhook-state-machine.helper';
 import { WebhookEventLogService } from './webhook-event-log.service';
+import { toPayload } from '../helpers/payload.helper';
 import { WebhookEvent } from '../enums/webhook-event.enum';
 import { TransactionNotFoundRetryableException } from '@/common/errors/exceptions/transaction-not-found-retryable.exception';
 import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
 import { parseDate } from '@/common/helpers/date.helpers';
+import { parseFinancialProvider } from '../helpers/provider-slug.helper';
 
 @Injectable()
 export class TedWebhookService {
@@ -44,6 +45,7 @@ export class TedWebhookService {
   async handleCashOutApproved(
     events: WebhookPayload<TedCashOutData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
     await this.processCashOutEvent(
@@ -51,6 +53,7 @@ export class TedWebhookService {
       TedTransferStatus.APPROVED,
       WebhookEvent.TED_CASH_OUT_WAS_APPROVED,
       clientId,
+      providerSlug,
       validPublicKey,
     );
   }
@@ -58,6 +61,7 @@ export class TedWebhookService {
   async handleCashOutDone(
     events: WebhookPayload<TedCashOutData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
     await this.processCashOutEvent(
@@ -65,6 +69,7 @@ export class TedWebhookService {
       TedTransferStatus.DONE,
       WebhookEvent.TED_CASH_OUT_WAS_DONE,
       clientId,
+      providerSlug,
       validPublicKey,
     );
   }
@@ -72,6 +77,7 @@ export class TedWebhookService {
   async handleCashOutCanceled(
     events: WebhookPayload<TedCashOutData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
     await this.processCashOutEvent(
@@ -79,6 +85,7 @@ export class TedWebhookService {
       TedTransferStatus.CANCELED,
       WebhookEvent.TED_CASH_OUT_WAS_CANCELED,
       clientId,
+      providerSlug,
       validPublicKey,
     );
   }
@@ -86,6 +93,7 @@ export class TedWebhookService {
   async handleCashOutReproved(
     events: WebhookPayload<TedCashOutData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
     await this.processCashOutEvent(
@@ -93,6 +101,7 @@ export class TedWebhookService {
       TedTransferStatus.REPROVED,
       WebhookEvent.TED_CASH_OUT_WAS_REPROVED,
       clientId,
+      providerSlug,
       validPublicKey,
     );
   }
@@ -100,6 +109,7 @@ export class TedWebhookService {
   async handleCashOutUndone(
     events: WebhookPayload<TedCashOutData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
     await this.processCashOutEvent(
@@ -107,6 +117,7 @@ export class TedWebhookService {
       TedTransferStatus.UNDONE,
       WebhookEvent.TED_CASH_OUT_WAS_UNDONE,
       clientId,
+      providerSlug,
       validPublicKey,
     );
   }
@@ -116,6 +127,7 @@ export class TedWebhookService {
     status: TedTransferStatus,
     eventName: WebhookEvent,
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
     if (!validPublicKey) {
@@ -181,7 +193,7 @@ export class TedWebhookService {
         entityId: tedTransfer.id,
         eventName,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
@@ -193,12 +205,15 @@ export class TedWebhookService {
   async handleCashInReceived(
     events: WebhookPayload<TedCashInData>[],
     _clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
     if (!validPublicKey) {
       this.logger.warn('TED_CASH_IN_WAS_RECEIVED: Invalid publicKey, skipping');
       return;
     }
+
+    const provider = parseFinancialProvider(providerSlug);
 
     for (const event of events) {
       const data = event.data;
@@ -239,7 +254,7 @@ export class TedWebhookService {
         idempotencyKey: event.idempotencyKey,
         entityId: event.entityId,
         status: TedCashInStatus.RECEIVED,
-        providerSlug: FinancialProvider.HIPERBANCO,
+        providerSlug: provider,
         amount: data.amount?.value,
         currency: data.amount?.currency || 'BRL',
         description: data.description,
@@ -292,7 +307,7 @@ export class TedWebhookService {
         entityId: saved.id,
         eventName: WebhookEvent.TED_CASH_IN_WAS_RECEIVED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
@@ -309,12 +324,15 @@ export class TedWebhookService {
   async handleCashInCleared(
     events: WebhookPayload<TedCashInData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
     if (!validPublicKey) {
       this.logger.warn('TED_CASH_IN_WAS_CLEARED: Invalid publicKey, skipping');
       return;
     }
+
+    parseFinancialProvider(providerSlug);
 
     for (const event of events) {
       const data = event.data;
@@ -396,7 +414,7 @@ export class TedWebhookService {
         entityId: tedCashIn.id,
         eventName: WebhookEvent.TED_CASH_IN_WAS_CLEARED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
@@ -415,12 +433,15 @@ export class TedWebhookService {
   async handleRefundReceived(
     events: WebhookPayload<TedRefundData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
     if (!validPublicKey) {
       this.logger.warn('TED_REFUND_WAS_RECEIVED: Invalid publicKey, skipping');
       return;
     }
+
+    const provider = parseFinancialProvider(providerSlug);
 
     for (const event of events) {
       const data = event.data;
@@ -455,7 +476,7 @@ export class TedWebhookService {
         idempotencyKey: event.idempotencyKey,
         entityId: event.entityId,
         status: TedRefundStatus.RECEIVED,
-        providerSlug: FinancialProvider.HIPERBANCO,
+        providerSlug: provider,
         amount: data.amount?.value,
         currency: data.amount?.currency || 'BRL',
         description: data.description,
@@ -504,7 +525,7 @@ export class TedWebhookService {
         entityId: saved.id,
         eventName: WebhookEvent.TED_REFUND_WAS_RECEIVED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
@@ -521,12 +542,15 @@ export class TedWebhookService {
   async handleRefundCleared(
     events: WebhookPayload<TedRefundData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
     if (!validPublicKey) {
       this.logger.warn('TED_REFUND_WAS_CLEARED: Invalid publicKey, skipping');
       return;
     }
+
+    parseFinancialProvider(providerSlug);
 
     for (const event of events) {
       const data = event.data;
@@ -595,7 +619,7 @@ export class TedWebhookService {
         entityId: tedRefund.id,
         eventName: WebhookEvent.TED_REFUND_WAS_CLEARED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });

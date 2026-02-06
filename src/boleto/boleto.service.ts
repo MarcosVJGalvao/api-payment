@@ -8,7 +8,7 @@ import { CreateBoletoDto } from './dto/create-boleto.dto';
 import { UpdateBoletoDto } from './dto/update-boleto.dto';
 import { QueryBoletoDto } from './dto/query-boleto.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { BoletoProviderHelper } from './helpers/boleto-provider.helper';
 import { BoletoSyncHelper } from './helpers/boleto-sync.helper';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';

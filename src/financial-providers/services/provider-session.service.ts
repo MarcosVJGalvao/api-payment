@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { RedisService } from '@/common/redis/redis.service';
 import { AppLoggerService } from '@/common/logger/logger.service';
-import { ProviderSession } from '../hiperbanco/interfaces/provider-session.interface';
+import {
+  ProviderSession,
+  isProviderSession,
+} from '../contracts/provider-session';
 import { v4 as uuidv4 } from 'uuid';
 
 const SESSION_PREFIX = 'provider_session:';
@@ -47,7 +50,16 @@ export class ProviderSessionService {
       return null;
     }
 
-    return JSON.parse(data) as ProviderSession;
+    const parsed: unknown = JSON.parse(data);
+    if (!isProviderSession(parsed)) {
+      this.logger.warn(
+        `Invalid provider session payload for ${sessionId}`,
+        this.context,
+      );
+      return null;
+    }
+
+    return parsed;
   }
 
   async deleteSession(sessionId: string): Promise<void> {

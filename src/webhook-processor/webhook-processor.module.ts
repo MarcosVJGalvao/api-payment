@@ -33,6 +33,26 @@ import { TedRefund } from '@/ted/entities/ted-refund.entity';
 import { TedWebhookService } from './services/ted-webhook.service';
 import { TedWebhookController } from './controllers/ted-webhook.controller';
 import { TedWebhookProcessor } from './processors/ted-webhook.processor';
+import { HiperbancoPixWebhookNormalizer } from '@/financial-providers/providers/hiperbanco/webhook/hiperbanco-pix-webhook.normalizer';
+import { HiperbancoBoletoWebhookNormalizer } from '@/financial-providers/providers/hiperbanco/webhook/hiperbanco-boleto-webhook.normalizer';
+import { HiperbancoBillPaymentWebhookNormalizer } from '@/financial-providers/providers/hiperbanco/webhook/hiperbanco-bill-payment-webhook.normalizer';
+import { HiperbancoTedWebhookNormalizer } from '@/financial-providers/providers/hiperbanco/webhook/hiperbanco-ted-webhook.normalizer';
+import {
+  PixWebhookNormalizerRegistry,
+  PIX_WEBHOOK_NORMALIZERS,
+} from './registries/pix-webhook-normalizer.registry';
+import {
+  BoletoWebhookNormalizerRegistry,
+  BOLETO_WEBHOOK_NORMALIZERS,
+} from './registries/boleto-webhook-normalizer.registry';
+import {
+  BillPaymentWebhookNormalizerRegistry,
+  BILL_PAYMENT_WEBHOOK_NORMALIZERS,
+} from './registries/bill-payment-webhook-normalizer.registry';
+import {
+  TedWebhookNormalizerRegistry,
+  TED_WEBHOOK_NORMALIZERS,
+} from './registries/ted-webhook-normalizer.registry';
 
 /**
  * Configuração padrão de retry para filas de webhook.
@@ -46,8 +66,8 @@ const WEBHOOK_QUEUE_DEFAULT_OPTIONS = {
       type: 'exponential',
       delay: 5000, // 5 segundos inicial
     },
-    removeOnComplete: true,
-    removeOnFail: false, // Manter jobs falhos para análise
+    removeOnComplete: { age: 24 * 3600 },
+    removeOnFail: { age: 7 * 24 * 3600 },
   },
 };
 
@@ -98,6 +118,38 @@ const WEBHOOK_QUEUE_DEFAULT_OPTIONS = {
     PixWebhookProcessor,
     TedWebhookService,
     TedWebhookProcessor,
+    HiperbancoPixWebhookNormalizer,
+    HiperbancoBoletoWebhookNormalizer,
+    HiperbancoBillPaymentWebhookNormalizer,
+    HiperbancoTedWebhookNormalizer,
+    {
+      provide: PIX_WEBHOOK_NORMALIZERS,
+      useFactory: (hiperbanco: HiperbancoPixWebhookNormalizer) => [hiperbanco],
+      inject: [HiperbancoPixWebhookNormalizer],
+    },
+    {
+      provide: BOLETO_WEBHOOK_NORMALIZERS,
+      useFactory: (hiperbanco: HiperbancoBoletoWebhookNormalizer) => [
+        hiperbanco,
+      ],
+      inject: [HiperbancoBoletoWebhookNormalizer],
+    },
+    {
+      provide: BILL_PAYMENT_WEBHOOK_NORMALIZERS,
+      useFactory: (hiperbanco: HiperbancoBillPaymentWebhookNormalizer) => [
+        hiperbanco,
+      ],
+      inject: [HiperbancoBillPaymentWebhookNormalizer],
+    },
+    {
+      provide: TED_WEBHOOK_NORMALIZERS,
+      useFactory: (hiperbanco: HiperbancoTedWebhookNormalizer) => [hiperbanco],
+      inject: [HiperbancoTedWebhookNormalizer],
+    },
+    PixWebhookNormalizerRegistry,
+    BoletoWebhookNormalizerRegistry,
+    BillPaymentWebhookNormalizerRegistry,
+    TedWebhookNormalizerRegistry,
   ],
   exports: [
     BillPaymentWebhookService,

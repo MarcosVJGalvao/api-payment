@@ -1,5 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
-import { AxiosError, isAxiosError } from 'axios';
+import { isAxiosError } from 'axios';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { isHiperbancoErrorResponse } from './hiperbanco-validators.helper';
@@ -36,7 +36,7 @@ export function handleHiperbancoError(
   let errorData: Record<string, unknown> | undefined = undefined;
 
   if (isAxiosError(error)) {
-    const axiosError = error as AxiosError;
+    const axiosError = error;
     responseData = axiosError.response?.data;
 
     // Se não houver response, é erro de rede/timeout - usar Bad Gateway

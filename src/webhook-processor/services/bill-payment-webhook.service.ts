@@ -10,10 +10,13 @@ import { BillPaymentWebhookData } from '../interfaces/bill-payment-webhook.inter
 import { mapWebhookEventToTransactionStatus } from '../helpers/transaction-status-mapper.helper';
 import { canProcessWebhook } from '../helpers/webhook-state-machine.helper';
 import { WebhookEventLogService } from './webhook-event-log.service';
+import { toPayload } from '../helpers/payload.helper';
 import { WebhookEvent } from '../enums/webhook-event.enum';
 import { TransactionNotFoundRetryableException } from '@/common/errors/exceptions/transaction-not-found-retryable.exception';
 import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
 import { parseDate } from '@/common/helpers/date.helpers';
+import { PaymentRecipient } from '@/common/entities/payment-recipient.entity';
+import { parseFinancialProvider } from '../helpers/provider-slug.helper';
 
 @Injectable()
 export class BillPaymentWebhookService {
@@ -29,8 +32,10 @@ export class BillPaymentWebhookService {
   async handleReceived(
     events: WebhookPayload<BillPaymentWebhookData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
+    parseFinancialProvider(providerSlug);
     if (!validPublicKey) {
       this.logger.warn(
         'BILL_PAYMENT_WAS_RECEIVED: Invalid publicKey, skipping',
@@ -67,7 +72,7 @@ export class BillPaymentWebhookService {
       if (data.assignor) billPayment.assignor = data.assignor;
 
       if (data.recipient) {
-        billPayment.recipient = billPayment.recipient || ({} as any);
+        billPayment.recipient = billPayment.recipient || new PaymentRecipient();
         if (data.recipient.name)
           billPayment.recipient.name = data.recipient.name;
         if (data.recipient.document?.value) {
@@ -114,7 +119,7 @@ export class BillPaymentWebhookService {
         entityId: billPayment.id,
         eventName: WebhookEvent.BILL_PAYMENT_WAS_RECEIVED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
@@ -128,8 +133,10 @@ export class BillPaymentWebhookService {
   async handleCreated(
     events: WebhookPayload<BillPaymentWebhookData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
+    parseFinancialProvider(providerSlug);
     if (!validPublicKey) {
       this.logger.warn('BILL_PAYMENT_WAS_CREATED: Invalid publicKey, skipping');
       return;
@@ -185,7 +192,7 @@ export class BillPaymentWebhookService {
         entityId: billPayment.id,
         eventName: WebhookEvent.BILL_PAYMENT_WAS_CREATED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
@@ -199,8 +206,10 @@ export class BillPaymentWebhookService {
   async handleConfirmed(
     events: WebhookPayload<BillPaymentWebhookData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
+    parseFinancialProvider(providerSlug);
     if (!validPublicKey) {
       this.logger.warn(
         'BILL_PAYMENT_WAS_CONFIRMED: Invalid publicKey, skipping',
@@ -260,7 +269,7 @@ export class BillPaymentWebhookService {
         entityId: billPayment.id,
         eventName: WebhookEvent.BILL_PAYMENT_WAS_CONFIRMED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
@@ -274,8 +283,10 @@ export class BillPaymentWebhookService {
   async handleFailed(
     events: WebhookPayload<BillPaymentWebhookData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
+    parseFinancialProvider(providerSlug);
     if (!validPublicKey) {
       this.logger.warn('BILL_PAYMENT_HAS_FAILED: Invalid publicKey, skipping');
       return;
@@ -333,7 +344,7 @@ export class BillPaymentWebhookService {
         entityId: billPayment.id,
         eventName: WebhookEvent.BILL_PAYMENT_HAS_FAILED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
@@ -347,8 +358,10 @@ export class BillPaymentWebhookService {
   async handleCancelled(
     events: WebhookPayload<BillPaymentWebhookData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
+    parseFinancialProvider(providerSlug);
     if (!validPublicKey) {
       this.logger.warn(
         'BILL_PAYMENT_WAS_CANCELLED: Invalid publicKey, skipping',
@@ -407,7 +420,7 @@ export class BillPaymentWebhookService {
         entityId: billPayment.id,
         eventName: WebhookEvent.BILL_PAYMENT_WAS_CANCELLED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
@@ -421,8 +434,10 @@ export class BillPaymentWebhookService {
   async handleRefused(
     events: WebhookPayload<BillPaymentWebhookData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
+    parseFinancialProvider(providerSlug);
     if (!validPublicKey) {
       this.logger.warn('BILL_PAYMENT_WAS_REFUSED: Invalid publicKey, skipping');
       return;
@@ -478,7 +493,7 @@ export class BillPaymentWebhookService {
         entityId: billPayment.id,
         eventName: WebhookEvent.BILL_PAYMENT_WAS_REFUSED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });

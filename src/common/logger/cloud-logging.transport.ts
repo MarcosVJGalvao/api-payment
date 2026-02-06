@@ -6,6 +6,7 @@ import {
 } from './providers/cloud-logging.provider';
 import { getModuleName } from './helpers/module-context.helper';
 import { transformToISO, getCurrentDate } from '@/common/helpers/date.helpers';
+import { isRecord } from '@/common/errors/helpers/type.helpers';
 
 const BOOTSTRAP_SKIP_PATTERNS = [
   /bootstrap/i,
@@ -65,8 +66,10 @@ export class CloudLoggingTransport extends TransportStream {
     return level.replace(/\u001b\[[0-9;]*m/g, '').trim();
   }
 
-  private cleanLogEntry(logEntry: Record<string, any>): Partial<CloudLogEntry> {
-    const cleaned: Record<string, any> = {};
+  private cleanLogEntry(
+    logEntry: Record<string, unknown>,
+  ): Partial<CloudLogEntry> {
+    const cleaned: Record<string, unknown> = {};
     const skipKeys = [
       'splat',
       'level',
@@ -86,18 +89,17 @@ export class CloudLoggingTransport extends TransportStream {
 
     if (cleaned.module) delete cleaned.context;
 
-    return this.removeStack(cleaned) as Partial<CloudLogEntry>;
+    const cleanedWithoutStack = this.removeStack(cleaned);
+    return isRecord(cleanedWithoutStack) ? cleanedWithoutStack : {};
   }
 
-  private removeStack(obj: any): any {
+  private removeStack(obj: unknown): unknown {
     if (obj === null || obj === undefined) return obj;
     if (Array.isArray(obj)) return obj.map((item) => this.removeStack(item));
 
-    if (typeof obj === 'object') {
+    if (isRecord(obj)) {
       const cleaned: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(
-        obj as Record<string, unknown>,
-      )) {
+      for (const [key, value] of Object.entries(obj)) {
         if (key.toLowerCase() === 'stack') continue;
         cleaned[key] = this.removeStack(value);
       }
@@ -110,32 +112,41 @@ export class CloudLoggingTransport extends TransportStream {
   log(info: winston.LogEntry, callback: () => void): void {
     setImmediate(() => this.emit('logged', info));
 
-    const context = info.context as string | undefined;
+    const infoRecord = isRecord(info) ? info : {};
+    const context =
+      typeof infoRecord['context'] === 'string'
+        ? infoRecord['context']
+        : undefined;
     const shouldSkipCloud =
-      (info.skipCloud as boolean) || (info.skipOci as boolean);
-    const message = info.message as string | undefined;
+      Boolean(infoRecord['skipCloud']) || Boolean(infoRecord['skipOci']);
+    const message =
+      typeof infoRecord['message'] === 'string'
+        ? infoRecord['message']
+        : undefined;
 
     if (shouldSkipCloud === true || this.shouldSkipMessage(message, context)) {
       callback();
       return;
     }
 
-    const moduleName = getModuleName(
-      context,
-      info as Record<string, any>,
-      info.stack as string,
-    );
+    const stack =
+      typeof infoRecord['stack'] === 'string' ? infoRecord['stack'] : undefined;
+    const moduleName = getModuleName(context, infoRecord, stack);
 
-    const cleanedEntry = this.cleanLogEntry(info as Record<string, any>);
+    const cleanedEntry = this.cleanLogEntry(infoRecord);
+    const timestamp =
+      typeof infoRecord['timestamp'] === 'string'
+        ? infoRecord['timestamp']
+        : undefined;
+    const level = typeof info.level === 'string' ? info.level : 'info';
     const logEntry: CloudLogEntry = {
       ...cleanedEntry,
-      timestamp: (info.timestamp as string) || transformToISO(getCurrentDate()),
-      level: this.cleanLevel(info.level || 'info'),
+      timestamp: timestamp || transformToISO(getCurrentDate()),
+      level: this.cleanLevel(level),
       message: message || '',
     };
 
-    if (logEntry.level && typeof logEntry.level === 'object') {
-      delete (logEntry as any).level;
+    if (typeof logEntry.level !== 'string') {
       logEntry.level = 'info';
     }
 

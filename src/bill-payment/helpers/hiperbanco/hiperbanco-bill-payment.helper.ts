@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { HiperbancoHttpService } from '@/financial-providers/hiperbanco/hiperbanco-http.service';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import {
   BillPaymentValidateResponse,
   BillPaymentConfirmResponse,
@@ -8,6 +8,7 @@ import {
 } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { HiperbancoEndpoint } from '@/financial-providers/hiperbanco/enums/hiperbanco-endpoint.enum';
 import { ConfirmBillPaymentDto } from '../../dto/confirm-bill-payment.dto';
+import { getProviderAccessToken } from '@/financial-providers/hiperbanco/helpers/session-token.helper';
 
 /**
  * Helper responsável pela comunicação com o Hiperbanco para operações de pagamento de contas.
@@ -33,7 +34,7 @@ export class HiperbancoBillPaymentHelper {
       {},
       {
         headers: {
-          Authorization: `Bearer ${session.hiperbancoToken}`,
+          Authorization: `Bearer ${getProviderAccessToken(session)}`,
         },
       },
     );
@@ -62,7 +63,7 @@ export class HiperbancoBillPaymentHelper {
       payload,
       {
         headers: {
-          Authorization: `Bearer ${session.hiperbancoToken}`,
+          Authorization: `Bearer ${getProviderAccessToken(session)}`,
         },
       },
     );
@@ -86,7 +87,7 @@ export class HiperbancoBillPaymentHelper {
 
     return this.hiperbancoHttp.get<BillPaymentDetailResponse>(path, {
       headers: {
-        Authorization: `Bearer ${session.hiperbancoToken}`,
+        Authorization: `Bearer ${getProviderAccessToken(session)}`,
       },
     });
   }

@@ -13,16 +13,28 @@ export class CacheService {
    * Obtém um valor do cache e faz o parse do JSON
    * @param key Chave do cache
    */
-  async get<T>(key: string): Promise<T | null> {
+  async get<T>(
+    key: string,
+    validator: (value: unknown) => value is T,
+  ): Promise<T | null>;
+  async get(key: string): Promise<unknown | null>;
+  async get<T>(
+    key: string,
+    validator?: (value: unknown) => value is T,
+  ): Promise<T | unknown | null> {
     try {
       const value = await this.redisService.get(key);
       if (!value) {
         return null;
       }
-      return JSON.parse(value) as T;
+      const parsed: unknown = JSON.parse(value);
+      if (!validator) {
+        return parsed;
+      }
+      return validator(parsed) ? parsed : null;
     } catch (error) {
       this.logger.warn(
-        `Failed to get/parse cache key ${key}: ${error.message}`,
+        `Failed to get/parse cache key ${key}: ${error instanceof Error ? error.message : String(error)}`,
         'CacheService',
       );
       return null;
@@ -35,13 +47,13 @@ export class CacheService {
    * @param value Valor a ser salvo
    * @param ttlSeconds Tempo de vida em segundos (opcional)
    */
-  async set(key: string, value: any, ttlSeconds?: number): Promise<void> {
+  async set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
     try {
       const stringValue = JSON.stringify(value);
       await this.redisService.set(key, stringValue, ttlSeconds);
     } catch (error) {
       this.logger.warn(
-        `Failed to set cache key ${key}: ${error.message}`,
+        `Failed to set cache key ${key}: ${error instanceof Error ? error.message : String(error)}`,
         'CacheService',
       );
     }
@@ -56,7 +68,7 @@ export class CacheService {
       await this.redisService.del(key);
     } catch (error) {
       this.logger.warn(
-        `Failed to delete cache key ${key}: ${error.message}`,
+        `Failed to delete cache key ${key}: ${error instanceof Error ? error.message : String(error)}`,
         'CacheService',
       );
     }
@@ -76,7 +88,7 @@ export class CacheService {
       }
     } catch (error) {
       this.logger.warn(
-        `Failed to invalidate pattern ${pattern}: ${error.message}`,
+        `Failed to invalidate pattern ${pattern}: ${error instanceof Error ? error.message : String(error)}`,
         'CacheService',
       );
     }

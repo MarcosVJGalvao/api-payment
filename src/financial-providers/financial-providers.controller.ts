@@ -27,6 +27,7 @@ import { RequireClient } from '@/common/decorators/require-client.decorator';
 import { RequireClientPermission } from '@/common/decorators/require-client-permission.decorator';
 import type { RequestWithClient } from '@/common/guards/client.guard';
 import { ProviderLoginType } from './enums/provider-login-type.enum';
+import { AuthProviderRegistry } from './registry/auth-provider.registry';
 
 @ApiTags('Provedores Financeiros')
 @Controller('providers')
@@ -35,6 +36,7 @@ export class FinancialProvidersController {
   constructor(
     private readonly credentialsService: FinancialCredentialsService,
     private readonly hiperbancoAuth: HiperbancoAuthService,
+    private readonly authProviders: AuthProviderRegistry,
   ) {}
 
   @Post(':provider/config')
@@ -84,5 +86,33 @@ export class FinancialProvidersController {
   @ApiBankLogin()
   async loginBank(@Body() dto: BankLoginDto, @Req() req: RequestWithClient) {
     return this.hiperbancoAuth.loginApiBank(dto, req.clientId!);
+  }
+
+  /**
+   * Rotas padronizadas (plugáveis) por provedor.
+   * Mantém compatibilidade com as rotas hardcoded existentes durante a migração.
+   */
+  @Post(':provider/auth/backoffice')
+  @ApiBackofficeLogin()
+  async loginBackofficeByProvider(
+    @Param('provider', new ParseEnumPipe(FinancialProvider))
+    provider: FinancialProvider,
+    @Body() dto: BackofficeLoginDto,
+  ) {
+    return this.authProviders.get(provider).loginBackoffice(dto);
+  }
+
+  @Post(':provider/auth/bank')
+  @RequireClient()
+  @RequireClientPermission('auth:bank')
+  @ApiBearerAuth('provider-auth')
+  @ApiBankLogin()
+  async loginBankByProvider(
+    @Param('provider', new ParseEnumPipe(FinancialProvider))
+    provider: FinancialProvider,
+    @Body() dto: BankLoginDto,
+    @Req() req: RequestWithClient,
+  ) {
+    return this.authProviders.get(provider).loginBank(dto, req.clientId!);
   }
 }

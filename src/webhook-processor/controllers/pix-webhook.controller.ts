@@ -20,8 +20,13 @@ import {
   PixRefundData,
   PixQrCodeCreatedData,
 } from '../interfaces/pix-webhook.interface';
-import type { PixWebhookJob } from '../processors/pix-webhook.processor';
-import { enqueueWebhookEvent } from '../helpers/enqueue-webhook.helper';
+import {
+  enqueueWebhookEvent,
+  WebhookJobBase,
+} from '../helpers/enqueue-webhook.helper';
+import { PixWebhookNormalizerRegistry } from '../registries/pix-webhook-normalizer.registry';
+import { parseFinancialProvider } from '../helpers/provider-slug.helper';
+import { isRecord } from '@/common/errors/helpers/type.helpers';
 
 @ApiTags('Webhooks - PIX')
 @Controller('webhook/:provider/pix')
@@ -29,8 +34,17 @@ import { enqueueWebhookEvent } from '../helpers/enqueue-webhook.helper';
 export class PixWebhookController {
   constructor(
     @InjectQueue('webhook-pix')
-    private readonly webhookQueue: Queue<PixWebhookJob>,
+    private readonly webhookQueue: Queue<WebhookJobBase>,
+    private readonly normalizerRegistry: PixWebhookNormalizerRegistry,
   ) {}
+
+  private getProvider(request: Request) {
+    return parseFinancialProvider(String(request.params?.provider || ''));
+  }
+
+  private getHeaders(request: Request): Record<string, unknown> {
+    return isRecord(request.headers) ? request.headers : {};
+  }
 
   @Post('cash-in/received')
   @HttpCode(HttpStatus.ACCEPTED)
@@ -40,10 +54,15 @@ export class PixWebhookController {
     @Body() events: WebhookPayload<PixCashInReceivedData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeCashInReceived(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CASH_IN_RECEIVED',
-      events,
+      normalized,
       request,
     );
   }
@@ -56,10 +75,15 @@ export class PixWebhookController {
     @Body() events: WebhookPayload<PixCashInClearedData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeCashInCleared(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CASH_IN_CLEARED',
-      events,
+      normalized,
       request,
     );
   }
@@ -72,10 +96,15 @@ export class PixWebhookController {
     @Body() events: WebhookPayload<PixCashOutData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeCashOutCompleted(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CASH_OUT_COMPLETED',
-      events,
+      normalized,
       request,
     );
   }
@@ -88,10 +117,15 @@ export class PixWebhookController {
     @Body() events: WebhookPayload<PixCashOutData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeCashOutCanceled(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CASH_OUT_CANCELED',
-      events,
+      normalized,
       request,
     );
   }
@@ -104,10 +138,15 @@ export class PixWebhookController {
     @Body() events: WebhookPayload<PixCashOutData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeCashOutUndone(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CASH_OUT_UNDONE',
-      events,
+      normalized,
       request,
     );
   }
@@ -120,10 +159,15 @@ export class PixWebhookController {
     @Body() events: WebhookPayload<PixRefundData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeRefundReceived(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'REFUND_RECEIVED',
-      events,
+      normalized,
       request,
     );
   }
@@ -136,10 +180,15 @@ export class PixWebhookController {
     @Body() events: WebhookPayload<PixRefundData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeRefundCleared(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'REFUND_CLEARED',
-      events,
+      normalized,
       request,
     );
   }
@@ -152,10 +201,15 @@ export class PixWebhookController {
     @Body() events: WebhookPayload<PixQrCodeCreatedData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeQrCodeCreated(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'QRCODE_CREATED',
-      events,
+      normalized,
       request,
     );
   }

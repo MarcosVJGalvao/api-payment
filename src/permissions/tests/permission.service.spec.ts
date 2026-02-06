@@ -111,10 +111,10 @@ describe('PermissionService', () => {
         PermissionName.USER_DELETE,
       ];
 
-      jest
-        .spyOn(service, 'hasPermission')
-        .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(false);
+      jest.spyOn(service, 'getUserPermissions').mockResolvedValueOnce([]);
+      (permissionHelper.checkPermissionHierarchy as jest.Mock)
+        .mockReturnValueOnce(true)
+        .mockReturnValueOnce(false);
 
       const result = await service.hasAnyPermission(userId, permissions);
 
@@ -128,10 +128,10 @@ describe('PermissionService', () => {
         PermissionName.USER_UPDATE,
       ];
 
-      jest
-        .spyOn(service, 'hasPermission')
-        .mockResolvedValueOnce(false)
-        .mockResolvedValueOnce(false);
+      jest.spyOn(service, 'getUserPermissions').mockResolvedValueOnce([]);
+      (permissionHelper.checkPermissionHierarchy as jest.Mock)
+        .mockReturnValueOnce(false)
+        .mockReturnValueOnce(false);
 
       const result = await service.hasAnyPermission(userId, permissions);
 
@@ -147,10 +147,10 @@ describe('PermissionService', () => {
         PermissionName.USER_UPDATE,
       ];
 
-      jest
-        .spyOn(service, 'hasPermission')
-        .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(true);
+      jest.spyOn(service, 'getUserPermissions').mockResolvedValueOnce([]);
+      (permissionHelper.checkPermissionHierarchy as jest.Mock)
+        .mockReturnValueOnce(true)
+        .mockReturnValueOnce(true);
 
       const result = await service.hasAllPermissions(userId, permissions);
 
@@ -164,10 +164,10 @@ describe('PermissionService', () => {
         PermissionName.USER_DELETE,
       ];
 
-      jest
-        .spyOn(service, 'hasPermission')
-        .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(false);
+      jest.spyOn(service, 'getUserPermissions').mockResolvedValueOnce([]);
+      (permissionHelper.checkPermissionHierarchy as jest.Mock)
+        .mockReturnValueOnce(true)
+        .mockReturnValueOnce(false);
 
       const result = await service.hasAllPermissions(userId, permissions);
 

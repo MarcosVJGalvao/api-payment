@@ -24,6 +24,8 @@ import { ErrorCode } from '../../errors/enums/error-code.enum';
 
 export type { BuildQueryOptions } from '../interfaces/query-options.interface';
 
+const DEFAULT_MAX_LIMIT = 100;
+
 @Injectable()
 export class BaseQueryService {
   buildQueryOptions<T extends ObjectLiteral>(
@@ -33,13 +35,14 @@ export class BaseQueryService {
   ): QueryOptions {
     const relations: string[] = options.relations ?? [];
     const defaultSortBy = options.defaultSortBy ?? 'createdAt';
-    const defaultSortOrder = options.defaultSortOrder ?? SortOrder.ASC;
+    const defaultSortOrder = options.defaultSortOrder ?? SortOrder.DESC;
     const searchFields: string[] = options.searchFields ?? [];
     const sortableFields: string[] = options.sortableFields ?? [];
     const dateField = options.dateField ?? 'createdAt';
     const filterConfigs: FilterConfig[] = options.filters ?? [];
     const select: string[] = options.select ?? [];
     const withDeleted = options.withDeleted ?? false;
+    const maxLimit = options.maxLimit ?? DEFAULT_MAX_LIMIT;
 
     validateSelectRelations(select, relations);
 
@@ -94,7 +97,8 @@ export class BaseQueryService {
 
     return {
       page: dto.page,
-      limit: dto.limit,
+      limit:
+        dto.limit && dto.limit > 0 ? Math.min(dto.limit, maxLimit) : dto.limit,
       search: dto.search,
       searchFields:
         finalSearchFields.length > 0 ? finalSearchFields : undefined,

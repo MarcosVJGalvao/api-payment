@@ -16,59 +16,20 @@ import {
 } from './interfaces/transaction-webhook.interface';
 import { getDetailedStatuses } from './helpers/transaction-status.helper';
 import { FilterConfig } from '@/common/base-query/interfaces/query-options.interface';
-import { hydrateTransactionRelations } from './helpers/transaction-hydration.helper';
-import { IHydrationRepositories } from './interfaces/hydration-repositories.interface';
-import { PixCashIn } from '@/pix/entities/pix-cash-in.entity';
-import { PixTransfer } from '@/pix/entities/pix-transfer.entity';
-import { PixRefund } from '@/pix/entities/pix-refund.entity';
-import { PixQrCode } from '@/pix/entities/pix-qr-code.entity';
-import { Boleto } from '@/boleto/entities/boleto.entity';
-import { BillPayment } from '@/bill-payment/entities/bill-payment.entity';
-import { TedTransfer } from '@/ted/entities/ted-transfer.entity';
-import { TedCashIn } from '@/ted/entities/ted-cash-in.entity';
-import { TedRefund } from '@/ted/entities/ted-refund.entity';
+import { TransactionHydratorService } from './services/transaction-hydrator.service';
+import { applyDefined } from '@/common/helpers/apply-defined.helper';
 
 @Injectable()
 export class TransactionService {
   private readonly logger = new Logger(TransactionService.name);
-  private readonly hydrationRepositories: IHydrationRepositories;
 
   constructor(
     private readonly transactionRepository: TransactionRepository,
     @InjectRepository(Transaction)
     private readonly typeOrmRepository: Repository<Transaction>,
     private readonly baseQueryService: BaseQueryService,
-    @InjectRepository(PixCashIn)
-    private readonly pixCashInRepository: Repository<PixCashIn>,
-    @InjectRepository(PixTransfer)
-    private readonly pixTransferRepository: Repository<PixTransfer>,
-    @InjectRepository(PixRefund)
-    private readonly pixRefundRepository: Repository<PixRefund>,
-    @InjectRepository(PixQrCode)
-    private readonly pixQrCodeRepository: Repository<PixQrCode>,
-    @InjectRepository(Boleto)
-    private readonly boletoRepository: Repository<Boleto>,
-    @InjectRepository(BillPayment)
-    private readonly billPaymentRepository: Repository<BillPayment>,
-    @InjectRepository(TedTransfer)
-    private readonly tedTransferRepository: Repository<TedTransfer>,
-    @InjectRepository(TedCashIn)
-    private readonly tedCashInRepository: Repository<TedCashIn>,
-    @InjectRepository(TedRefund)
-    private readonly tedRefundRepository: Repository<TedRefund>,
-  ) {
-    this.hydrationRepositories = {
-      pixCashIn: this.pixCashInRepository,
-      pixTransfer: this.pixTransferRepository,
-      pixRefund: this.pixRefundRepository,
-      pixQrCode: this.pixQrCodeRepository,
-      boleto: this.boletoRepository,
-      billPayment: this.billPaymentRepository,
-      tedTransfer: this.tedTransferRepository,
-      tedCashIn: this.tedCashInRepository,
-      tedRefund: this.tedRefundRepository,
-    };
-  }
+    private readonly transactionHydrator: TransactionHydratorService,
+  ) {}
 
   async createFromWebhook(
     data: CreateTransactionFromWebhook,
@@ -139,12 +100,13 @@ export class TransactionService {
 
     transaction.status = data.status;
 
-    if (data.correlationId) transaction.correlationId = data.correlationId;
-    if (data.idempotencyKey) transaction.idempotencyKey = data.idempotencyKey;
-    if (data.entityId) transaction.entityId = data.entityId;
-    if (data.description) transaction.description = data.description;
-    if (data.providerTimestamp)
-      transaction.providerTimestamp = data.providerTimestamp;
+    applyDefined(transaction, data, [
+      'correlationId',
+      'idempotencyKey',
+      'entityId',
+      'description',
+      'providerTimestamp',
+    ]);
 
     const updated = await this.transactionRepository.save(transaction);
 
@@ -228,10 +190,7 @@ export class TransactionService {
     );
 
     if (result.data.length > 0) {
-      await hydrateTransactionRelations(
-        result.data,
-        this.hydrationRepositories,
-      );
+      await this.transactionHydrator.hydrate(result.data);
     }
 
     return result;
@@ -254,10 +213,7 @@ export class TransactionService {
       );
     }
 
-    await hydrateTransactionRelations(
-      [transaction],
-      this.hydrationRepositories,
-    );
+    await this.transactionHydrator.hydrate([transaction]);
 
     return transaction;
   }

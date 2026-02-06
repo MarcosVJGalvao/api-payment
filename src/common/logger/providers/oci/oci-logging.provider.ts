@@ -4,6 +4,11 @@ import * as loggingingestion from 'oci-loggingingestion';
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
+import { isRecord } from '@/common/errors/helpers/type.helpers';
+
+function hasRegionId(value: object): value is { regionId?: string } {
+  return 'regionId' in value;
+}
 import { CloudLoggingProvider, CloudLogEntry } from '../cloud-logging.provider';
 import type { OCILoggingConfig, ModuleLogMapping } from './oci-logging.config';
 import { AppLoggerService } from '../../logger.service';
@@ -48,9 +53,8 @@ export class OCILoggingProvider implements CloudLoggingProvider {
         let authenticationDetailsProvider: common.AuthenticationDetailsProvider;
 
         try {
-          const builder = new (
-            common as any
-          ).InstancePrincipalsAuthenticationDetailsProviderBuilder();
+          const builder =
+            new common.InstancePrincipalsAuthenticationDetailsProviderBuilder();
           authenticationDetailsProvider = await builder.build();
         } catch {
           let configFile = this.config.configFile || '~/.oci/config';
@@ -75,8 +79,9 @@ export class OCILoggingProvider implements CloudLoggingProvider {
         this.loggingClient = new loggingingestion.LoggingClient({
           authenticationDetailsProvider,
         });
-        (this.loggingClient as { regionId?: string }).regionId =
-          this.config.region;
+        if (hasRegionId(this.loggingClient)) {
+          this.loggingClient.regionId = this.config.region;
+        }
       } catch (error) {
         this.initializationError =
           error instanceof Error ? error : new Error(String(error));
@@ -103,14 +108,14 @@ export class OCILoggingProvider implements CloudLoggingProvider {
     throw new Error('OCI_LOGGING_LOG_ID is required');
   }
 
-  private removeOracleFields(obj: any): any {
+  private removeOracleFields(obj: unknown): unknown {
     if (obj === null || obj === undefined) return obj;
     if (Array.isArray(obj))
       return obj.map((item) => this.removeOracleFields(item));
-    if (typeof obj !== 'object') return obj;
+    if (!isRecord(obj)) return obj;
 
     const cleaned: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    for (const [key, value] of Object.entries(obj)) {
       const lowerKey = key.toLowerCase();
       if (
         lowerKey.includes('oracle') ||
@@ -119,7 +124,7 @@ export class OCILoggingProvider implements CloudLoggingProvider {
         lowerKey === 'logid' ||
         lowerKey === 'tenantid' ||
         lowerKey === 'ingestedtime' ||
-        (lowerKey === 'context' && (obj as Record<string, any>).module)
+        (lowerKey === 'context' && obj['module'] !== undefined)
       ) {
         continue;
       }
@@ -129,16 +134,14 @@ export class OCILoggingProvider implements CloudLoggingProvider {
     return cleaned;
   }
 
-  private normalizeDates(obj: any): any {
+  private normalizeDates(obj: unknown): unknown {
     if (obj === null || obj === undefined) return obj;
     if (Array.isArray(obj)) return obj.map((item) => this.normalizeDates(item));
     if (obj instanceof Date) return obj.toISOString();
 
-    if (typeof obj === 'object') {
+    if (isRecord(obj)) {
       const normalized: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(
-        obj as Record<string, unknown>,
-      )) {
+      for (const [key, value] of Object.entries(obj)) {
         if (value instanceof Date) {
           normalized[key] = value.toISOString();
         } else if (
@@ -179,6 +182,9 @@ export class OCILoggingProvider implements CloudLoggingProvider {
 
       const cleanedEntry = this.removeOracleFields(logEntry);
       const normalizedEntry = this.normalizeDates(cleanedEntry);
+      const normalizedEntryRecord = isRecord(normalizedEntry)
+        ? normalizedEntry
+        : { message: normalizedEntry };
 
       const isoTimestamp =
         typeof logTimestamp === 'string'
@@ -188,7 +194,7 @@ export class OCILoggingProvider implements CloudLoggingProvider {
           : parseISO(logTimestamp).toISOString();
 
       const logData = {
-        ...normalizedEntry,
+        ...normalizedEntryRecord,
         module: moduleName,
         timestamp: isoTimestamp,
       };

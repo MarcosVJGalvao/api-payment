@@ -1,6 +1,7 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { getDatabaseConfig } from './helpers/database-config.helper';
+import { createTypeOrmOptions } from './helpers/typeorm-options.helper';
 
 export const typeOrmConfig = (
   configService: ConfigService,
@@ -16,33 +17,22 @@ export const typeOrmConfig = (
   );
   const idleTimeout = configService.get<number>('DB_IDLE_TIMEOUT', 10000);
 
-  return {
-    type: 'mysql',
-    host,
-    port,
-    username,
-    password,
-    database,
-    entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-    autoLoadEntities: true,
-    migrations: [__dirname + '/migrations/*.ts'],
-    migrationsRun: true,
-    synchronize: configService.get<string>('TYPEORM_SYNCHRONIZE') === 'true',
-    ...(sslMode === 'REQUIRED' && {
-      ssl: {
-        rejectUnauthorized: false,
-      },
-    }),
-    extra: {
-      charset: 'utf8mb4_unicode_ci',
-      multipleStatements: true,
-      timezone: configService.get<string>('TIME_ZONE'),
-      dateStrings: ['DATE'],
+  const baseOptions = createTypeOrmOptions(
+    { host, port, username, password, database },
+    {
+      sslMode,
+      migrationsRun: true,
+      synchronize: configService.get<string>('TYPEORM_SYNCHRONIZE') === 'true',
       connectionLimit,
-      waitForConnections: true,
       idleTimeout,
-      enableKeepAlive: true,
-      keepAliveInitialDelay: 10000,
+      timeZone: configService.get<string>('TIME_ZONE'),
     },
+  );
+
+  return {
+    ...baseOptions,
+    // Required so entities registered via `TypeOrmModule.forFeature(...)` are
+    // automatically added to the default DataSource.
+    autoLoadEntities: true,
   };
 };

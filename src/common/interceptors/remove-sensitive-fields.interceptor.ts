@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { isRecord } from '@/common/errors/helpers/type.helpers';
 
 @Injectable()
 export class RemoveSensitiveFieldsInterceptor implements NestInterceptor {
@@ -115,9 +116,9 @@ export class RemoveSensitiveFieldsInterceptor implements NestInterceptor {
       return sanitizedSet;
     }
 
-    if (typeof data === 'object') {
+    if (isRecord(data)) {
       this.visitedObjects.add(data);
-      const dataObj = data as Record<string, unknown>;
+      const dataObj = data;
 
       if (
         'data' in dataObj &&

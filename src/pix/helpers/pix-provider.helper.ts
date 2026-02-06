@@ -1,9 +1,7 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
-import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
-import { ErrorCode } from '@/common/errors/enums/error-code.enum';
-import { HiperbancoPixHelper } from './hiperbanco/hiperbanco-pix.helper';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
+import { PixProviderRegistry } from '@/financial-providers/registry/pix-provider.registry';
 import {
   PixGetKeysResponse,
   PixRegisterKeyResponse,
@@ -21,23 +19,14 @@ import { TransferPayload } from '../interfaces/transfer-payload.interface';
 
 @Injectable()
 export class PixProviderHelper {
-  constructor(private readonly hiperbancoHelper: HiperbancoPixHelper) {}
+  constructor(private readonly registry: PixProviderRegistry) {}
 
   async getPixKeys(
     provider: FinancialProvider,
     accountNumber: string,
     session: ProviderSession,
   ): Promise<PixGetKeysResponse> {
-    switch (provider) {
-      case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.getPixKeys(accountNumber, session);
-      default:
-        throw new CustomHttpException(
-          `Provider ${String(provider)} is not supported for PIX`,
-          HttpStatus.BAD_REQUEST,
-          ErrorCode.INVALID_INPUT,
-        );
-    }
+    return this.registry.get(provider).getPixKeys(accountNumber, session);
   }
 
   async registerPixKey(
@@ -47,21 +36,9 @@ export class PixProviderHelper {
     accountNumber: string,
     session: ProviderSession,
   ): Promise<PixRegisterKeyResponse> {
-    switch (provider) {
-      case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.registerPixKey(
-          dto,
-          accountBranch,
-          accountNumber,
-          session,
-        );
-      default:
-        throw new CustomHttpException(
-          `Provider ${String(provider)} is not supported for PIX`,
-          HttpStatus.BAD_REQUEST,
-          ErrorCode.INVALID_INPUT,
-        );
-    }
+    return this.registry
+      .get(provider)
+      .registerPixKey(dto, accountBranch, accountNumber, session);
   }
 
   async deletePixKey(
@@ -69,16 +46,7 @@ export class PixProviderHelper {
     addressKey: string,
     session: ProviderSession,
   ): Promise<void> {
-    switch (provider) {
-      case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.deletePixKey(addressKey, session);
-      default:
-        throw new CustomHttpException(
-          `Provider ${String(provider)} is not supported for PIX`,
-          HttpStatus.BAD_REQUEST,
-          ErrorCode.INVALID_INPUT,
-        );
-    }
+    return this.registry.get(provider).deletePixKey(addressKey, session);
   }
 
   async generateTotpCode(
@@ -86,16 +54,7 @@ export class PixProviderHelper {
     dto: GenerateTotpDto,
     session: ProviderSession,
   ): Promise<void> {
-    switch (provider) {
-      case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.generateTotpCode(dto, session);
-      default:
-        throw new CustomHttpException(
-          `Provider ${String(provider)} is not supported for PIX`,
-          HttpStatus.BAD_REQUEST,
-          ErrorCode.INVALID_INPUT,
-        );
-    }
+    return this.registry.get(provider).generateTotpCode(dto, session);
   }
 
   async validatePixKey(
@@ -103,16 +62,7 @@ export class PixProviderHelper {
     addressingKey: string,
     session: ProviderSession,
   ): Promise<PixValidateKeyResponse> {
-    switch (provider) {
-      case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.validatePixKey(addressingKey, session);
-      default:
-        throw new CustomHttpException(
-          `Provider ${String(provider)} is not supported for PIX`,
-          HttpStatus.BAD_REQUEST,
-          ErrorCode.INVALID_INPUT,
-        );
-    }
+    return this.registry.get(provider).validatePixKey(addressingKey, session);
   }
 
   async transfer(
@@ -121,16 +71,9 @@ export class PixProviderHelper {
     session: ProviderSession,
     idempotencyKey?: string,
   ): Promise<PixTransferResponse> {
-    switch (provider) {
-      case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.transfer(payload, session, idempotencyKey);
-      default:
-        throw new CustomHttpException(
-          `Provider ${String(provider)} is not supported for PIX`,
-          HttpStatus.BAD_REQUEST,
-          ErrorCode.INVALID_INPUT,
-        );
-    }
+    return this.registry
+      .get(provider)
+      .transfer(payload, session, idempotencyKey);
   }
 
   async getTransferStatus(
@@ -139,20 +82,9 @@ export class PixProviderHelper {
     authenticationCode: string,
     session: ProviderSession,
   ): Promise<PixTransferStatusResponse> {
-    switch (provider) {
-      case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.getTransfer(
-          accountNumber,
-          authenticationCode,
-          session,
-        );
-      default:
-        throw new CustomHttpException(
-          `Provider ${String(provider)} is not supported for PIX`,
-          HttpStatus.BAD_REQUEST,
-          ErrorCode.INVALID_INPUT,
-        );
-    }
+    return this.registry
+      .get(provider)
+      .getTransferStatus(accountNumber, authenticationCode, session);
   }
 
   async generateStaticQrCode(
@@ -160,16 +92,7 @@ export class PixProviderHelper {
     dto: GenerateStaticQrCodeDto,
     session: ProviderSession,
   ): Promise<PixQrCodeGenerateResponse> {
-    switch (provider) {
-      case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.generateStaticQrCode(dto, session);
-      default:
-        throw new CustomHttpException(
-          `Provider ${String(provider)} is not supported for PIX QR Code`,
-          HttpStatus.BAD_REQUEST,
-          ErrorCode.INVALID_INPUT,
-        );
-    }
+    return this.registry.get(provider).generateStaticQrCode(dto, session);
   }
 
   async generateDynamicQrCode(
@@ -177,16 +100,7 @@ export class PixProviderHelper {
     dto: GenerateDynamicQrCodeDto,
     session: ProviderSession,
   ): Promise<PixQrCodeGenerateResponse> {
-    switch (provider) {
-      case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.generateDynamicQrCode(dto, session);
-      default:
-        throw new CustomHttpException(
-          `Provider ${String(provider)} is not supported for PIX QR Code`,
-          HttpStatus.BAD_REQUEST,
-          ErrorCode.INVALID_INPUT,
-        );
-    }
+    return this.registry.get(provider).generateDynamicQrCode(dto, session);
   }
 
   async decodeQrCode(
@@ -194,15 +108,6 @@ export class PixProviderHelper {
     code: string,
     session: ProviderSession,
   ): Promise<PixQrCodeDecodeResponse> {
-    switch (provider) {
-      case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.decodeQrCode(code, session);
-      default:
-        throw new CustomHttpException(
-          `Provider ${String(provider)} is not supported for PIX QR Code`,
-          HttpStatus.BAD_REQUEST,
-          ErrorCode.INVALID_INPUT,
-        );
-    }
+    return this.registry.get(provider).decodeQrCode(code, session);
   }
 }

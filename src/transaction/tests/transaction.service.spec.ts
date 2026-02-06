@@ -16,6 +16,7 @@ describe('TransactionService', () => {
   let repositoryMock: any;
   let typeOrmRepositoryMock: any;
   let baseQueryServiceMock: any;
+  let transactionHydratorMock: any;
 
   beforeEach(async () => {
     const factory = await createTransactionServiceTestFactory();
@@ -23,6 +24,7 @@ describe('TransactionService', () => {
     repositoryMock = factory.transactionRepositoryMock;
     typeOrmRepositoryMock = factory.typeOrmRepositoryMock;
     baseQueryServiceMock = factory.baseQueryServiceMock;
+    transactionHydratorMock = factory.transactionHydratorMock;
   });
 
   afterEach(() => {
@@ -164,27 +166,7 @@ describe('TransactionService', () => {
               ignore: true,
             },
           ],
-          relations: [
-            'pixCashIn',
-            'pixCashIn.sender',
-            'pixCashIn.recipient',
-            'pixTransfer',
-            'pixTransfer.sender',
-            'pixTransfer.recipient',
-            'pixRefund',
-            'boleto',
-            'boleto.payer',
-            'billPayment',
-            'billPayment.recipient',
-            'pixQrCode',
-            'tedTransfer',
-            'tedTransfer.sender',
-            'tedTransfer.recipient',
-            'tedCashIn',
-            'tedCashIn.sender',
-            'tedCashIn.recipient',
-            'tedRefund',
-          ],
+          relations: [],
         }),
       );
       expect(baseQueryServiceMock.findAll).toHaveBeenCalledWith(
@@ -237,28 +219,10 @@ describe('TransactionService', () => {
 
       expect(typeOrmRepositoryMock.findOne).toHaveBeenCalledWith({
         where: { id, accountId, clientId },
-        relations: [
-          'pixCashIn',
-          'pixCashIn.sender',
-          'pixCashIn.recipient',
-          'pixTransfer',
-          'pixTransfer.sender',
-          'pixTransfer.recipient',
-          'pixRefund',
-          'boleto',
-          'boleto.payer',
-          'billPayment',
-          'billPayment.recipient',
-          'pixQrCode',
-          'tedTransfer',
-          'tedTransfer.sender',
-          'tedTransfer.recipient',
-          'tedCashIn',
-          'tedCashIn.sender',
-          'tedCashIn.recipient',
-          'tedRefund',
-        ],
       });
+      expect(transactionHydratorMock.hydrate).toHaveBeenCalledWith([
+        transaction,
+      ]);
       expect(result).toEqual(transaction);
     });
 

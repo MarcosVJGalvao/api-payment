@@ -266,7 +266,13 @@ export class RefactorPaymentEntities1768400000000 implements MigrationInterface 
 
   private async addForeignKeyColumns(queryRunner: QueryRunner) {
     // Array of (Table, Column, RefTable, RefColumn, FKName)
-    const configurations = [
+    const configurations: Array<{
+      table: string;
+      column: string;
+      refTable: string;
+      fkName: string;
+      collation?: string;
+    }> = [
       {
         table: 'pix_transfer',
         column: 'sender_id',
@@ -337,7 +343,7 @@ export class RefactorPaymentEntities1768400000000 implements MigrationInterface 
             type: 'varchar',
             length: '36',
             isNullable: true,
-            collation: (config as any).collation,
+            collation: config.collation,
           }),
         );
       }

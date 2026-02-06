@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { AppLoggerService } from '@/common/logger/logger.service';
 import { Boleto } from '../entities/boleto.entity';
 import { BoletoStatus } from '../enums/boleto-status.enum';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { BoletoProviderHelper } from './boleto-provider.helper';
 import { BoletoGetDataResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';

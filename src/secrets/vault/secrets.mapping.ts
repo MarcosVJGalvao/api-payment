@@ -7,7 +7,7 @@
  *   Outras variáveis (DB_DATABASE, PORT, NODE_ENV, etc.) continuam vindo do .env
  * - Quando SECRETS_SOURCE=ENV: todas as variáveis (incluindo essas) devem estar no .env
  */
-export const SECRETS_MAPPING = [
+export const SECRETS_MAPPING: readonly string[] = [
   'DB_PASSWORD',
   'DB_USERNAME',
   'DB_HOST',
@@ -19,4 +19,4 @@ export const SECRETS_MAPPING = [
   'R2_ACCESS_KEY_ID',
   'R2_ACCOUNT_ID',
   'WEBHOOK_ENCRYPTION_KEY',
-] as const;
+];

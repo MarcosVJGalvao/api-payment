@@ -17,8 +17,9 @@ import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { BaseQueryService } from '@/common/base-query/service/base-query.service';
 import { PaginationResult } from '@/common/base-query/interfaces/pagination-result.interface';
 import { ITedTransferRequest } from './interfaces/ted-transfer-request.interface';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { mapTedTransferStatusToTransactionStatus } from '@/common/helpers/status-mapper.helper';
+import { BaseQueryDto } from '@/common/base-query/dto/base-query.dto';
 
 @Injectable()
 export class TedService {
@@ -43,13 +44,14 @@ export class TedService {
     accountId: string,
   ): Promise<PaginationResult<TedTransfer>> {
     // Add accountId filter to query
-    const queryWithAccount = { ...queryDto, accountId };
+    const queryWithAccount: BaseQueryDto & { accountId: string } = {
+      ...queryDto,
+      accountId,
+    };
 
     const queryOptions = this.baseQueryService.buildQueryOptions(
       this.tedTransferRepository,
-      queryWithAccount as Parameters<
-        typeof this.baseQueryService.buildQueryOptions
-      >[1],
+      queryWithAccount,
       {
         relations: ['sender', 'recipient'],
         defaultSortBy: 'createdAt',

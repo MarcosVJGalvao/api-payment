@@ -7,7 +7,7 @@ import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exce
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { BaseQueryService } from '@/common/base-query/service/base-query.service';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { BillPayment } from './entities/bill-payment.entity';
 import { BillPaymentStatus } from './enums/bill-payment-status.enum';
 import { ConfirmBillPaymentDto } from './dto/confirm-bill-payment.dto';

@@ -8,6 +8,38 @@ import { BaseQueryDto } from '../dto/base-query.dto';
 import { QUERY_FILTER_METADATA_KEY } from '../decorators/query-filter.decorator';
 import { SEARCHABLE_FIELDS_METADATA_KEY } from '../decorators/searchable-field.decorator';
 import { getEntityAlias } from './alias.helpers';
+import { isRecord } from '@/common/errors/helpers/type.helpers';
+
+const filterOperatorValues = Object.values(FilterOperator).filter(
+  (value): value is FilterOperator => typeof value === 'string',
+);
+
+function isFilterOperator(value: string): value is FilterOperator {
+  return filterOperatorValues.some((operator) => operator === value);
+}
+
+function isPrimitiveFilterValue(value: unknown): boolean {
+  return (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    value instanceof Date ||
+    value === null
+  );
+}
+
+function isFilterValue(value: unknown): value is FilterCondition['value'] {
+  if (isPrimitiveFilterValue(value)) {
+    return true;
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 2) {
+      return true;
+    }
+    return value.every((item) => isPrimitiveFilterValue(item));
+  }
+  return false;
+}
 
 /**
  * Extrai campos pesquisáveis do DTO usando metadata do decorator @SearchableField
@@ -81,9 +113,11 @@ export function buildFiltersFromDto<T extends ObjectLiteral>(
     (rel) => rel.propertyName,
   );
 
+  const dtoRecord = isRecord(dto) ? dto : {};
+
   // Processa cada campo do DTO
-  Object.keys(dto).forEach((key) => {
-    const value = (dto as Record<string, any>)[key];
+  Object.keys(dtoRecord).forEach((key) => {
+    const value = dtoRecord[key];
 
     // Ignora campos vazios ou da base
     if (excludeFields.includes(key) || value === undefined || value === null) {
@@ -129,6 +163,10 @@ export function buildFiltersFromDto<T extends ObjectLiteral>(
       }
     }
 
+    if (!isFilterValue(value)) {
+      return;
+    }
+
     filters.push({
       field: actualField,
       operator,
@@ -138,8 +176,30 @@ export function buildFiltersFromDto<T extends ObjectLiteral>(
   });
 
   // Adiciona filtros manuais se existirem no DTO
-  if ('filters' in dto && dto.filters && Array.isArray(dto.filters)) {
-    filters.push(...(dto.filters as FilterCondition[]));
+  const rawFilters = dtoRecord['filters'];
+  if (Array.isArray(rawFilters)) {
+    rawFilters.forEach((item) => {
+      if (!isRecord(item)) {
+        return;
+      }
+      const field = item['field'];
+      const operator = item['operator'];
+      const value = item['value'];
+      if (typeof field !== 'string' || typeof operator !== 'string') {
+        return;
+      }
+      if (!isFilterValue(value)) {
+        return;
+      }
+
+      const relationValue = item['relation'];
+      filters.push({
+        field,
+        operator: isFilterOperator(operator) ? operator : FilterOperator.EQUALS,
+        value,
+        relation: typeof relationValue === 'string' ? relationValue : undefined,
+      });
+    });
   }
 
   return filters;

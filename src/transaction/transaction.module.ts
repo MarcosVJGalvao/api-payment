@@ -15,6 +15,7 @@ import { BillPayment } from '@/bill-payment/entities/bill-payment.entity';
 import { TedTransfer } from '@/ted/entities/ted-transfer.entity';
 import { TedCashIn } from '@/ted/entities/ted-cash-in.entity';
 import { TedRefund } from '@/ted/entities/ted-refund.entity';
+import { TransactionHydratorService } from './services/transaction-hydrator.service';
 
 @Module({
   imports: [
@@ -34,7 +35,11 @@ import { TedRefund } from '@/ted/entities/ted-refund.entity';
     FinancialProvidersModule,
   ],
   controllers: [TransactionController],
-  providers: [TransactionRepository, TransactionService],
+  providers: [
+    TransactionRepository,
+    TransactionHydratorService,
+    TransactionService,
+  ],
   exports: [TransactionService, TransactionRepository],
 })
 export class TransactionModule {}

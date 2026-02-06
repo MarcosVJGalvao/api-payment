@@ -14,8 +14,13 @@ import type { Queue } from 'bull';
 import { WebhookPublicKeyGuard } from '../guards/webhook-public-key.guard';
 import { WebhookPayload } from '../interfaces/webhook-base.interface';
 import { BillPaymentWebhookData } from '../interfaces/bill-payment-webhook.interface';
-import type { BillPaymentWebhookJob } from '../processors/bill-payment-webhook.processor';
-import { enqueueWebhookEvent } from '../helpers/enqueue-webhook.helper';
+import {
+  enqueueWebhookEvent,
+  WebhookJobBase,
+} from '../helpers/enqueue-webhook.helper';
+import { BillPaymentWebhookNormalizerRegistry } from '../registries/bill-payment-webhook-normalizer.registry';
+import { parseFinancialProvider } from '../helpers/provider-slug.helper';
+import { isRecord } from '@/common/errors/helpers/type.helpers';
 
 @ApiTags('Webhooks - BillPayment')
 @Controller('webhook/:provider/payment')
@@ -23,8 +28,17 @@ import { enqueueWebhookEvent } from '../helpers/enqueue-webhook.helper';
 export class BillPaymentWebhookController {
   constructor(
     @InjectQueue('webhook-bill-payment')
-    private readonly webhookQueue: Queue<BillPaymentWebhookJob>,
+    private readonly webhookQueue: Queue<WebhookJobBase>,
+    private readonly normalizerRegistry: BillPaymentWebhookNormalizerRegistry,
   ) {}
+
+  private getProvider(request: Request) {
+    return parseFinancialProvider(String(request.params?.provider || ''));
+  }
+
+  private getHeaders(request: Request): Record<string, unknown> {
+    return isRecord(request.headers) ? request.headers : {};
+  }
 
   @Post('received')
   @HttpCode(HttpStatus.ACCEPTED)
@@ -34,10 +48,15 @@ export class BillPaymentWebhookController {
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeReceived(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'RECEIVED',
-      events,
+      normalized,
       request,
     );
   }
@@ -50,10 +69,15 @@ export class BillPaymentWebhookController {
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeCreated(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CREATED',
-      events,
+      normalized,
       request,
     );
   }
@@ -66,10 +90,15 @@ export class BillPaymentWebhookController {
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeConfirmed(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CONFIRMED',
-      events,
+      normalized,
       request,
     );
   }
@@ -82,10 +111,15 @@ export class BillPaymentWebhookController {
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeFailed(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'FAILED',
-      events,
+      normalized,
       request,
     );
   }
@@ -98,10 +132,15 @@ export class BillPaymentWebhookController {
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeCancelled(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CANCELLED',
-      events,
+      normalized,
       request,
     );
   }
@@ -114,10 +153,15 @@ export class BillPaymentWebhookController {
     @Body() events: WebhookPayload<BillPaymentWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeRefused(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'REFUSED',
-      events,
+      normalized,
       request,
     );
   }

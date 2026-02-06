@@ -1,10 +1,13 @@
-import { RequestWithAccount } from '@/financial-providers/guards/account.guard';
-import { ProviderSession } from './provider-session.interface';
+import type { RequestWithAccount } from '@/financial-providers/guards/account.guard';
+import type { RequestWithSession as CanonicalRequestWithSession } from '../../contracts/request-with-session.interface';
 
 /**
  * Interface para Request que inclui ProviderSession.
  * Usada em rotas que precisam de autenticação de provider.
  */
-export interface RequestWithSession extends RequestWithAccount {
-  providerSession: ProviderSession;
-}
+/**
+ * Compatibilidade.
+ * @deprecated Use `@/financial-providers/contracts/request-with-session.interface`.
+ */
+export type RequestWithSession = CanonicalRequestWithSession &
+  RequestWithAccount;

@@ -1,11 +1,9 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreateBoletoDto } from '../dto/create-boleto.dto';
 import { Boleto } from '../entities/boleto.entity';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
-import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
-import { ErrorCode } from '@/common/errors/enums/error-code.enum';
-import { HiperbancoBoletoHelper } from './hiperbanco/hiperbanco-boleto.helper';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
+import { BoletoProviderRegistry } from '@/financial-providers/registry/boleto-provider.registry';
 import {
   BoletoEmissionResponse,
   BoletoGetDataResponse,
@@ -17,7 +15,7 @@ import {
  */
 @Injectable()
 export class BoletoProviderHelper {
-  constructor(private readonly hiperbancoHelper: HiperbancoBoletoHelper) {}
+  constructor(private readonly registry: BoletoProviderRegistry) {}
 
   /**
    * Emite um boleto no provedor especificado.
@@ -31,16 +29,7 @@ export class BoletoProviderHelper {
     dto: CreateBoletoDto,
     session: ProviderSession,
   ): Promise<BoletoEmissionResponse> {
-    switch (provider) {
-      case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.emitBoleto(dto, session);
-      default:
-        throw new CustomHttpException(
-          `Provider ${String(provider)} is not supported`,
-          HttpStatus.BAD_REQUEST,
-          ErrorCode.INVALID_INPUT,
-        );
-    }
+    return this.registry.get(provider).emitBoleto(dto, session);
   }
 
   /**
@@ -59,21 +48,9 @@ export class BoletoProviderHelper {
     accountNumber: string,
     session: ProviderSession,
   ): Promise<BoletoGetDataResponse> {
-    switch (provider) {
-      case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.getBoletoData(
-          authenticationCode,
-          accountBranch,
-          accountNumber,
-          session,
-        );
-      default:
-        throw new CustomHttpException(
-          `Provider ${String(provider)} is not supported`,
-          HttpStatus.BAD_REQUEST,
-          ErrorCode.INVALID_INPUT,
-        );
-    }
+    return this.registry
+      .get(provider)
+      .getBoletoData(authenticationCode, accountBranch, accountNumber, session);
   }
 
   /**
@@ -88,22 +65,6 @@ export class BoletoProviderHelper {
     boleto: Boleto,
     session: ProviderSession,
   ): Promise<BoletoCancelResponse> {
-    switch (provider) {
-      case FinancialProvider.HIPERBANCO:
-        return this.hiperbancoHelper.cancelBoleto(
-          {
-            authenticationCode: boleto.authenticationCode!,
-            accountNumber: boleto.accountNumber,
-            accountBranch: boleto.accountBranch,
-          },
-          session,
-        );
-      default:
-        throw new CustomHttpException(
-          `Provider ${String(provider)} is not supported`,
-          HttpStatus.BAD_REQUEST,
-          ErrorCode.INVALID_INPUT,
-        );
-    }
+    return this.registry.get(provider).cancelBoleto(boleto, session);
   }
 }

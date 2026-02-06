@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { HiperbancoHttpService } from '@/financial-providers/hiperbanco/hiperbanco-http.service';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import {
   PixGetKeysResponse,
   PixRegisterKeyResponse,
@@ -18,6 +18,7 @@ import { GenerateDynamicQrCodeDto } from '@/pix/dto/generate-dynamic-qr-code.dto
 import { PixKeyType } from '@/pix/enums/pix-key-type.enum';
 import { PixAccountType } from '@/pix/enums/pix-account-type.enum';
 import { TransferPayload } from '@/pix/interfaces/transfer-payload.interface';
+import { getProviderAccessToken } from '@/financial-providers/hiperbanco/helpers/session-token.helper';
 
 @Injectable()
 export class HiperbancoPixHelper {
@@ -31,7 +32,7 @@ export class HiperbancoPixHelper {
 
     return this.hiperbancoHttp.get<PixGetKeysResponse>(path, {
       headers: {
-        Authorization: `Bearer ${session.hiperbancoToken}`,
+        Authorization: `Bearer ${getProviderAccessToken(session)}`,
       },
     });
   }
@@ -53,7 +54,7 @@ export class HiperbancoPixHelper {
       payload,
       {
         headers: {
-          Authorization: `Bearer ${session.hiperbancoToken}`,
+          Authorization: `Bearer ${getProviderAccessToken(session)}`,
         },
       },
     );
@@ -67,7 +68,7 @@ export class HiperbancoPixHelper {
 
     await this.hiperbancoHttp.delete(path, {
       headers: {
-        Authorization: `Bearer ${session.hiperbancoToken}`,
+        Authorization: `Bearer ${getProviderAccessToken(session)}`,
       },
     });
   }
@@ -92,7 +93,7 @@ export class HiperbancoPixHelper {
       payload,
       {
         headers: {
-          Authorization: `Bearer ${session.hiperbancoToken}`,
+          Authorization: `Bearer ${getProviderAccessToken(session)}`,
         },
       },
     );
@@ -106,7 +107,7 @@ export class HiperbancoPixHelper {
 
     return this.hiperbancoHttp.get<PixValidateKeyResponse>(path, {
       headers: {
-        Authorization: `Bearer ${session.hiperbancoToken}`,
+        Authorization: `Bearer ${getProviderAccessToken(session)}`,
       },
     });
   }
@@ -117,7 +118,7 @@ export class HiperbancoPixHelper {
     idempotencyKey?: string,
   ): Promise<PixTransferResponse> {
     const headers: Record<string, string> = {
-      Authorization: `Bearer ${session.hiperbancoToken}`,
+      Authorization: `Bearer ${getProviderAccessToken(session)}`,
       version: 'cutting-edge',
     };
 
@@ -141,7 +142,7 @@ export class HiperbancoPixHelper {
 
     return this.hiperbancoHttp.get<PixTransferStatusResponse>(path, {
       headers: {
-        Authorization: `Bearer ${session.hiperbancoToken}`,
+        Authorization: `Bearer ${getProviderAccessToken(session)}`,
       },
     });
   }
@@ -170,7 +171,7 @@ export class HiperbancoPixHelper {
       payload,
       {
         headers: {
-          Authorization: `Bearer ${session.hiperbancoToken}`,
+          Authorization: `Bearer ${getProviderAccessToken(session)}`,
         },
       },
     );
@@ -209,7 +210,7 @@ export class HiperbancoPixHelper {
       payload,
       {
         headers: {
-          Authorization: `Bearer ${session.hiperbancoToken}`,
+          Authorization: `Bearer ${getProviderAccessToken(session)}`,
         },
       },
     );
@@ -226,7 +227,7 @@ export class HiperbancoPixHelper {
       payload,
       {
         headers: {
-          Authorization: `Bearer ${session.hiperbancoToken}`,
+          Authorization: `Bearer ${getProviderAccessToken(session)}`,
         },
       },
     );

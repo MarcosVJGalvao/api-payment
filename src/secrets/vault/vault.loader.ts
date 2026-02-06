@@ -65,9 +65,8 @@ export async function loadSecretsFromVault(): Promise<void> {
     let usingInstancePrincipal = false;
 
     try {
-      const builder = new (
-        common as any
-      ).InstancePrincipalsAuthenticationDetailsProviderBuilder();
+      const builder =
+        new common.InstancePrincipalsAuthenticationDetailsProviderBuilder();
       authenticationDetailsProvider = await builder.build();
       usingInstancePrincipal = true;
     } catch (error) {
@@ -98,15 +97,9 @@ export async function loadSecretsFromVault(): Promise<void> {
         const kmsVaultClient = new keymanagement.KmsVaultClient({
           authenticationDetailsProvider,
         });
-        (kmsVaultClient as { regionId?: string }).regionId = vaultConfig.region;
+        kmsVaultClient.regionId = vaultConfig.region;
 
-        const vaultDetails = await (
-          kmsVaultClient as unknown as {
-            getVault(request: {
-              vaultId: string;
-            }): Promise<{ vault?: { compartmentId?: string } }>;
-          }
-        ).getVault({
+        const vaultDetails = await kmsVaultClient.getVault({
           vaultId: vaultConfig.vaultOcid,
         });
 
@@ -121,9 +114,9 @@ export async function loadSecretsFromVault(): Promise<void> {
     const secretsClient = new secretsmanagement.SecretsClient({
       authenticationDetailsProvider,
     });
-    (secretsClient as { regionId?: string }).regionId = vaultConfig.region;
+    secretsClient.regionId = vaultConfig.region;
 
-    const secretNames = SECRETS_MAPPING as readonly string[];
+    const secretNames = SECRETS_MAPPING;
     const secrets: Record<string, string> = {};
 
     const batchSize = 10;
@@ -142,19 +135,7 @@ export async function loadSecretsFromVault(): Promise<void> {
             throw new Error(`Secret '${secretName}' returned empty response`);
           }
 
-          const secretBundle =
-            response.secretBundle ||
-            (response as unknown as {
-              secretBundleContent?: { content?: string };
-            });
-          const secretContent =
-            'secretBundleContent' in response
-              ? (
-                  response as unknown as {
-                    secretBundleContent?: { content?: string };
-                  }
-                ).secretBundleContent
-              : secretBundle?.secretBundleContent;
+          const secretContent = response.secretBundle?.secretBundleContent;
 
           if (!secretContent?.content) {
             throw new Error(`Secret '${secretName}' has no content`);

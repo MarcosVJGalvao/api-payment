@@ -10,10 +10,12 @@ import { BoletoWebhookData } from '../interfaces/boleto-webhook.interface';
 import { mapWebhookEventToTransactionStatus } from '../helpers/transaction-status-mapper.helper';
 import { canProcessWebhook } from '../helpers/webhook-state-machine.helper';
 import { WebhookEventLogService } from './webhook-event-log.service';
+import { toPayload } from '../helpers/payload.helper';
 import { WebhookEvent } from '../enums/webhook-event.enum';
 import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
 import { parseDate } from '@/common/helpers/date.helpers';
 import { AccountService } from '@/account/account.service';
+import { parseFinancialProvider } from '../helpers/provider-slug.helper';
 
 @Injectable()
 export class BoletoWebhookService {
@@ -30,8 +32,10 @@ export class BoletoWebhookService {
   async handleRegistered(
     events: WebhookPayload<BoletoWebhookData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
+    parseFinancialProvider(providerSlug);
     if (!validPublicKey) {
       this.logger.warn('BOLETO_WAS_REGISTERED: Invalid publicKey, skipping');
       return;
@@ -64,7 +68,7 @@ export class BoletoWebhookService {
         entityId: boleto.id,
         eventName: WebhookEvent.BOLETO_WAS_REGISTERED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
@@ -78,8 +82,10 @@ export class BoletoWebhookService {
   async handleCashInReceived(
     events: WebhookPayload<BoletoWebhookData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
+    parseFinancialProvider(providerSlug);
     if (!validPublicKey) {
       this.logger.warn(
         'BOLETO_CASH_IN_WAS_RECEIVED: Invalid publicKey, skipping',
@@ -148,7 +154,7 @@ export class BoletoWebhookService {
         entityId: boleto.id,
         eventName: WebhookEvent.BOLETO_CASH_IN_WAS_RECEIVED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
@@ -162,8 +168,10 @@ export class BoletoWebhookService {
   async handleCashInCleared(
     events: WebhookPayload<BoletoWebhookData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
+    parseFinancialProvider(providerSlug);
     if (!validPublicKey) {
       this.logger.warn(
         'BOLETO_CASH_IN_WAS_CLEARED: Invalid publicKey, skipping',
@@ -220,7 +228,7 @@ export class BoletoWebhookService {
         entityId: boleto.id,
         eventName: WebhookEvent.BOLETO_CASH_IN_WAS_CLEARED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
@@ -234,8 +242,10 @@ export class BoletoWebhookService {
   async handleCancelled(
     events: WebhookPayload<BoletoWebhookData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
+    parseFinancialProvider(providerSlug);
     if (!validPublicKey) {
       this.logger.warn('BOLETO_WAS_CANCELLED: Invalid publicKey, skipping');
       return;
@@ -291,7 +301,7 @@ export class BoletoWebhookService {
         entityId: boleto.id,
         eventName: WebhookEvent.BOLETO_WAS_CANCELLED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });

@@ -107,10 +107,10 @@ export class TransactionMapper {
       parentDto.description = source.description;
     }
 
-    const clean = { ...source } as Partial<TransactionSource> & {
+    const clean: Partial<TransactionSource> & {
       authenticationCode?: string;
       providerTimestamp?: Date;
-    };
+    } = { ...source };
 
     delete clean.amount;
     delete clean.currency;

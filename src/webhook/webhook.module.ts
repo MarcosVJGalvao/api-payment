@@ -19,6 +19,11 @@ import { PermissionsModule } from '../permissions/permissions.module';
 import { BackofficeUserModule } from '../backoffice-user/backoffice-user.module';
 import { InternalUserModule } from '../internal-user/internal-user.module';
 import { BaseQueryModule } from '../common/base-query/base-query.module';
+import {
+  WebhookProviderRegistry,
+  WEBHOOK_PROVIDERS,
+} from '@/financial-providers/registry/webhook-provider.registry';
+import { HiperbancoWebhookProvider } from '@/financial-providers/providers/hiperbanco/hiperbanco-webhook.provider';
 
 @Module({
   imports: [
@@ -45,6 +50,13 @@ import { BaseQueryModule } from '../common/base-query/base-query.module';
     WebhookProviderHelper,
     ProviderSessionHelper,
     HiperbancoWebhookHelper,
+    HiperbancoWebhookProvider,
+    {
+      provide: WEBHOOK_PROVIDERS,
+      useFactory: (hiperbanco: HiperbancoWebhookProvider) => [hiperbanco],
+      inject: [HiperbancoWebhookProvider],
+    },
+    WebhookProviderRegistry,
     WebhookProcessor,
   ],
   exports: [WebhookService],

@@ -2,34 +2,14 @@ import { Process, Processor, OnQueueFailed } from '@nestjs/bull';
 import type { Job } from 'bull';
 import { Logger } from '@nestjs/common';
 import { BillPaymentWebhookService } from '../services/bill-payment-webhook.service';
+import { toPayload } from '../helpers/payload.helper';
 import { WebhookEventLogService } from '../services/webhook-event-log.service';
-import { WebhookPayload } from '../interfaces/webhook-base.interface';
-import { BillPaymentWebhookData } from '../interfaces/bill-payment-webhook.interface';
 import { TransactionNotFoundRetryableException } from '@/common/errors/exceptions/transaction-not-found-retryable.exception';
 import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
 import { WebhookEvent } from '../enums/webhook-event.enum';
 import { parseDate } from '@/common/helpers/date.helpers';
-
-/**
- * Tipos de eventos de webhook de pagamento de contas.
- */
-export type BillPaymentWebhookEventType =
-  | 'RECEIVED'
-  | 'CREATED'
-  | 'CONFIRMED'
-  | 'FAILED'
-  | 'CANCELLED'
-  | 'REFUSED';
-
-/**
- * Estrutura do Job na fila de webhook de pagamento.
- */
-export interface BillPaymentWebhookJob {
-  eventType: BillPaymentWebhookEventType;
-  events: WebhookPayload<BillPaymentWebhookData>[];
-  clientId: string;
-  validPublicKey: boolean;
-}
+import { BillPaymentWebhookEventType } from '../enums/bill-payment-webhook-event-type.enum';
+import type { BillPaymentWebhookJob } from '../interfaces/bill-payment-webhook-job.interface';
 
 /**
  * Processor responsável por consumir jobs da fila 'webhook-bill-payment'.
@@ -46,7 +26,8 @@ export class BillPaymentWebhookProcessor {
 
   @Process()
   async handleJob(job: Job<BillPaymentWebhookJob>): Promise<void> {
-    const { eventType, events, clientId, validPublicKey } = job.data;
+    const { eventType, events, clientId, providerSlug, validPublicKey } =
+      job.data;
 
     this.logger.log(
       `Processing ${eventType} webhook job (ID: ${job.id}, Attempt: ${job.attemptsMade + 1})`,
@@ -54,45 +35,51 @@ export class BillPaymentWebhookProcessor {
 
     try {
       switch (eventType) {
-        case 'RECEIVED':
+        case BillPaymentWebhookEventType.RECEIVED:
           await this.billPaymentWebhookService.handleReceived(
             events,
             clientId,
+            providerSlug,
             validPublicKey,
           );
           break;
-        case 'CREATED':
+        case BillPaymentWebhookEventType.CREATED:
           await this.billPaymentWebhookService.handleCreated(
             events,
             clientId,
+            providerSlug,
             validPublicKey,
           );
           break;
-        case 'CONFIRMED':
+        case BillPaymentWebhookEventType.CONFIRMED:
           await this.billPaymentWebhookService.handleConfirmed(
             events,
             clientId,
+            providerSlug,
             validPublicKey,
           );
           break;
-        case 'FAILED':
+        case BillPaymentWebhookEventType.FAILED:
           await this.billPaymentWebhookService.handleFailed(
             events,
             clientId,
+            providerSlug,
             validPublicKey,
           );
           break;
-        case 'CANCELLED':
+        case BillPaymentWebhookEventType.CANCELLED:
           await this.billPaymentWebhookService.handleCancelled(
             events,
             clientId,
+            providerSlug,
             validPublicKey,
           );
           break;
-        case 'REFUSED':
+        case BillPaymentWebhookEventType.REFUSED:
           await this.billPaymentWebhookService.handleRefused(
             events,
             clientId,
+            providerSlug,
             validPublicKey,
           );
           break;
@@ -142,6 +129,14 @@ export class BillPaymentWebhookProcessor {
     // Log final failure to webhook_event_log
     if (isLastAttempt) {
       const { events, clientId, eventType } = job.data;
+      const eventNameMap: Record<BillPaymentWebhookEventType, WebhookEvent> = {
+        RECEIVED: WebhookEvent.BILL_PAYMENT_WAS_RECEIVED,
+        CREATED: WebhookEvent.BILL_PAYMENT_WAS_CREATED,
+        CONFIRMED: WebhookEvent.BILL_PAYMENT_WAS_CONFIRMED,
+        FAILED: WebhookEvent.BILL_PAYMENT_HAS_FAILED,
+        CANCELLED: WebhookEvent.BILL_PAYMENT_WAS_CANCELLED,
+        REFUSED: WebhookEvent.BILL_PAYMENT_WAS_REFUSED,
+      };
       for (const event of events) {
         const data = event.data;
         try {
@@ -149,10 +144,10 @@ export class BillPaymentWebhookProcessor {
             authenticationCode: data.authenticationCode,
             entityType: 'BILL_PAYMENT',
             entityId: undefined,
-            eventName: `BILL_PAYMENT_WAS_${eventType}` as WebhookEvent,
+            eventName: eventNameMap[eventType],
             wasProcessed: false,
             skipReason: `Failed after ${maxAttempts} attempts: ${error.message}`,
-            payload: event as unknown as Record<string, unknown>,
+            payload: toPayload(event),
             providerTimestamp: parseDate(event.timestamp),
             clientId,
           });

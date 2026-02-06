@@ -1,7 +1,16 @@
 import { Injectable, INestApplication } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder, OpenAPIObject } from '@nestjs/swagger';
 import { AppLoggerService } from '@/common/logger/logger.service';
-import { SwaggerValue } from './interfaces/swagger.interface';
+import { isRecord } from '@/common/errors/helpers/type.helpers';
+
+type PathItem = NonNullable<OpenAPIObject['paths'][string]>;
+type Operation = NonNullable<PathItem[keyof PathItem]>;
+
+const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete'];
+
+function isOperation(value: unknown): value is Operation {
+  return isRecord(value);
+}
 
 @Injectable()
 export class SwaggerService {
@@ -45,9 +54,11 @@ export class SwaggerService {
         .build();
 
       const rawDocument = SwaggerModule.createDocument(app, config);
-      this.document = this.normalizeSwagger(
-        rawDocument as unknown as SwaggerValue,
-      ) as unknown as OpenAPIObject;
+      const normalized = this.normalizeSwagger(rawDocument);
+      if (!this.isOpenApiObject(normalized)) {
+        throw new Error('Normalized swagger document is invalid');
+      }
+      this.document = normalized;
     } catch (error) {
       this.logger.error(
         'Failed to generate Swagger document',
@@ -88,14 +99,19 @@ export class SwaggerService {
     const filteredPaths: OpenAPIObject['paths'] = {};
 
     for (const [path, pathItem] of Object.entries(this.document.paths || {})) {
-      const filteredPathItem: typeof pathItem = {};
+      const filteredPathItem: OpenAPIObject['paths'][string] = {};
       let hasMatchingMethod = false;
 
-      for (const method of ['get', 'post', 'put', 'patch', 'delete'] as const) {
-        const operation = pathItem?.[method];
-        if (operation?.security) {
-          const hasAuthKey = operation.security.some(
-            (sec: Record<string, unknown>) => authKey in sec,
+      const pathItemRecord = isRecord(pathItem) ? pathItem : {};
+      for (const method of HTTP_METHODS) {
+        const operation = pathItemRecord[method];
+        if (!isOperation(operation)) {
+          continue;
+        }
+        const security = operation['security'];
+        if (Array.isArray(security)) {
+          const hasAuthKey = security.some(
+            (sec) => isRecord(sec) && authKey in sec,
           );
           if (hasAuthKey) {
             filteredPathItem[method] = operation;
@@ -139,22 +155,31 @@ export class SwaggerService {
         return;
       }
 
-      const record = obj as Record<string, unknown>;
-      if (record.$ref && typeof record.$ref === 'string') {
-        const match = record.$ref.match(/#\/components\/schemas\/(.+)/);
+      if (!isRecord(obj)) {
+        return;
+      }
+
+      const refValue = obj['$ref'];
+      if (typeof refValue === 'string') {
+        const match = refValue.match(/#\/components\/schemas\/(.+)/);
         if (match) {
           schemasToProcess.add(match[1]);
         }
       }
 
-      Object.values(record).forEach(collectRefs);
+      Object.values(obj).forEach(collectRefs);
     };
 
     collectRefs(paths);
 
     if (allSchemas) {
       while (schemasToProcess.size > 0) {
-        const schemaName = schemasToProcess.values().next().value as string;
+        const schemaCandidate = schemasToProcess.values().next().value;
+        if (typeof schemaCandidate !== 'string') {
+          schemasToProcess.clear();
+          break;
+        }
+        const schemaName = schemaCandidate;
         schemasToProcess.delete(schemaName);
 
         if (!usedSchemas.has(schemaName) && allSchemas[schemaName]) {
@@ -180,10 +205,8 @@ export class SwaggerService {
     if (!components) return components;
 
     const allSchemas = components.schemas || {};
-    const finalUsedSchemas = this.collectUsedSchemas(
-      {} as OpenAPIObject['paths'],
-      allSchemas,
-    );
+    const emptyPaths: OpenAPIObject['paths'] = {};
+    const finalUsedSchemas = this.collectUsedSchemas(emptyPaths, allSchemas);
 
     usedSchemas.forEach((s) => finalUsedSchemas.add(s));
 
@@ -209,17 +232,13 @@ export class SwaggerService {
     });
 
     const filteredSecuritySchemes = authKey
-      ? this.filterSecuritySchemes(
-          components.securitySchemes as Record<string, unknown>,
-          authKey,
-        )
+      ? this.filterSecuritySchemes(components.securitySchemes, authKey)
       : components.securitySchemes;
 
     return {
       ...components,
       schemas: filteredSchemas,
-      securitySchemes:
-        filteredSecuritySchemes as typeof components.securitySchemes,
+      securitySchemes: filteredSecuritySchemes ?? components.securitySchemes,
     };
   }
 
@@ -227,17 +246,16 @@ export class SwaggerService {
    * Filtra os securitySchemes para manter apenas o authKey especificado
    */
   private filterSecuritySchemes(
-    securitySchemes: Record<string, unknown> | undefined,
+    securitySchemes: NonNullable<
+      OpenAPIObject['components']
+    >['securitySchemes'],
     authKey: string,
-  ): Record<string, unknown> | undefined {
+  ): NonNullable<OpenAPIObject['components']>['securitySchemes'] {
     if (!securitySchemes) return securitySchemes;
 
-    const filtered: Record<string, unknown> = {};
-    if (securitySchemes[authKey]) {
-      filtered[authKey] = securitySchemes[authKey];
-    }
-
-    return filtered;
+    const scheme = securitySchemes[authKey];
+    if (!scheme) return {};
+    return { [authKey]: scheme };
   }
 
   /**
@@ -254,99 +272,106 @@ export class SwaggerService {
         return;
       }
 
-      const record = o as Record<string, unknown>;
-      if (record.$ref && typeof record.$ref === 'string') {
-        const match = record.$ref.match(/#\/components\/schemas\/(.+)/);
+      if (!isRecord(o)) {
+        return;
+      }
+
+      const refValue = o['$ref'];
+      if (typeof refValue === 'string') {
+        const match = refValue.match(/#\/components\/schemas\/(.+)/);
         if (match) refs.add(match[1]);
       }
 
-      Object.values(record).forEach(extract);
+      Object.values(o).forEach(extract);
     };
 
     extract(obj);
     return refs;
   }
 
+  private isOpenApiObject(value: unknown): value is OpenAPIObject {
+    if (!isRecord(value)) return false;
+    return typeof value.openapi === 'string' && typeof value.info === 'object';
+  }
+
   private normalizeSwagger(
-    obj: SwaggerValue,
+    obj: unknown,
     parentKey?: string,
     method?: string,
-  ): SwaggerValue {
+  ): unknown {
     if (Array.isArray(obj)) {
-      return obj.map((item) =>
-        this.normalizeSwagger(item as SwaggerValue, parentKey, method),
-      ) as SwaggerValue;
+      return obj.map((item) => this.normalizeSwagger(item, parentKey, method));
     }
 
-    if (obj && typeof obj === 'object' && obj !== null) {
+    if (isRecord(obj)) {
       const swaggerObj = obj;
       const keys = Object.keys(swaggerObj);
 
       // Objetos numerados → array
       if (keys.length && keys.every((k, i) => String(i) === k)) {
         return keys.map((k) =>
-          this.normalizeSwagger(
-            swaggerObj[k] as SwaggerValue,
-            parentKey,
-            method,
-          ),
-        ) as SwaggerValue;
+          this.normalizeSwagger(swaggerObj[k], parentKey, method),
+        );
       }
 
       // Enums → array
-      if (swaggerObj.enum && !Array.isArray(swaggerObj.enum)) {
-        swaggerObj.enum = Object.values(swaggerObj.enum);
+      const enumValue = swaggerObj['enum'];
+      if (enumValue && !Array.isArray(enumValue) && isRecord(enumValue)) {
+        swaggerObj['enum'] = Object.values(enumValue);
       }
 
       // Required → array apenas para schemas de objeto
+      const requiredValue = swaggerObj['required'];
       if (
-        swaggerObj.required &&
-        !Array.isArray(swaggerObj.required) &&
-        swaggerObj.type === 'object'
+        requiredValue &&
+        !Array.isArray(requiredValue) &&
+        swaggerObj['type'] === 'object' &&
+        isRecord(requiredValue)
       ) {
-        swaggerObj.required = Object.values(swaggerObj.required) as string[];
+        swaggerObj['required'] = Object.values(requiredValue);
       }
 
-      // Security → array sem duplicados
-      if (swaggerObj.security) {
-        if (!Array.isArray(swaggerObj.security)) {
-          // Se não for array, tenta corrigir ou deixa como está se for objeto válido
-          // Mas o type definition diz que é array de objetos geralmente.
-          // Vamos manter a lógica original de fallback se não for array, mas cuidado
-          swaggerObj.security = [];
+      const securityValue = swaggerObj['security'];
+      if (securityValue) {
+        if (!Array.isArray(securityValue)) {
+          swaggerObj['security'] = [];
         } else {
-          const securityArray = swaggerObj.security;
+          const securityArray = securityValue;
           // Apenas remover duplicados, sem sobrescrever chaves
           const normalized = securityArray.filter(
             (v, i, a) =>
               i ===
               a.findIndex((obj) => JSON.stringify(obj) === JSON.stringify(v)),
           );
-          swaggerObj.security = normalized;
+          swaggerObj['security'] = normalized;
         }
       }
 
       // Remover requestBody de GET e DELETE
-      if (parentKey === 'paths' && method && swaggerObj.requestBody) {
+      if (parentKey === 'paths' && method && swaggerObj['requestBody']) {
         const methodUpper = method.toUpperCase();
         if (['GET', 'DELETE'].includes(methodUpper)) {
-          delete swaggerObj.requestBody;
+          delete swaggerObj['requestBody'];
         }
       }
 
       // Corrigir responses: colocar schema dentro de content
       if (keys.includes('responses')) {
-        const responses = swaggerObj.responses;
-        if (responses) {
+        const responses = swaggerObj['responses'];
+        if (isRecord(responses)) {
           for (const status of Object.keys(responses)) {
             const response = responses[status];
-            if (response && response.schema && !response.content) {
-              response.content = {
+            if (
+              isRecord(response) &&
+              response['schema'] &&
+              !response['content']
+            ) {
+              response['content'] = {
                 'application/json': {
-                  schema: response.schema,
+                  schema: response['schema'],
                 },
               };
-              delete response.schema;
+              delete response['schema'];
             }
           }
         }
@@ -361,7 +386,7 @@ export class SwaggerService {
           : method;
         const nextParentKey = key === 'paths' ? key : parentKey;
         swaggerObj[key] = this.normalizeSwagger(
-          swaggerObj[key] as SwaggerValue,
+          swaggerObj[key],
           nextParentKey,
           nextMethod,
         );

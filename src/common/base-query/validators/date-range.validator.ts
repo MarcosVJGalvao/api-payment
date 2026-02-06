@@ -4,6 +4,7 @@ import {
   ValidationArguments,
 } from 'class-validator';
 import { parseDate } from '@/common/helpers/date.helpers';
+import { isRecord } from '@/common/errors/helpers/type.helpers';
 
 @ValidatorConstraint({ name: 'validateDateRange', async: false })
 export class ValidateDateRangeConstraint implements ValidatorConstraintInterface {
@@ -14,7 +15,7 @@ export class ValidateDateRangeConstraint implements ValidatorConstraintInterface
    * @returns true se endDate >= startDate, false caso contrário
    */
   validate(value: unknown, args: ValidationArguments): boolean {
-    const obj = args.object as Record<string, unknown>;
+    const obj = isRecord(args.object) ? args.object : {};
     const startDate = obj.startDate;
     const endDate = obj.endDate;
 

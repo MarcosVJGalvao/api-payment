@@ -18,6 +18,11 @@ import { AccountModule } from '../account/account.module';
 import { OnboardingModule } from '../onboarding/onboarding.module';
 import { ClientModule } from '../client/client.module';
 import { PermissionsModule } from '../permissions/permissions.module';
+import {
+  AuthProviderRegistry,
+  AUTH_PROVIDERS,
+} from './registry/auth-provider.registry';
+import { HiperbancoAuthProvider } from './providers/hiperbanco/hiperbanco-auth.provider';
 
 @Module({
   imports: [
@@ -39,6 +44,13 @@ import { PermissionsModule } from '../permissions/permissions.module';
     ProviderJwtService,
     HiperbancoHttpService,
     HiperbancoAuthService,
+    HiperbancoAuthProvider,
+    {
+      provide: AUTH_PROVIDERS,
+      useFactory: (hiperbanco: HiperbancoAuthProvider) => [hiperbanco],
+      inject: [HiperbancoAuthProvider],
+    },
+    AuthProviderRegistry,
     ProviderAuthGuard,
     AccountGuard,
   ],
@@ -48,6 +60,7 @@ import { PermissionsModule } from '../permissions/permissions.module';
     ProviderJwtService,
     HiperbancoHttpService,
     HiperbancoAuthService,
+    AuthProviderRegistry,
     ProviderAuthGuard,
     AccountGuard,
   ],

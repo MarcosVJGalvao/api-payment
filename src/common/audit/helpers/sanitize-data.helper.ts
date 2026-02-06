@@ -1,3 +1,5 @@
+import { isRecord } from '@/common/errors/helpers/type.helpers';
+
 export class SanitizeDataHelper {
   private static readonly maxDepth: number = 20;
   private static sensitiveFieldsCache: Set<string> | null = null;
@@ -53,8 +55,8 @@ export class SanitizeDataHelper {
       return sanitizedSet;
     }
 
-    if (typeof data === 'object') {
-      const dataObj = data as Record<string, unknown>;
+    if (isRecord(data)) {
+      const dataObj = data;
       const sanitized: Record<string, unknown> = {};
 
       const sensitiveFields = this.getSensitiveFields();
@@ -110,8 +112,8 @@ export class SanitizeDataHelper {
       );
     }
 
-    if (typeof data === 'object') {
-      const dataObj = data as Record<string, unknown>;
+    if (isRecord(data)) {
+      const dataObj = data;
       const sanitized: Record<string, unknown> = {};
       const fieldsToRemoveLower = fieldsToRemove.map((f) => f.toLowerCase());
 

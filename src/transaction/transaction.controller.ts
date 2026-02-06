@@ -6,7 +6,7 @@ import { TransactionMapper } from './helpers/transaction-mapper.helper';
 import { ApiListTransactions } from './docs/api-list-transactions.decorator';
 import { ApiGetTransaction } from './docs/api-get-transaction.decorator';
 import { ProviderAuthGuard } from '@/financial-providers/guards/provider-auth.guard';
-import type { RequestWithSession } from '@/financial-providers/hiperbanco/interfaces/request-with-session.interface';
+import type { RequestWithSession } from '@/financial-providers/contracts/request-with-session.interface';
 
 @ApiTags('Transações')
 @Controller('financial/transactions')

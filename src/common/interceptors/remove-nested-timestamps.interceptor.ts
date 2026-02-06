@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { isRecord } from '@/common/errors/helpers/type.helpers';
 
 @Injectable()
 export class RemoveNestedTimestampsInterceptor implements NestInterceptor {
@@ -117,9 +118,9 @@ export class RemoveNestedTimestampsInterceptor implements NestInterceptor {
       return processedSet;
     }
 
-    if (typeof data === 'object') {
+    if (isRecord(data)) {
       this.visitedObjects.add(data);
-      const dataObj = data as Record<string, unknown>;
+      const dataObj = data;
 
       if (
         'data' in dataObj &&

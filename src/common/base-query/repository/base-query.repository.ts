@@ -14,13 +14,17 @@ import { applyJoinsWithSelect } from '../helpers/join-with-select.helpers';
 import { applySearch } from '../helpers/search.helpers';
 import { applyFilter } from '../helpers/filter.helpers';
 
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 10;
+const MAX_LIMIT = 100;
+
 export async function executeQuery<T extends ObjectLiteral>(
   repository: Repository<T>,
   options: QueryOptions = {},
 ): Promise<PaginationResult<T>> {
   const {
-    page = 1,
-    limit = 10,
+    page = DEFAULT_PAGE,
+    limit = DEFAULT_LIMIT,
     search,
     searchFields,
     sortBy,
@@ -81,19 +85,23 @@ export async function executeQuery<T extends ObjectLiteral>(
     queryBuilder.orderBy(`${alias}.createdAt`, SortOrder.DESC);
   }
 
-  const skip = (page - 1) * limit;
-  queryBuilder.skip(skip).take(limit);
+  const safePage = page && page > 0 ? page : DEFAULT_PAGE;
+  const safeLimit =
+    limit && limit > 0 ? Math.min(limit, MAX_LIMIT) : DEFAULT_LIMIT;
+
+  const skip = (safePage - 1) * safeLimit;
+  queryBuilder.skip(skip).take(safeLimit);
 
   const [data, total] = await queryBuilder.getManyAndCount();
 
-  const totalPages = Math.ceil(total / limit);
+  const totalPages = Math.ceil(total / safeLimit);
   const meta: PaginationMeta = {
-    page,
-    limit,
+    page: safePage,
+    limit: safeLimit,
     total,
     totalPages,
-    hasNextPage: page < totalPages,
-    hasPreviousPage: page > 1,
+    hasNextPage: safePage < totalPages,
+    hasPreviousPage: safePage > 1,
   };
 
   return { data, meta };
