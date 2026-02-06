@@ -25,6 +25,7 @@ import {
   parseBoletoStatus,
 } from './helpers/boleto-validation.helper';
 import { FilterOperator } from '@/common/base-query/enums/filter-operator.enum';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 @Injectable()
 export class BoletoService {
@@ -104,7 +105,7 @@ export class BoletoService {
       };
     } catch (error) {
       this.logger.error(
-        `Failed to create boleto: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to create boleto: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
         this.context,
       );
@@ -264,7 +265,7 @@ export class BoletoService {
       return response;
     } catch (error) {
       this.logger.error(
-        `Failed to cancel boleto: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to cancel boleto: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
         this.context,
       );
@@ -333,7 +334,7 @@ export class BoletoService {
       return updatedBoleto;
     } catch (error) {
       this.logger.error(
-        `Failed to process webhook update: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to process webhook update: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
         this.context,
       );

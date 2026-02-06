@@ -7,6 +7,7 @@ import { TransactionService } from '@/transaction/transaction.service';
 import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { PixTransferStatus } from '../enums/pix-transfer-status.enum';
 import { mapPixTransferStatusToTransactionStatus } from '@/common/helpers/status-mapper.helper';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 @Injectable()
 export class PixSyncHelper {
@@ -79,7 +80,7 @@ export class PixSyncHelper {
       }
     } catch (error) {
       this.logger.warn(
-        `Failed to sync PixTransfer ${pixTransfer.id} with provider: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to sync PixTransfer ${pixTransfer.id} with provider: ${getErrorMessage(error)}`,
       );
     }
 

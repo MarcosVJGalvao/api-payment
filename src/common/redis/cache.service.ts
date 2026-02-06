@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { RedisService } from './redis.service';
 import { AppLoggerService } from '@/common/logger/logger.service';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 @Injectable()
 export class CacheService {
@@ -34,7 +35,7 @@ export class CacheService {
       return validator(parsed) ? parsed : null;
     } catch (error) {
       this.logger.warn(
-        `Failed to get/parse cache key ${key}: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to get/parse cache key ${key}: ${getErrorMessage(error)}`,
         'CacheService',
       );
       return null;
@@ -53,7 +54,7 @@ export class CacheService {
       await this.redisService.set(key, stringValue, ttlSeconds);
     } catch (error) {
       this.logger.warn(
-        `Failed to set cache key ${key}: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to set cache key ${key}: ${getErrorMessage(error)}`,
         'CacheService',
       );
     }
@@ -68,7 +69,7 @@ export class CacheService {
       await this.redisService.del(key);
     } catch (error) {
       this.logger.warn(
-        `Failed to delete cache key ${key}: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to delete cache key ${key}: ${getErrorMessage(error)}`,
         'CacheService',
       );
     }
@@ -88,7 +89,7 @@ export class CacheService {
       }
     } catch (error) {
       this.logger.warn(
-        `Failed to invalidate pattern ${pattern}: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to invalidate pattern ${pattern}: ${getErrorMessage(error)}`,
         'CacheService',
       );
     }

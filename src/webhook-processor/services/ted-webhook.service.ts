@@ -26,6 +26,16 @@ import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptio
 import { parseDate } from '@/common/helpers/date.helpers';
 import { parseFinancialProvider } from '../helpers/provider-slug.helper';
 
+function setIfPresent<T extends object, K extends keyof T>(
+  obj: T,
+  key: K,
+  value: T[K] | undefined,
+): void {
+  if (value === undefined || value === null) return;
+  if (typeof value === 'string' && value.trim() === '') return;
+  obj[key] = value;
+}
+
 @Injectable()
 export class TedWebhookService {
   private readonly logger = new Logger(TedWebhookService.name);
@@ -170,10 +180,84 @@ export class TedWebhookService {
       }
 
       tedTransfer.status = status;
+      setIfPresent(tedTransfer, 'correlationId', event.correlationId);
+      setIfPresent(tedTransfer, 'idempotencyKey', event.idempotencyKey);
+      setIfPresent(tedTransfer, 'channel', data.channel);
       tedTransfer.paymentDate = data.paymentDate
         ? parseDate(data.paymentDate)
         : undefined;
       tedTransfer.refusalReason = data.refusalReason;
+      tedTransfer.providerCreatedAt = data.createdAt
+        ? parseDate(data.createdAt)
+        : tedTransfer.providerCreatedAt;
+      if (data.sender && tedTransfer.sender) {
+        setIfPresent(tedTransfer.sender, 'documentNumber', data.sender.document);
+        setIfPresent(tedTransfer.sender, 'name', data.sender.name);
+        setIfPresent(
+          tedTransfer.sender,
+          'accountBranch',
+          data.sender.account?.branch,
+        );
+        setIfPresent(
+          tedTransfer.sender,
+          'accountNumber',
+          data.sender.account?.number,
+        );
+        setIfPresent(tedTransfer.sender, 'accountType', data.sender.account?.type);
+        setIfPresent(
+          tedTransfer.sender,
+          'bankIspb',
+          data.sender.account?.bank?.ispb,
+        );
+        setIfPresent(
+          tedTransfer.sender,
+          'bankName',
+          data.sender.account?.bank?.name,
+        );
+        setIfPresent(
+          tedTransfer.sender,
+          'bankCompe',
+          data.sender.account?.bank?.compe,
+        );
+      }
+      if (data.recipient && tedTransfer.recipient) {
+        setIfPresent(
+          tedTransfer.recipient,
+          'documentNumber',
+          data.recipient.document,
+        );
+        setIfPresent(tedTransfer.recipient, 'name', data.recipient.name);
+        setIfPresent(
+          tedTransfer.recipient,
+          'accountBranch',
+          data.recipient.account?.branch,
+        );
+        setIfPresent(
+          tedTransfer.recipient,
+          'accountNumber',
+          data.recipient.account?.number,
+        );
+        setIfPresent(
+          tedTransfer.recipient,
+          'accountType',
+          data.recipient.account?.type,
+        );
+        setIfPresent(
+          tedTransfer.recipient,
+          'bankIspb',
+          data.recipient.account?.bank?.ispb,
+        );
+        setIfPresent(
+          tedTransfer.recipient,
+          'bankName',
+          data.recipient.account?.bank?.name,
+        );
+        setIfPresent(
+          tedTransfer.recipient,
+          'bankCompe',
+          data.recipient.account?.bank?.compe,
+        );
+      }
 
       await this.tedTransferRepository.save(tedTransfer);
 

@@ -6,6 +6,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { VaultConfig } from './vault.config';
 import { SECRETS_MAPPING } from './secrets.mapping';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 interface SecretBundleResponse {
   secretBundle?: {
@@ -70,8 +71,7 @@ export async function loadSecretsFromVault(): Promise<void> {
       authenticationDetailsProvider = await builder.build();
       usingInstancePrincipal = true;
     } catch (error) {
-      const instancePrincipalError =
-        error instanceof Error ? error.message : String(error);
+      const instancePrincipalError = getErrorMessage(error);
 
       let configFile = vaultConfig.configFile || '~/.oci/config';
       const profile = vaultConfig.profile || 'DEFAULT';
@@ -147,8 +147,7 @@ export async function loadSecretsFromVault(): Promise<void> {
           ).toString('utf-8');
           return { name: secretName, value: decodedValue };
         } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
+          const errorMessage = getErrorMessage(error);
           throw new Error(
             `Failed to get secret '${secretName}': ${errorMessage}`,
           );
@@ -169,7 +168,7 @@ export async function loadSecretsFromVault(): Promise<void> {
       process.env[name] = value;
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = getErrorMessage(error);
 
     // Remover informações sensíveis do erro
     const sanitizedError = errorMessage

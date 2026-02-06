@@ -19,6 +19,7 @@ import { OnboardingService } from '@/onboarding/onboarding.service';
 import { Onboarding } from '@/onboarding/entities/onboarding.entity';
 import { ProviderLoginType } from '../enums/provider-login-type.enum';
 import { HiperbancoEndpoint } from './enums/hiperbanco-endpoint.enum';
+import { getErrorMessageAndStack } from '@/common/helpers/exception.helper';
 import {
   persistAccounts,
   getPrimaryAccount,
@@ -89,9 +90,8 @@ export class HiperbancoAuthService {
       this.logger.log('Shared Backoffice login successful', this.context);
       return response.access_token;
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      const errorStack = error instanceof Error ? error.stack : undefined;
+      const { message: errorMessage, stack: errorStack } =
+        getErrorMessageAndStack(error);
 
       this.logger.error(
         `Failed to login with shared backoffice credentials: ${errorMessage}`,

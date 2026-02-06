@@ -13,10 +13,11 @@ export interface TedCashOutData {
   refusalReason?: string;
   sender?: {
     document: string;
-    name: string;
+    name?: string;
     account: {
       branch: string;
       number: string;
+      type?: string;
       bank: {
         ispb: string;
         name: string;
@@ -26,10 +27,11 @@ export interface TedCashOutData {
   };
   recipient?: {
     document: string;
-    name: string;
+    name?: string;
     account: {
       branch: string;
       number: string;
+      type?: string;
       bank: {
         ispb: string;
         name: string;
@@ -51,10 +53,11 @@ export interface TedCashInData {
   channel?: string;
   sender?: {
     document: string;
-    name: string;
+    name?: string;
     account: {
       branch: string;
       number: string;
+      type?: string;
       bank: {
         ispb: string;
         name: string;
@@ -64,10 +67,11 @@ export interface TedCashInData {
   };
   recipient?: {
     document: string;
-    name: string;
+    name?: string;
     account: {
       branch: string;
       number: string;
+      type?: string;
     };
   };
   createdAt?: string;
@@ -86,11 +90,11 @@ export interface TedRefundData {
   errorReason?: string;
   sender?: {
     document: string;
-    name: string;
+    name?: string;
   };
   recipient?: {
     document: string;
-    name: string;
+    name?: string;
   };
   createdAt?: string;
 }

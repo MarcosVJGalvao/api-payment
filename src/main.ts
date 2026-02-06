@@ -23,6 +23,7 @@ import { SwaggerService } from './swagger/swagger.service';
 import { createStandaloneLogger } from './common/logger/standalone-logger';
 import { RequestLoggingInterceptor } from './common/logger/interceptors/request-logging.interceptor';
 import { loadSecretsFromVault } from './secrets/vault/vault.loader';
+import { getErrorMessage, getErrorTrace } from './common/helpers/exception.helper';
 
 async function bootstrap() {
   const standaloneLogger = createStandaloneLogger();
@@ -35,8 +36,8 @@ async function bootstrap() {
     await loadSecretsFromVault();
   } catch (error) {
     standaloneLogger.error(
-      `Failed to load secrets from Vault: ${error instanceof Error ? error.message : String(error)}`,
-      error instanceof Error ? error.stack : undefined,
+      `Failed to load secrets from Vault: ${getErrorMessage(error)}`,
+      getErrorTrace(error),
     );
     if (process.env.SECRETS_SOURCE?.toUpperCase() === 'VAULT') {
       process.exit(1);
@@ -150,8 +151,8 @@ async function bootstrap() {
     );
   } catch (error) {
     standaloneLogger.error(
-      `Failed to start application: ${error instanceof Error ? error.message : String(error)}`,
-      error instanceof Error ? error.stack : undefined,
+      `Failed to start application: ${getErrorMessage(error)}`,
+      getErrorTrace(error),
     );
     throw error;
   }

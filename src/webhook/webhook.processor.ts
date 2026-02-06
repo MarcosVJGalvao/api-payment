@@ -13,6 +13,7 @@ import type { ProviderSession } from '@/financial-providers/contracts/provider-s
 import { RegisterWebhookResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
+import { getErrorMessageAndStack } from '@/common/helpers/exception.helper';
 
 export interface RegisterWebhookJob {
   provider: FinancialProvider;
@@ -97,9 +98,8 @@ export class WebhookProcessor {
         this.context,
       );
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      const errorStack = error instanceof Error ? error.stack : undefined;
+      const { message: errorMessage, stack: errorStack } =
+        getErrorMessageAndStack(error);
 
       this.logger.error(
         `Failed to process webhook registration for client ${clientId}: ${errorMessage}`,

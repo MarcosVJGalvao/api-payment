@@ -21,6 +21,7 @@ import { executeQuery } from '../repository/base-query.repository';
 import { CustomHttpException } from '../../errors/exceptions/custom-http.exception';
 import { HttpStatus } from '@nestjs/common';
 import { ErrorCode } from '../../errors/enums/error-code.enum';
+import { getErrorMessage } from '../../helpers/exception.helper';
 
 export type { BuildQueryOptions } from '../interfaces/query-options.interface';
 
@@ -122,8 +123,7 @@ export class BaseQueryService {
         throw error;
       }
 
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
 
       if (
         errorMessage.includes('relation') ||

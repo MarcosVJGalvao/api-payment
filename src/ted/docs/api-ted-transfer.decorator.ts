@@ -79,6 +79,18 @@ export function ApiTedTransfer() {
             example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
             description: 'ID da transação no provedor',
           },
+          transferId: {
+            type: 'string',
+            format: 'uuid',
+            example: '0ffbf5a2-14fd-4aa5-ae7f-22bf7aa4ed39',
+            description: 'ID interno (tabela ted_transfer)',
+          },
+          internalTransactionId: {
+            type: 'string',
+            format: 'uuid',
+            example: '6050d630-15d7-4efd-aedc-6f3b48f3310c',
+            description: 'ID interno (tabela transaction)',
+          },
         },
       },
     }),

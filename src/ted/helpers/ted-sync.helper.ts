@@ -7,6 +7,7 @@ import { TransactionService } from '@/transaction/transaction.service';
 import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { TedTransferStatus } from '../enums/ted-transfer-status.enum';
 import { mapTedTransferStatusToTransactionStatus } from '@/common/helpers/status-mapper.helper';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 @Injectable()
 export class TedSyncHelper {
@@ -71,7 +72,7 @@ export class TedSyncHelper {
       }
     } catch (error) {
       this.logger.warn(
-        `Failed to sync TED ${tedTransfer.id} with provider: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to sync TED ${tedTransfer.id} with provider: ${getErrorMessage(error)}`,
       );
     }
 

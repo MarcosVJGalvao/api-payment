@@ -10,6 +10,7 @@ import { WebhookEvent } from '../enums/webhook-event.enum';
 import { parseDate } from '@/common/helpers/date.helpers';
 import { BoletoWebhookEventType } from '../enums/boleto-webhook-event-type.enum';
 import type { BoletoWebhookJob } from '../interfaces/boleto-webhook-job.interface';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 /**
  * Processor responsável por consumir jobs da fila 'webhook-boleto'.
@@ -90,7 +91,7 @@ export class BoletoWebhookProcessor {
       }
 
       this.logger.error(
-        `Error processing ${eventType} webhook: ${error instanceof Error ? error.message : String(error)}`,
+        `Error processing ${eventType} webhook: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
       );
       throw error;

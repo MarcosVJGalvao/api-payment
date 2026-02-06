@@ -7,6 +7,7 @@ import {
 import { getModuleName } from './helpers/module-context.helper';
 import { transformToISO, getCurrentDate } from '@/common/helpers/date.helpers';
 import { isRecord } from '@/common/errors/helpers/type.helpers';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 const BOOTSTRAP_SKIP_PATTERNS = [
   /bootstrap/i,
@@ -152,7 +153,7 @@ export class CloudLoggingTransport extends TransportStream {
 
     this.cloudLoggingProvider.sendLog(moduleName, logEntry).catch((error) => {
       process.stderr.write(
-        `[${this.cloudLoggingProvider.getProviderName()}] Failed to send log: ${error instanceof Error ? error.message : String(error)}\n`,
+        `[${this.cloudLoggingProvider.getProviderName()}] Failed to send log: ${getErrorMessage(error)}\n`,
       );
     });
 

@@ -1,4 +1,4 @@
-import { Injectable, Logger, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TedTransfer } from './entities/ted-transfer.entity';
@@ -11,6 +11,7 @@ import { TedProviderHelper } from './helpers/ted-provider.helper';
 import { TedSyncHelper } from './helpers/ted-sync.helper';
 import { PaymentSender } from '@/common/entities/payment-sender.entity';
 import { PaymentRecipient } from '@/common/entities/payment-recipient.entity';
+import { AppLoggerService } from '@/common/logger/logger.service';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
@@ -20,10 +21,14 @@ import { ITedTransferRequest } from './interfaces/ted-transfer-request.interface
 import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { mapTedTransferStatusToTransactionStatus } from '@/common/helpers/status-mapper.helper';
 import { BaseQueryDto } from '@/common/base-query/dto/base-query.dto';
+import {
+  getErrorMessage,
+  getErrorTrace,
+} from '@/common/helpers/exception.helper';
 
 @Injectable()
 export class TedService {
-  private readonly logger = new Logger(TedService.name);
+  private readonly context = TedService.name;
 
   constructor(
     @InjectRepository(TedTransfer)
@@ -34,6 +39,7 @@ export class TedService {
     private readonly providerHelper: TedProviderHelper,
     private readonly syncHelper: TedSyncHelper,
     private readonly baseQueryService: BaseQueryService,
+    private readonly logger: AppLoggerService,
   ) {}
 
   /**
@@ -108,9 +114,15 @@ export class TedService {
     clientId: string,
     accountId: string,
     session: ProviderSession,
-  ): Promise<{ authenticationCode: string; transactionId: string }> {
+  ): Promise<{
+    authenticationCode: string;
+    transactionId: string;
+    transferId: string;
+    internalTransactionId: string;
+  }> {
     this.logger.log(
       `Starting TED transfer for client ${clientId} on account ${accountId}`,
+      this.context,
     );
 
     // Buscar conta com onboarding para obter dados do sender
@@ -190,26 +202,30 @@ export class TedService {
         providerTransactionId: providerResponse.transactionId,
       });
 
-      await this.transactionService.createFromWebhook({
-        authenticationCode: providerResponse.authenticationCode,
-        type: TransactionType.TED_OUT,
-        status: mapTedTransferStatusToTransactionStatus(tedTransfer.status),
-        amount: createTedDto.amount,
-        description: createTedDto.description,
-        clientId: clientId,
-        accountId: accountId,
-        tedTransferId: tedTransfer.id,
-        idempotencyKey: createTedDto.idempotencyKey,
-      });
+      const internalTransaction =
+        await this.transactionService.createFromWebhook({
+          authenticationCode: providerResponse.authenticationCode,
+          type: TransactionType.TED_OUT,
+          status: mapTedTransferStatusToTransactionStatus(tedTransfer.status),
+          amount: createTedDto.amount,
+          description: createTedDto.description,
+          clientId: clientId,
+          accountId: accountId,
+          tedTransferId: tedTransfer.id,
+          idempotencyKey: createTedDto.idempotencyKey,
+        });
 
       return {
         authenticationCode: providerResponse.authenticationCode,
         transactionId: providerResponse.transactionId,
+        transferId: tedTransfer.id,
+        internalTransactionId: internalTransaction.id,
       };
     } catch (error) {
       this.logger.error(
-        `Failed to execute TED at provider: ${error instanceof Error ? error.message : String(error)}`,
-        error instanceof Error ? error.stack : undefined,
+        `Failed to execute TED at provider: ${getErrorMessage(error)}`,
+        getErrorTrace(error),
+        this.context,
       );
 
       tedTransfer.status = TedTransferStatus.FAILED;

@@ -17,6 +17,7 @@ import { BaseQueryModule } from '@/common/base-query/base-query.module';
 import { ClientModule } from '@/client/client.module';
 import { PermissionsModule } from '@/permissions/permissions.module';
 import { AccountModule } from '@/account/account.module';
+import { LoggerModule } from '@/common/logger/logger.module';
 import {
   TedProviderRegistry,
   TED_PROVIDERS,
@@ -36,6 +37,7 @@ import { HiperbancoTedProvider } from '@/financial-providers/providers/hiperbanc
     TransactionModule,
     FinancialProvidersModule,
     BaseQueryModule,
+    LoggerModule,
     ClientModule,
     PermissionsModule,
     AccountModule,

@@ -29,6 +29,8 @@ import { PixAccountType } from './enums/pix-account-type.enum';
 import { OnboardingTypeAccount } from '@/onboarding/enums/onboarding-type-account.enum';
 import { TransactionService } from '@/transaction/transaction.service';
 import { TransactionType } from '@/transaction/enums/transaction-type.enum';
+import type { Transaction } from '@/transaction/entities/transaction.entity';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 import { mapPixTransferStatusToTransactionStatus } from '@/common/helpers/status-mapper.helper';
 import {
   buildTransferPayload,
@@ -331,7 +333,7 @@ export class PixService {
       await this.pixTransferRepository.save(pixTransfer);
 
       if (pixTransfer.authenticationCode) {
-        await this.createTransactionForTransfer(
+        const internalTransaction = await this.createTransactionForTransfer(
           pixTransfer,
           clientId,
           accountId,
@@ -339,6 +341,9 @@ export class PixService {
             ? parseDate(response.requestDateTime)
             : undefined,
         );
+        if (internalTransaction) {
+          (pixTransfer as any).internalTransactionId = internalTransaction.id;
+        }
       }
 
       this.logger.log(
@@ -596,14 +601,14 @@ export class PixService {
     clientId: string,
     accountId: string,
     providerTimestamp?: Date,
-  ): Promise<void> {
+  ): Promise<Transaction | null> {
     try {
       const existingTx = await this.transactionService.findByAuthenticationCode(
         pixTransfer.authenticationCode!,
       );
 
       if (!existingTx) {
-        await this.transactionService.createFromWebhook({
+        const created = await this.transactionService.createFromWebhook({
           authenticationCode: pixTransfer.authenticationCode!,
           type: TransactionType.PIX_CASH_OUT,
           status: mapPixTransferStatusToTransactionStatus(pixTransfer.status),
@@ -620,13 +625,17 @@ export class PixService {
           `Transaction created for PIX transfer: ${pixTransfer.id}`,
           this.context,
         );
+        return created;
       }
+
+      return existingTx;
     } catch (error) {
       this.logger.error(
-        `Failed to create transaction for PIX transfer: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to create transaction for PIX transfer: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
         this.context,
       );
+      return null;
     }
   }
 }

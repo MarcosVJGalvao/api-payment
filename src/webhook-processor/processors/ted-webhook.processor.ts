@@ -11,6 +11,7 @@ import { parseDate } from '@/common/helpers/date.helpers';
 import { isRecord } from '@/common/errors/helpers/type.helpers';
 import { TedWebhookEventType } from '../enums/ted-webhook-event-type.enum';
 import type { TedWebhookJob } from '../interfaces/ted-webhook-job.type';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 function getAuthenticationCode(data: unknown): string | undefined {
   if (!isRecord(data)) {
@@ -138,7 +139,7 @@ export class TedWebhookProcessor {
       }
 
       this.logger.error(
-        `Error processing ${data.eventType} webhook: ${error instanceof Error ? error.message : String(error)}`,
+        `Error processing ${data.eventType} webhook: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
       );
       throw error;

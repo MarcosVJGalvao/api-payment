@@ -6,6 +6,7 @@ import {
   parseCloudLoggingProviderType,
 } from './providers/cloud-logging.factory';
 import { createLoggerFormat } from './helpers/logger-format.helper';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 dotenv.config({ debug: false });
 process.env.DOTENVX_QUIET = 'true';
@@ -78,7 +79,7 @@ export function createStandaloneLogger(): winston.Logger {
     } catch (error) {
       // Se falhar, fallback para console
       process.stdout.write(
-        `[Standalone Logger] Failed to initialize cloud logging, using console only: ${error instanceof Error ? error.message : String(error)}\n`,
+        `[Standalone Logger] Failed to initialize cloud logging, using console only: ${getErrorMessage(error)}\n`,
       );
       if (transports.length === 0) {
         transports.push(

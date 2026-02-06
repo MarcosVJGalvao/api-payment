@@ -11,6 +11,7 @@ import { parseDate } from '@/common/helpers/date.helpers';
 import { isRecord } from '@/common/errors/helpers/type.helpers';
 import { PixWebhookEventType } from '../enums/pix-webhook-event-type.enum';
 import type { PixWebhookJob } from '../interfaces/pix-webhook-job.type';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 function getAuthenticationCode(data: unknown): string | undefined {
   if (!isRecord(data)) {
@@ -134,7 +135,7 @@ export class PixWebhookProcessor {
       }
 
       this.logger.error(
-        `Error processing ${data.eventType} webhook: ${error instanceof Error ? error.message : String(error)}`,
+        `Error processing ${data.eventType} webhook: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
       );
       throw error;

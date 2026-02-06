@@ -14,6 +14,7 @@ import { TransactionType } from '@/transaction/enums/transaction-type.enum';
 import { mapBillPaymentStatusToTransactionStatus } from '@/common/helpers/status-mapper.helper';
 import { parseISO } from '@/common/helpers/date.helpers';
 import { PaymentRecipient } from '@/common/entities/payment-recipient.entity';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 /**
  * Helper responsável pela sincronização de dados de pagamento de contas com provedores externos.
@@ -228,7 +229,7 @@ export class BillPaymentSyncHelper {
       }
     } catch (error) {
       this.logger.error(
-        `Failed to sync bill payment from Hiperbanco: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to sync bill payment from Hiperbanco: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
         this.context,
       );
@@ -279,7 +280,7 @@ export class BillPaymentSyncHelper {
       }
     } catch (error) {
       this.logger.error(
-        `Failed to sync transaction for bill payment: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to sync transaction for bill payment: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
         this.context,
       );
