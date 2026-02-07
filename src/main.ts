@@ -14,8 +14,6 @@ import { AppModule } from './app.module';
 import { SwaggerModule } from '@nestjs/swagger';
 import { HttpExceptionFilter } from './common/errors/filters/http-exception.filter';
 import { ValidationPipe } from '@nestjs/common';
-import { RemoveSensitiveFieldsInterceptor } from './common/interceptors/remove-sensitive-fields.interceptor';
-import { RemoveNestedTimestampsInterceptor } from './common/interceptors/remove-nested-timestamps.interceptor';
 import { ConditionalClassSerializerInterceptor } from './common/interceptors/conditional-class-serializer.interceptor';
 import { AppLoggerService } from './common/logger/logger.service';
 import { ConfigService } from '@nestjs/config';
@@ -24,6 +22,7 @@ import { createStandaloneLogger } from './common/logger/standalone-logger';
 import { RequestLoggingInterceptor } from './common/logger/interceptors/request-logging.interceptor';
 import { loadSecretsFromVault } from './secrets/vault/vault.loader';
 import { getErrorMessage, getErrorTrace } from './common/helpers/exception.helper';
+import { ResponseSanitizationInterceptor } from './common/interceptors/response-sanitization.interceptor';
 
 async function bootstrap() {
   const standaloneLogger = createStandaloneLogger();
@@ -68,8 +67,7 @@ async function bootstrap() {
     app.useGlobalInterceptors(
       new RequestLoggingInterceptor(logger),
       new ConditionalClassSerializerInterceptor(app.get(Reflector)),
-      new RemoveNestedTimestampsInterceptor(),
-      new RemoveSensitiveFieldsInterceptor([
+      new ResponseSanitizationInterceptor([
         'password',
         'secret',
         'secretEncrypted',

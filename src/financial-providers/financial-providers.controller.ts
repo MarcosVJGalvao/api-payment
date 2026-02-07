@@ -10,7 +10,6 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { FinancialCredentialsService } from './services/financial-credentials.service';
-import { HiperbancoAuthService } from './hiperbanco/hiperbanco-auth.service';
 import { CreateProviderCredentialDto } from './dto/create-provider-credential.dto';
 import { BankLoginDto } from './dto/bank-login.dto';
 import { BackofficeLoginDto } from './dto/backoffice-login.dto';
@@ -35,7 +34,6 @@ import { AuthProviderRegistry } from './registry/auth-provider.registry';
 export class FinancialProvidersController {
   constructor(
     private readonly credentialsService: FinancialCredentialsService,
-    private readonly hiperbancoAuth: HiperbancoAuthService,
     private readonly authProviders: AuthProviderRegistry,
   ) {}
 
@@ -73,24 +71,8 @@ export class FinancialProvidersController {
     return this.credentialsService.getPublicCredentials(provider, loginType);
   }
 
-  @Post('hiperbanco/auth/backoffice')
-  @ApiBackofficeLogin()
-  async loginBackoffice(@Body() dto: BackofficeLoginDto) {
-    return this.hiperbancoAuth.loginBackoffice(dto);
-  }
-
-  @Post('hiperbanco/auth/bank')
-  @RequireClient()
-  @RequireClientPermission('auth:bank')
-  @ApiBearerAuth('provider-auth')
-  @ApiBankLogin()
-  async loginBank(@Body() dto: BankLoginDto, @Req() req: RequestWithClient) {
-    return this.hiperbancoAuth.loginApiBank(dto, req.clientId!);
-  }
-
   /**
    * Rotas padronizadas (plugáveis) por provedor.
-   * Mantém compatibilidade com as rotas hardcoded existentes durante a migração.
    */
   @Post(':provider/auth/backoffice')
   @ApiBackofficeLogin()

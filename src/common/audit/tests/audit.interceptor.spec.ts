@@ -127,4 +127,52 @@ describe('AuditInterceptor', () => {
 
     expect(auditQueue.add).not.toHaveBeenCalled();
   });
+
+  it('should use token identity when request user is missing', async () => {
+    const context = {
+      switchToHttp: jest.fn().mockReturnValue({
+        getRequest: jest.fn().mockReturnValue({
+          method: 'POST',
+          url: '/test',
+          body: {},
+          params: {},
+          query: {},
+          headers: {
+            authorization: 'Bearer token',
+          },
+        }),
+      }),
+      getType: jest.fn().mockReturnValue('http'),
+      getHandler: jest.fn(),
+      getClass: jest.fn(),
+    } as unknown as ExecutionContext;
+
+    const next = {
+      handle: jest.fn().mockReturnValue(of({ data: 'test' })),
+    } as unknown as CallHandler;
+
+    reflector.get.mockReturnValue({
+      action: AuditAction.USER_CREATED,
+      entityType: 'User',
+    });
+
+    jwtService.decode.mockReturnValue({
+      userId: 'token-user-id',
+      username: 'token-user',
+    });
+
+    await interceptor.intercept(context, next).toPromise();
+
+    expect(jwtService.decode).toHaveBeenCalledTimes(1);
+    expect(auditQueue.add).toHaveBeenCalledWith(
+      'log',
+      expect.objectContaining({
+        userId: 'token-user-id',
+        username: 'token-user',
+      }),
+      expect.objectContaining({
+        removeOnComplete: true,
+      }),
+    );
+  });
 });

@@ -50,11 +50,6 @@ function getStringField(
 export class AuditInterceptor implements NestInterceptor {
   private readonly logger = new Logger(AuditInterceptor.name);
 
-  private readonly entityTableMap: Record<string, string> = {
-    // Add mappings here as you create modules
-    // User: 'user',
-  };
-
   private readonly entityClassMap: Record<string, EntityTarget<ObjectLiteral>> =
     {
       Webhook: Webhook,
@@ -84,55 +79,10 @@ export class AuditInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    const userRecord = isRecord(request.user) ? request.user : undefined;
-    // Suporta tanto 'userId' (auth padrão) quanto 'sub' (backoffice JWT)
-    const directUserId = userRecord
-      ? getStringField(userRecord, 'userId')
-      : undefined;
-    const subUserId = userRecord
-      ? getStringField(userRecord, 'sub')
-      : undefined;
-    let userId = directUserId || subUserId;
-    const directUsername = userRecord
-      ? getStringField(userRecord, 'username')
-      : undefined;
-    const emailUsername = userRecord
-      ? getStringField(userRecord, 'email')
-      : undefined;
-    let username = directUsername || emailUsername;
-
-    // Se não encontrou userId no request.user, tenta extrair do providerSession (para autenticação de provider)
-    if (!userId && 'providerSession' in request && request.providerSession) {
-      const providerSession = request.providerSession;
-      if (isRecord(providerSession)) {
-        const sessionUserId = getStringField(providerSession, 'userId');
-        const sessionAccountId = getStringField(providerSession, 'accountId');
-        if (sessionUserId) {
-          userId = sessionUserId;
-        } else if (sessionAccountId) {
-          // Se não tiver userId, usa accountId como identificador alternativo
-          userId = sessionAccountId;
-        }
-      }
-    }
-
-    // Tenta extrair do token JWT (para tokens de usuários internos)
-    if (!userId) {
-      const tokenUserId = this.extractUserIdFromToken(request);
-      if (tokenUserId) {
-        userId = tokenUserId;
-        if (!username) {
-          const tokenUsername = this.extractUsernameFromToken(request);
-          if (tokenUsername) {
-            username = tokenUsername;
-          }
-        }
-      }
-    }
-
-    if (!username && request.body && request.body.username) {
-      username = request.body.username;
-    }
+    const tokenIdentity = this.extractTokenIdentity(request);
+    const resolvedIdentity = this.resolveRequestIdentity(request, tokenIdentity);
+    const userId = resolvedIdentity.userId;
+    const username = resolvedIdentity.username;
 
     const isPublicEndpoint =
       auditOptions.action === AuditAction.USER_LOGIN ||
@@ -160,25 +110,9 @@ export class AuditInterceptor implements NestInterceptor {
           )
         : Promise.resolve(undefined);
 
-    let newValues: Record<string, unknown> | undefined;
-    if (auditOptions.captureNewValues) {
-      const body = request.body;
-      if (body) {
-        const sanitizedBody = SanitizeDataHelper.sanitize(body);
-        let sanitizedRecord = isRecord(sanitizedBody) ? sanitizedBody : {};
-
-        if (auditOptions.ignoreFields && auditOptions.ignoreFields.length > 0) {
-          const removed = SanitizeDataHelper.removeFields(
-            sanitizedRecord,
-            auditOptions.ignoreFields,
-          );
-          sanitizedRecord = isRecord(removed) ? removed : {};
-        }
-
-        newValues =
-          Object.keys(sanitizedRecord).length > 0 ? sanitizedRecord : undefined;
-      }
-    }
+    const newValues = auditOptions.captureNewValues
+      ? this.extractNewValues(request.body, auditOptions.ignoreFields)
+      : undefined;
 
     const auditLogData: IAuditLogData = {
       action: auditOptions.action,
@@ -334,6 +268,105 @@ export class AuditInterceptor implements NestInterceptor {
     );
   }
 
+  private resolveRequestIdentity(
+    request: Request,
+    tokenIdentity?: { userId?: string; username?: string },
+  ): { userId?: string; username?: string } {
+    const userRecord = isRecord(request.user) ? request.user : undefined;
+    const directUserId = userRecord ? getStringField(userRecord, 'userId') : undefined;
+    const subUserId = userRecord ? getStringField(userRecord, 'sub') : undefined;
+    const directUsername = userRecord
+      ? getStringField(userRecord, 'username')
+      : undefined;
+    const emailUsername = userRecord ? getStringField(userRecord, 'email') : undefined;
+
+    let userId = directUserId || subUserId;
+    let username = directUsername || emailUsername;
+
+    if (!userId) {
+      userId = this.extractUserIdFromProviderSession(request);
+    }
+
+    if (!userId && tokenIdentity?.userId) {
+      userId = tokenIdentity.userId;
+    }
+
+    if (!username && tokenIdentity?.username) {
+      username = tokenIdentity.username;
+    }
+
+    if (!username && isRecord(request.body)) {
+      username = getStringField(request.body, 'username');
+    }
+
+    return { userId, username };
+  }
+
+  private extractUserIdFromProviderSession(request: Request): string | undefined {
+    if (!('providerSession' in request) || !request.providerSession) {
+      return undefined;
+    }
+
+    const providerSession = request.providerSession;
+    if (!isRecord(providerSession)) {
+      return undefined;
+    }
+
+    return (
+      getStringField(providerSession, 'userId') ||
+      getStringField(providerSession, 'accountId')
+    );
+  }
+
+  private extractTokenIdentity(
+    request: Request,
+  ): { userId?: string; username?: string } | undefined {
+    const authHeader = request.headers?.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return undefined;
+    }
+
+    try {
+      const token = authHeader.substring(7);
+      const decoded = this.jwtService.decode(String(token));
+      if (!isRecord(decoded)) {
+        return undefined;
+      }
+
+      const userId = getStringField(decoded, 'userId');
+      const username = getStringField(decoded, 'username');
+      if (!userId && !username) {
+        return undefined;
+      }
+
+      return { userId, username };
+    } catch {
+      return undefined;
+    }
+  }
+
+  private extractNewValues(
+    body: unknown,
+    ignoreFields?: string[],
+  ): Record<string, unknown> | undefined {
+    if (!body) {
+      return undefined;
+    }
+
+    const sanitizedBody = SanitizeDataHelper.sanitize(body);
+    let sanitizedRecord = isRecord(sanitizedBody) ? sanitizedBody : {};
+
+    if (ignoreFields && ignoreFields.length > 0) {
+      const removed = SanitizeDataHelper.removeFields(
+        sanitizedRecord,
+        ignoreFields,
+      );
+      sanitizedRecord = isRecord(removed) ? removed : {};
+    }
+
+    return Object.keys(sanitizedRecord).length > 0 ? sanitizedRecord : undefined;
+  }
+
   private extractEntityId(request: any, paramName: string): string | undefined {
     try {
       if (request.params && request.params[paramName]) {
@@ -398,52 +431,6 @@ export class AuditInterceptor implements NestInterceptor {
         `Failed to extract entityId from response: ${error.message}`,
         error.stack,
       );
-      return undefined;
-    }
-  }
-
-  private extractUserIdFromToken(request: any): string | undefined {
-    try {
-      const authHeader = request.headers?.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return undefined;
-      }
-
-      const token = authHeader.substring(7);
-
-      try {
-        const decoded = this.jwtService.decode(String(token));
-        if (decoded && decoded.userId) {
-          return decoded.userId;
-        }
-      } catch {
-        return undefined;
-      }
-      return undefined;
-    } catch {
-      return undefined;
-    }
-  }
-
-  private extractUsernameFromToken(request: any): string | undefined {
-    try {
-      const authHeader = request.headers?.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return undefined;
-      }
-
-      const token = authHeader.substring(7);
-
-      try {
-        const decoded = this.jwtService.decode(String(token));
-        if (decoded && decoded.username) {
-          return decoded.username;
-        }
-      } catch {
-        return undefined;
-      }
-      return undefined;
-    } catch {
       return undefined;
     }
   }
