@@ -159,6 +159,26 @@ export function setupApiDocumentation(
     },
   );
 
+  expressApp.get(
+    '/docs/manual/:slug',
+    (
+      _req: unknown,
+      res: { type: (t: string) => { send: (h: string) => void } },
+    ) => {
+      res.type('html').send(portalHtml);
+    },
+  );
+
+  expressApp.get(
+    '/docs/endpoint/:tag/:index',
+    (
+      _req: unknown,
+      res: { type: (t: string) => { send: (h: string) => void } },
+    ) => {
+      res.type('html').send(portalHtml);
+    },
+  );
+
   const scalarConfig = {
     ...scalarBaseConfig,
     cdn: '/docs/assets/scalar.js',

@@ -153,6 +153,15 @@ export function buildDocsPortalHtml(
 
     /* ── Sidebar Groups (Controllers) ──────────── */
     .sidebar-group { margin-top: 4px; }
+    .sidebar-auth-group { margin-top: 10px; }
+    .sidebar-auth-title {
+      padding: 8px 16px 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--scalar-color-3);
+    }
     .sidebar-group-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 7px 16px; font-size: 13px; font-weight: 500;
@@ -189,7 +198,7 @@ export function buildDocsPortalHtml(
     .method-DELETE { background: rgba(239, 68, 68, 0.15); color: #f87171; }
 
     /* ── Manual Content ────────────────────────── */
-    .manual-content { min-width: 0; overflow: auto; padding: 28px 28px 36px 20px; scroll-padding-top: 16px; }
+    .manual-content { min-width: 0; overflow-y: auto; overflow-x: hidden; padding: 28px 28px 36px 20px; scroll-padding-top: 16px; }
     .manual-content .markdown-body { max-width: 980px; margin: 0; width: 100%; min-width: 0; }
     .manual-content::-webkit-scrollbar { width: 5px; }
     .manual-content::-webkit-scrollbar-track { background: transparent; }
@@ -258,17 +267,24 @@ export function buildDocsPortalHtml(
     }
     .markdown-body pre {
       background: var(--scalar-background-2); border: 1px solid var(--scalar-border);
-      border-radius: 8px; padding: 14px 18px; margin: 14px 0; overflow-x: auto;
+      border-radius: 8px; padding: 14px 18px; margin: 14px 0; overflow-x: hidden;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
     }
-    .markdown-body pre code { background: transparent; padding: 0; color: var(--scalar-color-1); font-size: 13px; line-height: 1.6; }
+    .markdown-body pre code {
+      background: transparent; padding: 0; color: var(--scalar-color-1); font-size: 13px; line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
     .markdown-body table {
-      width: max-content;
-      min-width: 100%;
+      width: 100%;
       border-collapse: collapse;
       margin: 14px 0;
       font-size: 13px;
       display: table;
-      table-layout: auto;
+      table-layout: fixed;
     }
     .markdown-body th {
       text-align: left; padding: 9px 12px; background: var(--scalar-background-3);
@@ -281,12 +297,14 @@ export function buildDocsPortalHtml(
       color: var(--scalar-color-2);
       line-height: 1.5;
       white-space: normal;
-      word-break: normal;
-      overflow-wrap: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
       vertical-align: top;
     }
     .markdown-body th {
-      white-space: nowrap;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
       vertical-align: top;
     }
     .markdown-body td:nth-child(3),
@@ -314,11 +332,52 @@ export function buildDocsPortalHtml(
       border-radius: 4px; font-family: var(--scalar-font-code);
     }
     .endpoint-path { font-size: 14px; font-family: var(--scalar-font-code); color: var(--scalar-color-2); }
+    .auth-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--scalar-color-1);
+      background: var(--scalar-background-2);
+      border: 1px solid var(--scalar-border);
+      border-radius: 999px;
+      padding: 4px 10px;
+      margin: 0 0 10px;
+    }
 
     /* ── API View (iframe) ─────────────────────── */
-    .api-view { display: none; height: 100%; }
+    .api-view {
+      display: none;
+      height: 100%;
+      position: relative;
+      background: var(--scalar-background-1);
+    }
     .api-view.active { display: block; }
-    .api-view iframe { width: 100%; height: 100%; border: none; }
+    .api-view iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: var(--scalar-background-1);
+      opacity: 0;
+      transition: opacity 120ms ease;
+    }
+    .api-view.loaded iframe { opacity: 1; }
+    .api-loading {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,0.04), transparent 40%),
+        radial-gradient(circle at 80% 25%, rgba(99,102,241,0.08), transparent 45%),
+        var(--scalar-background-1);
+      color: var(--scalar-color-2);
+      font-size: 13px;
+      z-index: 1;
+    }
+    .api-view.active:not(.loaded) .api-loading { display: flex; }
 
     .navbar-manual-toggle {
       display: none;
@@ -500,6 +559,7 @@ export function buildDocsPortalHtml(
       </aside>
     </div>
     <div class="api-view" id="api-view">
+      <div class="api-loading">Carregando referência da API...</div>
       <iframe id="scalar-iframe" loading="lazy"></iframe>
     </div>
   </div>
@@ -511,6 +571,7 @@ export function buildDocsPortalHtml(
 
     let activeView = 'manual';
     let scalarLoaded = false;
+    let scalarReady = false;
     let searchSelectedIndex = 0;
     let openApiSpec = null;
     let endpointsByTag = {};
@@ -541,6 +602,94 @@ export function buildDocsPortalHtml(
       const backdrop = document.getElementById('manual-sidebar-backdrop');
       manualView.classList.remove('sidebar-open');
       backdrop.classList.remove('active');
+    }
+
+    function navigateToManualByName(name) {
+      const index = manualTags.findIndex((t) => t && t.name === name);
+      if (index >= 0) {
+        if (activeView !== 'manual') switchView('manual');
+        selectManualItem(index);
+        return true;
+      }
+      return false;
+    }
+
+    function slugifyManualName(name) {
+      return slugifyHeading(name);
+    }
+
+    function navigateToManualBySlug(slug) {
+      const index = manualTags.findIndex(
+        (t) => t && slugifyManualName(t.name) === slug,
+      );
+      if (index >= 0) {
+        if (activeView !== 'manual') switchView('manual');
+        selectManualItem(index);
+        return true;
+      }
+      return false;
+    }
+
+    function getManualSlugFromPath() {
+      const path = window.location.pathname || '';
+      const match = path.match(/^\\/docs\\/manual\\/([^/]+)$/);
+      return match ? decodeURIComponent(match[1]) : null;
+    }
+
+    function slugifyEndpointTag(tag) {
+      return slugifyHeading(tag);
+    }
+
+    function getEndpointRouteFromPath() {
+      const path = window.location.pathname || '';
+      const match = path.match(/^\\/docs\\/endpoint\\/([^/]+)\\/(\\d+)$/);
+      if (!match) return null;
+      return {
+        tagSlug: decodeURIComponent(match[1]),
+        index: Number(match[2]),
+      };
+    }
+
+    function setManualUrl(slug) {
+      const nextPath = '/docs/manual/' + slug;
+      const nextUrl = nextPath + (window.location.search || '');
+      if (window.location.pathname === nextPath) return;
+      window.history.replaceState({}, '', nextUrl);
+    }
+
+    function setEndpointUrl(tag, index) {
+      const nextPath = '/docs/endpoint/' + slugifyEndpointTag(tag) + '/' + index;
+      const nextUrl = nextPath + (window.location.search || '');
+      if (window.location.pathname === nextPath) return;
+      window.history.replaceState({}, '', nextUrl);
+    }
+
+    function applyRouteFromHash() {
+      const hash = window.location.hash || '';
+      if (!hash.startsWith('#manual=')) return false;
+      const value = decodeURIComponent(hash.replace('#manual=', ''));
+      return navigateToManualBySlug(value) || navigateToManualByName(value);
+    }
+
+    function applyRouteFromPath() {
+      const endpointRoute = getEndpointRouteFromPath();
+      if (endpointRoute && endpointRoute.tagSlug && Number.isInteger(endpointRoute.index)) {
+        const match = Object.entries(endpointsByTag || {}).find(
+          ([tag]) => slugifyEndpointTag(tag) === endpointRoute.tagSlug,
+        );
+        if (match) {
+          const [tag, eps] = match;
+          if (endpointRoute.index >= 0 && endpointRoute.index < (eps || []).length) {
+            if (activeView !== 'manual') switchView('manual');
+            selectEndpoint(tag, endpointRoute.index);
+            return true;
+          }
+        }
+      }
+
+      const slug = getManualSlugFromPath();
+      if (!slug) return false;
+      return navigateToManualBySlug(slug);
     }
 
     function slugifyHeading(text) {
@@ -664,9 +813,17 @@ export function buildDocsPortalHtml(
     // ── Init ─────────────────────────────────────
     async function init() {
       syncNavbarOffset();
+      const scalarIframe = document.getElementById('scalar-iframe');
+      scalarIframe.addEventListener('load', () => {
+        scalarReady = true;
+        document.getElementById('api-view').classList.add('loaded');
+      });
       renderSidebar();
-      if (manualTags.length > 0) selectManualItem(0);
+      if (!applyRouteFromPath() && !applyRouteFromHash() && manualTags.length > 0) {
+        selectManualItem(0);
+      }
       await loadOpenApiSpec();
+      applyRouteFromPath() || applyRouteFromHash();
     }
 
     // ── Load OpenAPI spec ────────────────────────
@@ -694,6 +851,135 @@ export function buildDocsPortalHtml(
         }
       }
       return groups;
+    }
+
+    function getEndpointAuthKeys(ep) {
+      if (!ep || !Array.isArray(ep.security)) return [];
+      const keys = new Set();
+      ep.security.forEach((entry) => {
+        if (!entry || typeof entry !== 'object') return;
+        Object.keys(entry).forEach((key) => keys.add(key));
+      });
+      return Array.from(keys);
+    }
+
+    function getPrimaryAuthKey(ep) {
+      const keys = getEndpointAuthKeys(ep);
+      if (!keys.length) return 'public';
+      const preferred = ['backoffice-auth', 'internal-auth', 'provider-auth'];
+      const match = preferred.find((k) => keys.includes(k));
+      return match || keys[0];
+    }
+
+    function getAuthGroupMeta(authKey) {
+      const map = {
+        'backoffice-auth': { label: 'Backoffice', order: 1 },
+        'internal-auth': { label: 'Internal', order: 2 },
+        'provider-auth': { label: 'Provider', order: 3 },
+        public: { label: 'Público', order: 4 },
+      };
+      return map[authKey] || { label: authKey, order: 99 };
+    }
+
+    function getAuthLabelForEndpoint(ep) {
+      const keys = getEndpointAuthKeys(ep);
+      if (!keys.length) return 'Sem autenticação';
+      const labels = keys.map((k) => getAuthGroupMeta(k).label);
+      return labels.join(' / ');
+    }
+
+    function getSecurityScheme(authKey) {
+      const schemes = openApiSpec && openApiSpec.components && openApiSpec.components.securitySchemes;
+      return schemes && schemes[authKey] ? schemes[authKey] : null;
+    }
+
+    function getRequiredHeadersForEndpoint(ep) {
+      const headers = [];
+      const seen = new Set();
+
+      const pushHeader = (name, source, required, description) => {
+        const key = String(name).toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        headers.push({ name, source, required, description });
+      };
+
+      getEndpointAuthKeys(ep).forEach((authKey) => {
+        const scheme = getSecurityScheme(authKey);
+        if (!scheme) return;
+
+        if (scheme.type === 'http' && scheme.scheme === 'bearer') {
+          pushHeader(
+            'Authorization',
+            'auth',
+            true,
+            'Bearer <token> (' + getAuthGroupMeta(authKey).label + ')',
+          );
+          return;
+        }
+
+        if (scheme.type === 'apiKey' && scheme.in === 'header' && scheme.name) {
+          pushHeader(
+            scheme.name,
+            'auth',
+            true,
+            scheme.description || ('Header de autenticação (' + getAuthGroupMeta(authKey).label + ')'),
+          );
+        }
+      });
+
+      (ep.parameters || []).forEach((p) => {
+        if (!p || p.in !== 'header') return;
+        pushHeader(
+          p.name,
+          'parameter',
+          Boolean(p.required),
+          p.description || 'Header da requisição',
+        );
+      });
+
+      return headers;
+    }
+
+    function renderRequiredHeadersBox(ep) {
+      const headers = getRequiredHeadersForEndpoint(ep);
+      let html = '<h2>Headers Necess\u00e1rios</h2>';
+      if (!headers.length) {
+        html += '<p>N\u00e3o \u00e9 necess\u00e1rio enviar headers adicionais nesta requisi\u00e7\u00e3o.</p>';
+        return html;
+      }
+      html += '<table><thead><tr><th>Nome</th><th>Obrigat\u00f3rio</th><th>Descri\u00e7\u00e3o</th></tr></thead><tbody>';
+      headers.forEach((h) => {
+        html += '<tr>';
+        html += '<td><code>' + escapeHtml(h.name) + '</code></td>';
+        html += '<td>' + (h.required ? 'Sim' : 'N\u00e3o') + '</td>';
+        html += '<td>' + escapeHtml(h.description || 'Header da requisi\u00e7\u00e3o') + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      return html;
+    }
+
+    function groupTagsByAuth() {
+      const authGroups = {};
+      Object.entries(endpointsByTag).forEach(([tag, endpoints]) => {
+        const authKey = getPrimaryAuthKey(endpoints[0]);
+        if (!authGroups[authKey]) authGroups[authKey] = [];
+        authGroups[authKey].push({ tag, endpoints });
+      });
+
+      return Object.entries(authGroups)
+        .sort((a, b) => {
+          const am = getAuthGroupMeta(a[0]);
+          const bm = getAuthGroupMeta(b[0]);
+          if (am.order !== bm.order) return am.order - bm.order;
+          return am.label.localeCompare(bm.label);
+        })
+        .map(([authKey, groups]) => ({
+          authKey,
+          ...getAuthGroupMeta(authKey),
+          groups: groups.sort((a, b) => a.tag.localeCompare(b.tag)),
+        }));
     }
 
     // ── Helpers: manual tags linked to API tags ──
@@ -739,42 +1025,50 @@ export function buildDocsPortalHtml(
       title.textContent = 'Endpoints';
       sidebar.appendChild(title);
 
-      const tagOrder = Object.keys(endpointsByTag).sort();
+      groupTagsByAuth().forEach((authBlock) => {
+        const authContainer = document.createElement('div');
+        authContainer.className = 'sidebar-auth-group';
 
-      tagOrder.forEach(tag => {
-        const endpoints = endpointsByTag[tag];
-        const linked = getLinkedManual(tag);
-        const group = document.createElement('div');
-        group.className = 'sidebar-group';
+        const authTitle = document.createElement('div');
+        authTitle.className = 'sidebar-auth-title';
+        authTitle.textContent = authBlock.label;
+        authContainer.appendChild(authTitle);
 
-        const header = document.createElement('div');
-        header.className = 'sidebar-group-header';
-        header.innerHTML = '<span>' + escapeHtml(tag) + '</span><span class="arrow">\u25B6</span>';
-        header.onclick = () => group.classList.toggle('open');
+        authBlock.groups.forEach(({ tag, endpoints }) => {
+          const linked = getLinkedManual(tag);
+          const group = document.createElement('div');
+          group.className = 'sidebar-group';
 
-        const items = document.createElement('div');
-        items.className = 'sidebar-group-items';
+          const header = document.createElement('div');
+          header.className = 'sidebar-group-header';
+          header.innerHTML = '<span>' + escapeHtml(tag) + '</span><span class="arrow">\u25B6</span>';
+          header.onclick = () => group.classList.toggle('open');
 
-        // If there's a linked manual, add a "Vis\u00e3o Geral" item
-        if (linked) {
-          const overview = document.createElement('div');
-          overview.className = 'sidebar-endpoint';
-          overview.innerHTML = '<span style="font-size:12px">\ud83d\udcd6</span> Vis\u00e3o Geral';
-          overview.onclick = (e) => { e.stopPropagation(); selectGroupOverview(tag); };
-          items.appendChild(overview);
-        }
+          const items = document.createElement('div');
+          items.className = 'sidebar-group-items';
 
-        endpoints.forEach((ep, i) => {
-          const item = document.createElement('div');
-          item.className = 'sidebar-endpoint';
-          item.innerHTML = '<span class="method-badge method-' + ep.method + '">' + ep.method + '</span> ' + escapeHtml(ep.summary || ep.path);
-          item.onclick = (e) => { e.stopPropagation(); selectEndpoint(tag, i); };
-          items.appendChild(item);
+          if (linked) {
+            const overview = document.createElement('div');
+            overview.className = 'sidebar-endpoint';
+            overview.innerHTML = '<span style="font-size:12px">\ud83d\udcd6</span> Vis\u00e3o Geral';
+            overview.onclick = (e) => { e.stopPropagation(); selectGroupOverview(tag); };
+            items.appendChild(overview);
+          }
+
+          endpoints.forEach((ep, i) => {
+            const item = document.createElement('div');
+            item.className = 'sidebar-endpoint';
+            item.innerHTML = '<span class="method-badge method-' + ep.method + '">' + ep.method + '</span> ' + escapeHtml(ep.summary || ep.path);
+            item.onclick = (e) => { e.stopPropagation(); selectEndpoint(tag, i); };
+            items.appendChild(item);
+          });
+
+          group.appendChild(header);
+          group.appendChild(items);
+          authContainer.appendChild(group);
         });
 
-        group.appendChild(header);
-        group.appendChild(items);
-        sidebar.appendChild(group);
+        sidebar.appendChild(authContainer);
       });
     }
 
@@ -792,6 +1086,7 @@ export function buildDocsPortalHtml(
       const content = document.getElementById('manual-content');
       const tag = manualTags[index];
       if (tag) {
+        setManualUrl(slugifyManualName(tag.name));
         renderManualHtml(marked.parse(tag.description));
       }
     }
@@ -813,6 +1108,7 @@ export function buildDocsPortalHtml(
       });
 
       const ep = endpointsByTag[tag][index];
+      setEndpointUrl(tag, index);
       renderManualHtml(buildEndpointDoc(ep, tag));
     }
 
@@ -872,15 +1168,20 @@ export function buildDocsPortalHtml(
 
       md += '<h1>' + escapeHtml(ep.summary || tag) + '</h1>';
 
+      md += '<div class="auth-chip">🔐 Autenticação: ' + escapeHtml(getAuthLabelForEndpoint(ep)) + '</div>';
+
       if (ep.description) {
         md += marked.parse(ep.description);
       }
 
-      // Parameters
-      if (ep.parameters && ep.parameters.length > 0) {
-        md += '<h2>Par\\u00e2metros</h2>';
+      md += renderRequiredHeadersBox(ep);
+
+      // Parameters (query/path only; headers are shown in "Headers Necessários")
+      const routeParams = (ep.parameters || []).filter((p) => p && (p.in === 'query' || p.in === 'path'));
+      md += '<h2>Par\\u00e2metros</h2>';
+      if (routeParams.length > 0) {
         md += '<table><thead><tr><th>Nome</th><th>Em</th><th>Tipo</th><th>Obrigat\\u00f3rio</th><th>Descri\\u00e7\\u00e3o</th></tr></thead><tbody>';
-        ep.parameters.forEach(p => {
+        routeParams.forEach(p => {
           const type = p.schema ? (p.schema.type || p.schema.enum ? 'enum' : '—') : '—';
           const enumVals = p.schema && p.schema.enum
             ? ' <span class="enum-value-list">(' + p.schema.enum.map(v => escapeHtml(String(v))).join(',<wbr> ') + ')</span>'
@@ -894,17 +1195,19 @@ export function buildDocsPortalHtml(
           md += '</tr>';
         });
         md += '</tbody></table>';
+      } else {
+        md += '<p>N\u00e3o \u00e9 necess\u00e1rio enviar par\u00e2metros nesta requisi\u00e7\u00e3o.</p>';
       }
 
       // Request Body
+      md += '<h2>Corpo da Requisi\\u00e7\\u00e3o</h2>';
       if (ep.requestBody) {
-        md += '<h2>Corpo da Requisi\\u00e7\\u00e3o</h2>';
         const content = ep.requestBody.content;
         if (content && content['application/json']) {
           const jsonContent = content['application/json'];
           const schema = resolveSchema(jsonContent.schema);
           if (schema && schema.properties) {
-            md += renderSchemaTable(schema);
+            md += renderSchemaTable(schema, { showRequired: false });
           }
           // Examples
           if (jsonContent.examples) {
@@ -914,31 +1217,79 @@ export function buildDocsPortalHtml(
               md += '<pre><code>' + escapeHtml(JSON.stringify(example.value, null, 2)) + '</code></pre>';
             }
           }
+        } else {
+          md += '<p>Esta requisi\u00e7\u00e3o n\u00e3o possui corpo em <code>application/json</code>.</p>';
         }
+      } else {
+        md += '<p>N\u00e3o \u00e9 necess\u00e1rio enviar body nesta requisi\u00e7\u00e3o.</p>';
       }
 
-      // Responses
+      // Responses (success + errors separated)
       if (ep.responses) {
-        md += '<h2>Respostas</h2>';
-        for (const [status, resp] of Object.entries(ep.responses)) {
-          const statusColor = status.startsWith('2') ? '#4ade80' : status.startsWith('4') ? '#facc15' : '#f87171';
-          md += '<h3><span style="color:' + statusColor + '">' + status + '</span> — ' + escapeHtml(resp.description || '') + '</h3>';
+        const responseEntries = Object.entries(ep.responses);
+        const successResponses = responseEntries.filter(([status]) => String(status).startsWith('2'));
+        const errorResponses = responseEntries.filter(([status]) => !String(status).startsWith('2'));
 
-          if (resp.content && resp.content['application/json']) {
-            const jsonResp = resp.content['application/json'];
-            const schema = resolveSchema(jsonResp.schema);
-            if (schema && schema.properties) {
-              md += renderSchemaTable(schema);
-            }
-            if (jsonResp.examples) {
-              for (const [name, example] of Object.entries(jsonResp.examples)) {
-                md += '<details><summary>' + escapeHtml(name) + '</summary>';
-                md += '<pre><code>' + escapeHtml(JSON.stringify(example.value, null, 2)) + '</code></pre>';
-                md += '</details>';
-              }
-            }
+        if (successResponses.length > 0) {
+          const [status, resp] = successResponses[0];
+          const jsonResp = getResponseJsonContent(resp);
+          const schema = jsonResp ? resolveSchema(jsonResp.schema) : null;
+
+          md += '<h2>Resposta</h2>';
+          md += '<p>Quando a requisição retornar sucesso, a API irá retornar <strong>statusCode ' + escapeHtml(String(status)) + '</strong>';
+          if (resp && resp.description) {
+            md += ' (' + escapeHtml(String(resp.description)) + ')';
           }
+          md += schema && schema.properties
+            ? ' e um objeto no formato abaixo:</p>'
+            : '.</p>';
+
+          if (schema && schema.properties) {
+            md += renderSchemaTable(schema);
+          }
+
+          const successExamples = getSuccessExamples(jsonResp);
+          if (successExamples.length > 0) {
+            md += '<h3>Exemplos de sucesso</h3>';
+            successExamples.forEach((example) => {
+              md += '<details><summary>' + escapeHtml(example.name) + '</summary>';
+              md += '<pre><code>' + escapeHtml(JSON.stringify(example.value, null, 2)) + '</code></pre>';
+              md += '</details>';
+            });
+          }
+        } else {
+          md += '<h2>Resposta</h2>';
+          md += '<p>N\u00e3o h\u00e1 resposta de sucesso documentada para este endpoint.</p>';
         }
+
+        if (errorResponses.length > 0) {
+          md += '<h2>Erros</h2>';
+          md += '<p>Este endpoint pode retornar erros específicos, conforme a tabela a seguir:</p>';
+          if (errorResponses.some(([status]) => String(status) === '400')) {
+            md += '<p>Recordamos que esta API também poderá retornar erros comuns entre todos os endpoints que acompanham os erros <strong>400</strong> (se houver). Consulte a seção <a href="/docs#manual=tratamento-de-erros">Padrões de Erros</a>.</p>';
+          }
+          md += '<table><thead><tr><th>StatusCode</th><th>ErrorCode</th><th>Message</th><th>Descri\u00e7\u00e3o</th></tr></thead><tbody>';
+
+          errorResponses.forEach(([status, resp]) => {
+            const errorSummary = extractErrorSummary(resp);
+            md += '<tr>';
+            md += '<td>' + escapeHtml(String(status)) + '</td>';
+            md += '<td><code>' + escapeHtml(errorSummary.errorCode) + '</code></td>';
+            md += '<td>' + escapeHtml(errorSummary.message) + '</td>';
+            md += '<td>' + escapeHtml(errorSummary.description) + '</td>';
+            md += '</tr>';
+          });
+
+          md += '</tbody></table>';
+        } else {
+          md += '<h2>Erros</h2>';
+          md += '<p>N\u00e3o h\u00e1 erros espec\u00edficos documentados para este endpoint.</p>';
+        }
+      } else {
+        md += '<h2>Resposta</h2>';
+        md += '<p>N\u00e3o h\u00e1 resposta de sucesso documentada para este endpoint.</p>';
+        md += '<h2>Erros</h2>';
+        md += '<p>N\u00e3o h\u00e1 erros documentados para este endpoint.</p>';
       }
 
       return md;
@@ -954,27 +1305,207 @@ export function buildDocsPortalHtml(
       return schema;
     }
 
-    function renderSchemaTable(schema) {
-      let html = '<table><thead><tr><th>Campo</th><th>Tipo</th><th>Obrigat\\u00f3rio</th><th>Descri\\u00e7\\u00e3o</th></tr></thead><tbody>';
-      const required = schema.required || [];
-      for (const [name, prop] of Object.entries(schema.properties)) {
+    function getResponseJsonContent(resp) {
+      if (!resp || !resp.content) return null;
+      return resp.content['application/json'] || null;
+    }
+
+    function getExampleValuesFromContent(jsonContent) {
+      if (!jsonContent) return [];
+      if (jsonContent.examples && typeof jsonContent.examples === 'object') {
+        return Object.values(jsonContent.examples)
+          .map((ex) => (ex && typeof ex === 'object' ? ex.value : null))
+          .filter(Boolean);
+      }
+      if (jsonContent.example) return [jsonContent.example];
+      return [];
+    }
+
+    function getSuccessExamples(jsonResp) {
+      if (!jsonResp) return [];
+
+      if (jsonResp.examples && typeof jsonResp.examples === 'object') {
+        return Object.entries(jsonResp.examples)
+          .map(([name, ex]) => ({
+            name,
+            value: ex && typeof ex === 'object' ? ex.value : null,
+          }))
+          .filter((item) => item.value != null);
+      }
+
+      if (jsonResp.example != null) {
+        return [{ name: 'success', value: jsonResp.example }];
+      }
+
+      const schema = resolveSchema(jsonResp.schema);
+      if (schema && schema.example != null) {
+        return [{ name: 'success', value: schema.example }];
+      }
+
+      if (schema) {
+        const generated = generateExampleFromSchema(schema);
+        if (generated !== undefined) {
+          return [{ name: 'success', value: generated }];
+        }
+      }
+
+      return [];
+    }
+
+    function generateExampleFromSchema(schema, depth = 0) {
+      if (!schema || depth > 4) return undefined;
+
+      const resolved = resolveSchema(schema) || schema;
+      if (!resolved || typeof resolved !== 'object') return undefined;
+
+      if (resolved.example != null) return resolved.example;
+
+      if (Array.isArray(resolved.enum) && resolved.enum.length > 0) {
+        return resolved.enum[0];
+      }
+
+      if (resolved.oneOf && Array.isArray(resolved.oneOf) && resolved.oneOf.length > 0) {
+        return generateExampleFromSchema(resolved.oneOf[0], depth + 1);
+      }
+      if (resolved.anyOf && Array.isArray(resolved.anyOf) && resolved.anyOf.length > 0) {
+        return generateExampleFromSchema(resolved.anyOf[0], depth + 1);
+      }
+      if (resolved.allOf && Array.isArray(resolved.allOf) && resolved.allOf.length > 0) {
+        const merged = {};
+        resolved.allOf.forEach((part) => {
+          const value = generateExampleFromSchema(part, depth + 1);
+          if (value && typeof value === 'object' && !Array.isArray(value)) {
+            Object.assign(merged, value);
+          }
+        });
+        if (Object.keys(merged).length > 0) return merged;
+      }
+
+      if (resolved.type === 'array' || resolved.items) {
+        const itemExample = generateExampleFromSchema(resolved.items, depth + 1);
+        return itemExample === undefined ? [] : [itemExample];
+      }
+
+      if (resolved.type === 'object' || resolved.properties) {
+        const obj = {};
+        const props = resolved.properties || {};
+        Object.entries(props).forEach(([key, propSchema]) => {
+          const value = generateExampleFromSchema(propSchema, depth + 1);
+          obj[key] = value === undefined ? null : value;
+        });
+        return obj;
+      }
+
+      switch (resolved.type) {
+        case 'string':
+          if (resolved.format === 'date-time') return '2026-01-01T00:00:00.000Z';
+          if (resolved.format === 'date') return '2026-01-01';
+          if (resolved.format === 'uuid') return '00000000-0000-0000-0000-000000000000';
+          if (resolved.format === 'email') return 'user@example.com';
+          if (resolved.format === 'uri') return 'https://example.com';
+          return 'string';
+        case 'integer':
+        case 'number':
+          return 0;
+        case 'boolean':
+          return true;
+        default:
+          return undefined;
+      }
+    }
+
+    function extractErrorSummary(resp) {
+      const jsonContent = getResponseJsonContent(resp);
+      const examples = getExampleValuesFromContent(jsonContent);
+
+      let errorCode = '—';
+      let message = '—';
+      const description = resp && resp.description ? String(resp.description) : '—';
+
+      for (const ex of examples) {
+        if (!ex || typeof ex !== 'object') continue;
+        if ('errorCode' in ex && ex.errorCode != null && errorCode === '—') {
+          errorCode = String(ex.errorCode);
+        }
+        if ('message' in ex && ex.message != null) {
+          message = String(ex.message);
+          break;
+        }
+      }
+
+      return { errorCode, message, description };
+    }
+
+    function getSchemaDisplayType(schema) {
+      if (!schema) return '—';
+      const p = resolveSchema(schema) || schema;
+      let type = p.type || '—';
+      if (p.type === 'array' && p.items) {
+        const item = resolveSchema(p.items) || p.items;
+        const itemType = item.type || (item.properties ? 'object' : '—');
+        type = 'array<' + itemType + '>';
+      }
+      if (p.format) type += ' (' + p.format + ')';
+      if (p.enum) type = 'enum: ' + p.enum.join(', ');
+      return type;
+    }
+
+    function renderSchemaTable(schema, options = { showRequired: true }) {
+      let html = '<table><thead><tr><th>Campo</th><th>Tipo</th>';
+      if (options.showRequired) {
+        html += '<th>Obrigat\\u00f3rio</th>';
+      }
+      html += '<th>Descri\\u00e7\\u00e3o</th></tr></thead><tbody>';
+      html += renderSchemaRows(schema, '', 0, new Set(), options);
+      html += '</tbody></table>';
+      return html;
+    }
+
+    function renderSchemaRows(schema, prefix = '', depth = 0, visited = new Set(), options = { showRequired: true }) {
+      const resolvedSchema = resolveSchema(schema) || schema;
+      if (!resolvedSchema || !resolvedSchema.properties || depth > 4) return '';
+
+      const visitKey = prefix + '|' + depth;
+      if (visited.has(visitKey)) return '';
+      visited.add(visitKey);
+
+      let html = '';
+      const required = Array.isArray(resolvedSchema.required) ? resolvedSchema.required : [];
+
+      for (const [name, prop] of Object.entries(resolvedSchema.properties)) {
         const p = resolveSchema(prop) || prop;
-        let type = p.type || '—';
-        if (p.format) type += ' (' + p.format + ')';
-        if (p.enum) type = 'enum: ' + p.enum.join(', ');
+        const fullName = prefix ? (prefix + '.' + name) : name;
+        const indent = depth * 10;
+        const fieldLabel = fullName;
+        const type = getSchemaDisplayType(p);
         const desc = p.description || (p.example !== undefined ? 'Ex: ' + p.example : '—');
+
         html += '<tr>';
-        html += '<td><code>' + escapeHtml(name) + '</code></td>';
+        html += '<td><code style="padding-left:' + indent + 'px; display:inline-block;">' + escapeHtml(fieldLabel) + '</code></td>';
         if (p.enum) {
           html += '<td><span class="enum-value-list">' + escapeHtml(type).replaceAll(', ', ',<wbr> ') + '</span></td>';
         } else {
           html += '<td>' + escapeHtml(type) + '</td>';
         }
-        html += '<td>' + (required.includes(name) ? 'Sim' : 'N\\u00e3o') + '</td>';
+        if (options.showRequired) {
+          html += '<td>' + (required.includes(name) ? 'Sim' : 'N\\u00e3o') + '</td>';
+        }
         html += '<td>' + escapeHtml(String(desc)) + '</td>';
         html += '</tr>';
+
+        if (p.type === 'object' || p.properties) {
+          html += renderSchemaRows(p, fullName, depth + 1, visited, options);
+          continue;
+        }
+
+        if (p.type === 'array' && p.items) {
+          const itemSchema = resolveSchema(p.items) || p.items;
+          if (itemSchema && (itemSchema.type === 'object' || itemSchema.properties)) {
+            html += renderSchemaRows(itemSchema, fullName + '[]', depth + 1, visited, options);
+          }
+        }
       }
-      html += '</tbody></table>';
+
       return html;
     }
 
@@ -986,7 +1517,9 @@ export function buildDocsPortalHtml(
         tab.classList.toggle('active', tab.dataset.view === view);
       });
       document.getElementById('manual-view').classList.toggle('active', view === 'manual');
-      document.getElementById('api-view').classList.toggle('active', view === 'api');
+      const apiView = document.getElementById('api-view');
+      apiView.classList.toggle('active', view === 'api');
+      apiView.classList.toggle('loaded', scalarReady);
       if (view === 'api' && !scalarLoaded) {
         document.getElementById('scalar-iframe').src = scalarUrl;
         scalarLoaded = true;
@@ -1091,6 +1624,14 @@ export function buildDocsPortalHtml(
       syncNavbarOffset();
       if (!isMobileLayout()) closeManualSidebar();
       if (activeView === 'manual') updateManualTocActive();
+    });
+
+    window.addEventListener('hashchange', () => {
+      applyRouteFromHash();
+    });
+
+    window.addEventListener('popstate', () => {
+      applyRouteFromPath() || applyRouteFromHash();
     });
 
     // ── Boot ─────────────────────────────────────

@@ -13,7 +13,26 @@ export function ApiListBoletos() {
     ApiOperation({
       summary: 'Listar boletos',
       description:
-        'Lista boletos com paginação, filtros e busca. Permite filtrar por status, tipo e provedor.',
+        'Lista boletos com paginação, filtros e busca. Permite filtrar por status, tipo e provedor. ' +
+        'Requer autenticação `provider-auth`, `X-Client-Id` e contexto de conta.',
+    }),
+    ApiResponse({
+      status: 400,
+      description: 'Erro de validação / query inválida',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            INVALID_QUERY_RELATION: {
+              value: {
+                errorCode: 'INVALID_QUERY_RELATION',
+                message: 'Invalid query configuration.',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
     }),
     ApiResponse({
       status: 200,
@@ -59,6 +78,24 @@ export function ApiListBoletos() {
               value: {
                 errorCode: 'UNAUTHORIZED',
                 message: 'Token de autenticação inválido ou expirado',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 403,
+      description: 'Acesso negado',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            ACCESS_DENIED: {
+              value: {
+                errorCode: 'ACCESS_DENIED',
+                message: 'Access denied',
                 correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
               },
             },

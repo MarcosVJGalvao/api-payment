@@ -13,7 +13,8 @@ export function ApiGetBoleto() {
     ApiExtraModels(ErrorResponseDto),
     ApiOperation({
       summary: 'Consultar boleto por ID',
-      description: 'Retorna os dados completos de um boleto pelo seu ID.',
+      description:
+        'Retorna os dados completos de um boleto pelo seu ID. Requer autenticação `provider-auth`, `X-Client-Id` e contexto de conta.',
     }),
     ApiParam({
       name: 'id',

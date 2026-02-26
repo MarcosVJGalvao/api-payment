@@ -15,8 +15,8 @@ export class BackofficeAuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async login(dto: LoginBackofficeUserDto) {
-    const user = await this.userService.findByEmail(dto.email);
+  async login(dto: LoginBackofficeUserDto, clientId: string) {
+    const user = await this.userService.findByEmailAndClientId(dto.email, clientId);
     if (!user) {
       throw new CustomHttpException(
         'Invalid credentials',
@@ -55,8 +55,8 @@ export class BackofficeAuthService {
     };
   }
 
-  async resetPassword(dto: ResetPasswordDto) {
-    const user = await this.userService.findByEmail(dto.email);
+  async resetPassword(dto: ResetPasswordDto, clientId: string) {
+    const user = await this.userService.findByEmailAndClientId(dto.email, clientId);
     if (!user) {
       return;
     }

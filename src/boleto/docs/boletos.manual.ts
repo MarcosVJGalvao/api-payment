@@ -21,6 +21,16 @@ O módulo de Boletos permite **emissão**, **consulta**, **listagem** e **cancel
 3. O provedor retorna o **código de barras**, **linha digitável** e **código de autenticação**
 4. O boleto fica com status \`REGISTERED\` até ser pago ou cancelado
 
+### Autenticação e Headers
+
+Os endpoints de Boletos normalmente exigem:
+
+- Autenticação \`provider-auth\`
+- Header \`X-Client-Id\` (identificação do cliente)
+- Contexto de conta (\`X-Account-Id\` ou conta resolvida pela sessão do provedor, conforme fluxo)
+
+Consulte a seção **Headers Necessários** de cada endpoint para confirmar os requisitos exatos.
+
 ### Regras de Negócio
 
 - A **data de vencimento** (\`dueDate\`) deve ser uma data futura

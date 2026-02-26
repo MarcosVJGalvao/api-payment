@@ -61,7 +61,8 @@ export function ApiCreateBoleto() {
     ApiOperation({
       summary: 'Emitir boleto',
       description:
-        'Emite um novo boleto no provedor financeiro especificado. Suporta dois tipos: Deposit (depósito) e Levy (cobrança).',
+        'Emite um novo boleto no provedor financeiro especificado. Suporta os tipos `Deposit` (depósito) e `Levy` (cobrança). ' +
+        'Requer autenticação `provider-auth`, header `X-Client-Id` e contexto de conta (`X-Account-Id` ou sessão equivalente).',
     }),
     ApiResponse({
       status: 201,

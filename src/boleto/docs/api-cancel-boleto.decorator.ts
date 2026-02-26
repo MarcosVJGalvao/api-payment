@@ -15,7 +15,8 @@ export function ApiCancelBoleto() {
     ApiOperation({
       summary: 'Cancelar boleto',
       description:
-        'Cancela um boleto emitido no provedor financeiro especificado. O boleto não pode ser cancelado se já estiver pago ou cancelado.',
+        'Cancela um boleto emitido no provedor financeiro especificado. O boleto não pode ser cancelado se já estiver pago ou cancelado. ' +
+        'Requer autenticação `provider-auth`, `X-Client-Id` e contexto de conta.',
     }),
     ApiParam({
       name: 'provider',

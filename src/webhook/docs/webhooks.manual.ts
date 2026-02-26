@@ -28,8 +28,11 @@ export const webhooksManualTag: IManualTag = {
     '- **Dead Letter Queue** para webhooks que falharam após todas as tentativas',
     '- **Idempotência** — webhooks duplicados são detectados e ignorados',
     '',
-    '### Configuração',
+    '### Configuração x Recepção de Eventos',
     '',
-    'Os endpoints de webhook estão protegidos com autenticação `provider-auth`. Cada provedor financeiro recebe credenciais específicas para enviar webhooks.',
+    '- **Configuração de webhooks** (registrar/listar/atualizar/remover): usa autenticação de **backoffice** e header `X-Client-Id`',
+    '- **Recepção/processamento de eventos** (webhooks enviados por provedores): pode usar autenticação/validação específica de provedor e/ou rotas internas',
+    '',
+    'Consulte a seção de cada endpoint para confirmar o tipo de autenticação e headers necessários.',
   ].join('\n'),
 };

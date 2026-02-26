@@ -100,6 +100,13 @@ export class BackofficeUserService {
     return this.repository.findOne({ where: { email } });
   }
 
+  async findByEmailAndClientId(
+    email: string,
+    clientId: string,
+  ): Promise<BackofficeUser | null> {
+    return this.repository.findOne({ where: { email, clientId } });
+  }
+
   async findById(id: string): Promise<BackofficeUser | null> {
     return this.repository.findOne({ where: { id } });
   }
