@@ -166,8 +166,8 @@
     .method-DELETE { background: rgba(239, 68, 68, 0.15); color: #f87171; }
 
     /* ── Manual Content ────────────────────────── */
-    .manual-content { min-width: 0; overflow-y: auto; overflow-x: hidden; padding: 28px 28px 36px 20px; scroll-padding-top: 16px; }
-    .manual-content .markdown-body { max-width: 980px; margin: 0; width: 100%; min-width: 0; }
+    .manual-content { min-width: 0; overflow-y: auto; overflow-x: hidden; padding: 28px 20px 36px 12px; scroll-padding-top: 16px; }
+.manual-content .markdown-body { max-width: 1180px; margin: 0 auto; width: 100%; min-width: 0; }
     .manual-content::-webkit-scrollbar { width: 5px; }
     .manual-content::-webkit-scrollbar-track { background: transparent; }
     .manual-content::-webkit-scrollbar-thumb { background: var(--scalar-border); border-radius: 3px; }
@@ -418,7 +418,7 @@
     @media (max-width: 1024px) {
       :root { --sidebar-width: 240px; }
       .manual-view.active { grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 240px; }
-      .manual-content { padding: 22px 18px 28px 16px; }
+      .manual-content { padding: 22px 14px 28px 10px; }
       .manual-toc { width: 240px; padding: 16px 10px; }
       .search-modal { width: min(520px, calc(100vw - 20px)); }
     }

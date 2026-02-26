@@ -269,9 +269,15 @@
       const tocList = document.getElementById('manual-toc-list');
       if (!content || !tocList) return;
 
-      const headings = Array.from(
+      const allHeadings = Array.from(
         content.querySelectorAll('.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4'),
       );
+      const hasNonH1Heading = allHeadings.some(
+        (el) => (el.tagName || '').toLowerCase() !== 'h1',
+      );
+      const headings = hasNonH1Heading
+        ? allHeadings.filter((el) => (el.tagName || '').toLowerCase() !== 'h1')
+        : allHeadings;
 
       const tocCandidates = [];
       const usedIds = new Set();
@@ -736,27 +742,27 @@
     function buildEndpointDoc(ep, tag) {
       let md = '';
 
-      // Header with method badge + path
-      md += '<div class="endpoint-header">';
-      md += '<span class="endpoint-method-badge method-' + ep.method + '">' + ep.method + '</span>';
-      md += '<span class="endpoint-path">' + escapeHtml(ep.path) + '</span>';
-      md += '</div>';
-
       md += '<h1>' + escapeHtml(ep.summary || tag) + '</h1>';
-
-      md += '<div class="auth-chip">🔐 Autenticação: ' + escapeHtml(getAuthLabelForEndpoint(ep)) + '</div>';
 
       if (ep.description) {
         md += marked.parse(ep.description);
       }
 
+      // Endpoint method/path below title+description, above auth
+      md += '<div class="endpoint-header">';
+      md += '<span class="endpoint-method-badge method-' + ep.method + '">' + ep.method + '</span>';
+      md += '<span class="endpoint-path">' + escapeHtml(ep.path) + '</span>';
+      md += '</div>';
+
+      md += '<div class="auth-chip">🔐 Autenticação: ' + escapeHtml(getAuthLabelForEndpoint(ep)) + '</div>';
+
       md += renderRequiredHeadersBox(ep);
 
       // Parameters (query/path only; headers are shown in "Headers Necessários")
       const routeParams = (ep.parameters || []).filter((p) => p && (p.in === 'query' || p.in === 'path'));
-      md += '<h2>Par\\u00e2metros</h2>';
+      md += '<h2>Parâmetros</h2>';
       if (routeParams.length > 0) {
-        md += '<table><thead><tr><th>Nome</th><th>Em</th><th>Tipo</th><th>Obrigat\\u00f3rio</th><th>Descri\\u00e7\\u00e3o</th></tr></thead><tbody>';
+        md += '<table><thead><tr><th>Nome</th><th>Em</th><th>Tipo</th><th>Obrigatório</th><th>Descrição</th></tr></thead><tbody>';
         routeParams.forEach(p => {
           const type = p.schema ? (p.schema.type || p.schema.enum ? 'enum' : '—') : '—';
           const enumVals = p.schema && p.schema.enum
@@ -766,7 +772,7 @@
           md += '<td><code>' + escapeHtml(p.name) + '</code></td>';
           md += '<td>' + escapeHtml(p.in) + '</td>';
           md += '<td>' + escapeHtml(type) + enumVals + '</td>';
-          md += '<td>' + (p.required ? 'Sim' : 'N\\u00e3o') + '</td>';
+          md += '<td>' + (p.required ? 'Sim' : 'Não') + '</td>';
           md += '<td>' + escapeHtml(p.description || '—') + '</td>';
           md += '</tr>';
         });
@@ -776,7 +782,7 @@
       }
 
       // Request Body
-      md += '<h2>Corpo da Requisi\\u00e7\\u00e3o</h2>';
+      md += '<h2>Corpo da Requisição</h2>';
       if (ep.requestBody) {
         const content = ep.requestBody.content;
         if (content && content['application/json']) {
@@ -1029,9 +1035,9 @@
     function renderSchemaTable(schema, options = { showRequired: true }) {
       let html = '<table><thead><tr><th>Campo</th><th>Tipo</th>';
       if (options.showRequired) {
-        html += '<th>Obrigat\\u00f3rio</th>';
+        html += '<th>Obrigatório</th>';
       }
-      html += '<th>Descri\\u00e7\\u00e3o</th></tr></thead><tbody>';
+      html += '<th>Descrição</th></tr></thead><tbody>';
       html += renderSchemaRows(schema, '', 0, new Set(), options);
       html += '</tbody></table>';
       return html;
@@ -1064,7 +1070,7 @@
           html += '<td>' + escapeHtml(type) + '</td>';
         }
         if (options.showRequired) {
-          html += '<td>' + (required.includes(name) ? 'Sim' : 'N\\u00e3o') + '</td>';
+          html += '<td>' + (required.includes(name) ? 'Sim' : 'Não') + '</td>';
         }
         html += '<td>' + escapeHtml(String(desc)) + '</td>';
         html += '</tr>';
