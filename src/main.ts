@@ -11,13 +11,6 @@ console.log = (...args: any[]) => {
 
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { SwaggerModule } from '@nestjs/swagger';
-import {
-  apiReference,
-  type NestJSReferenceConfiguration,
-} from '@scalar/nestjs-api-reference';
-import { buildDocsPortalHtml } from './swagger/templates/docs-portal.template';
-import { getManualTags } from './swagger/helpers/manual-tags.registry';
 import { HttpExceptionFilter } from './common/errors/filters/http-exception.filter';
 import { ValidationPipe } from '@nestjs/common';
 import { ConditionalClassSerializerInterceptor } from './common/interceptors/conditional-class-serializer.interceptor';
@@ -32,6 +25,7 @@ import {
   getErrorTrace,
 } from './common/helpers/exception.helper';
 import { ResponseSanitizationInterceptor } from './common/interceptors/response-sanitization.interceptor';
+import { setupApiDocumentation } from './swagger/setup-api-documentation';
 
 async function bootstrap() {
   const standaloneLogger = createStandaloneLogger();
@@ -89,123 +83,7 @@ async function bootstrap() {
 
     const swaggerService = app.get(SwaggerService);
     swaggerService.generateDocument(app);
-
-    const swaggerOptions = {
-      persistAuthorization: true,
-    };
-
-    SwaggerModule.setup('api', app, swaggerService.getSwaggerDocument(), {
-      jsonDocumentUrl: '/api/openapi.json',
-      swaggerOptions,
-    });
-
-    SwaggerModule.setup(
-      'api/provider',
-      app,
-      swaggerService.getFilteredDocument('provider-auth'),
-      {
-        jsonDocumentUrl: '/api/provider/openapi.json',
-        swaggerOptions,
-      },
-    );
-
-    SwaggerModule.setup(
-      'api/backoffice',
-      app,
-      swaggerService.getFilteredDocument('backoffice-auth'),
-      {
-        jsonDocumentUrl: '/api/backoffice/openapi.json',
-        swaggerOptions,
-      },
-    );
-
-    SwaggerModule.setup(
-      'api/internal',
-      app,
-      swaggerService.getFilteredDocument('internal-auth'),
-      {
-        jsonDocumentUrl: '/api/internal/openapi.json',
-        swaggerOptions,
-      },
-    );
-
-    // ── Scalar API Reference ──────────────────────────────────────────
-    const scalarBaseConfig: NestJSReferenceConfiguration = {
-      theme: 'deepSpace',
-      layout: 'modern',
-      forceDarkModeState: 'dark',
-      hideDarkModeToggle: true,
-      persistAuth: true,
-      hideModels: false,
-      defaultOpenAllTags: false,
-      searchHotKey: 'k',
-      showSidebar: true,
-      withDefaultFonts: true,
-      showDeveloperTools: 'localhost',
-      defaultHttpClient: {
-        targetKey: 'node',
-        clientKey: 'axios',
-      },
-    };
-
-    const expressApp = app.getHttpAdapter().getInstance();
-
-    // ── Portal de Documentação (navbar Manual/API) ────────────────────
-    const portalHtml = buildDocsPortalHtml(
-      {
-        title: 'Payments API',
-        apiSpecUrl: '/api/openapi.json',
-        scalarUrl: '/docs/api',
-      },
-      getManualTags(),
-    );
-
-    expressApp.get(
-      '/docs',
-      (
-        _req: unknown,
-        res: { type: (t: string) => { send: (h: string) => void } },
-      ) => {
-        res.type('html').send(portalHtml);
-      },
-    );
-
-    // ── Scalar API Reference ──────────────────────────────────────────
-    expressApp.use(
-      '/docs/api',
-      apiReference({
-        ...scalarBaseConfig,
-        pageTitle: 'Payments API - API Reference',
-        url: '/api/openapi.json',
-      }),
-    );
-
-    expressApp.use(
-      '/docs/api/provider',
-      apiReference({
-        ...scalarBaseConfig,
-        pageTitle: 'Payments API - Provider',
-        url: '/api/provider/openapi.json',
-      }),
-    );
-
-    expressApp.use(
-      '/docs/api/backoffice',
-      apiReference({
-        ...scalarBaseConfig,
-        pageTitle: 'Payments API - Backoffice',
-        url: '/api/backoffice/openapi.json',
-      }),
-    );
-
-    expressApp.use(
-      '/docs/api/internal',
-      apiReference({
-        ...scalarBaseConfig,
-        pageTitle: 'Payments API - Internal',
-        url: '/api/internal/openapi.json',
-      }),
-    );
+    setupApiDocumentation(app, swaggerService);
 
     const port = configService.get<number>('PORT', 3000);
     await app.listen(port);
