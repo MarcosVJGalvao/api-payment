@@ -122,7 +122,7 @@ export function buildDocsPortalHtml(
 
     /* ── Manual View ───────────────────────────── */
     .manual-view { display: none; height: 100%; min-width: 0; }
-    .manual-view.active { display: flex; min-width: 0; }
+    .manual-view.active { display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 280px; min-width: 0; }
 
     .manual-sidebar {
       width: var(--sidebar-width); min-width: var(--sidebar-width);
@@ -189,11 +189,52 @@ export function buildDocsPortalHtml(
     .method-DELETE { background: rgba(239, 68, 68, 0.15); color: #f87171; }
 
     /* ── Manual Content ────────────────────────── */
-    .manual-content { flex: 1; min-width: 0; overflow: auto; padding: 36px 40px; scroll-padding-top: 16px; }
-    .manual-content .markdown-body { max-width: 900px; margin: 0 auto; width: 100%; min-width: 0; }
+    .manual-content { min-width: 0; overflow: auto; padding: 28px 28px 36px 20px; scroll-padding-top: 16px; }
+    .manual-content .markdown-body { max-width: 980px; margin: 0; width: 100%; min-width: 0; }
     .manual-content::-webkit-scrollbar { width: 5px; }
     .manual-content::-webkit-scrollbar-track { background: transparent; }
     .manual-content::-webkit-scrollbar-thumb { background: var(--scalar-border); border-radius: 3px; }
+    .manual-toc {
+      width: 280px;
+      min-width: 0;
+      height: 100%;
+      border-left: 1px solid var(--scalar-border);
+      background: var(--scalar-background-1);
+      overflow: auto;
+      padding: 18px 12px 20px;
+    }
+    .manual-toc::-webkit-scrollbar { width: 4px; }
+    .manual-toc::-webkit-scrollbar-thumb { background: var(--scalar-border); border-radius: 2px; }
+    .manual-toc-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--scalar-color-3);
+      margin-bottom: 10px;
+      padding: 0 8px;
+    }
+    .manual-toc-list { display: flex; flex-direction: column; gap: 2px; }
+    .manual-toc-item {
+      display: block;
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: var(--scalar-color-2);
+      text-align: left;
+      padding: 5px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1.35;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: background var(--transition), color var(--transition);
+    }
+    .manual-toc-item:hover { background: var(--scalar-background-2); color: var(--scalar-color-1); }
+    .manual-toc-item.active { background: var(--scalar-background-2); color: var(--scalar-color-1); }
+    .manual-toc-item.level-2 { padding-left: 18px; font-size: 11.5px; color: var(--scalar-color-3); }
+    .manual-toc-empty { color: var(--scalar-color-3); font-size: 12px; padding: 0 8px; }
 
     /* ── Markdown — using Scalar tokens ─────────── */
     .markdown-body h1 { font-size: 28px; font-weight: 700; margin-bottom: 12px; color: var(--scalar-color-1); letter-spacing: -0.4px; }
@@ -349,7 +390,9 @@ export function buildDocsPortalHtml(
 
     @media (max-width: 1024px) {
       :root { --sidebar-width: 240px; }
-      .manual-content { padding: 24px 20px; }
+      .manual-view.active { grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 240px; }
+      .manual-content { padding: 22px 18px 28px 16px; }
+      .manual-toc { width: 240px; padding: 16px 10px; }
       .search-modal { width: min(520px, calc(100vw - 20px)); }
     }
 
@@ -360,7 +403,10 @@ export function buildDocsPortalHtml(
       .navbar-search { padding: 4px 8px; font-size: 11px; }
       .navbar-search kbd { display: none; }
 
-      .manual-view.active { position: relative; }
+      .manual-view.active {
+        position: relative;
+        display: flex;
+      }
       .manual-sidebar {
         position: fixed;
         top: var(--navbar-offset);
@@ -375,6 +421,8 @@ export function buildDocsPortalHtml(
       .manual-view.sidebar-open .manual-sidebar { transform: translateX(0); }
 
       .manual-content { width: 100%; padding: 18px 14px; }
+      .manual-content .markdown-body { max-width: none; }
+      .manual-toc { display: none; }
       .endpoint-header { flex-wrap: wrap; align-items: flex-start; }
       .endpoint-path { word-break: break-all; }
       .search-footer { flex-wrap: wrap; gap: 6px; }
@@ -444,6 +492,12 @@ export function buildDocsPortalHtml(
       <div class="manual-content" id="manual-content">
         <div class="markdown-body"></div>
       </div>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-toc-title">Table of Contents</div>
+        <div class="manual-toc-list" id="manual-toc-list">
+          <div class="manual-toc-empty">Sem tópicos</div>
+        </div>
+      </aside>
     </div>
     <div class="api-view" id="api-view">
       <iframe id="scalar-iframe" loading="lazy"></iframe>
@@ -461,6 +515,7 @@ export function buildDocsPortalHtml(
     let openApiSpec = null;
     let endpointsByTag = {};
     let allSearchItems = [];
+    let manualTocItems = [];
 
     function isMobileLayout() {
       return window.matchMedia('(max-width: 820px)').matches;
@@ -486,6 +541,124 @@ export function buildDocsPortalHtml(
       const backdrop = document.getElementById('manual-sidebar-backdrop');
       manualView.classList.remove('sidebar-open');
       backdrop.classList.remove('active');
+    }
+
+    function slugifyHeading(text) {
+      return String(text || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\\u0300-\\u036f]/g, '')
+        .replace(/[^a-z0-9\\s-]/g, '')
+        .trim()
+        .replace(/\\s+/g, '-')
+        .replace(/-+/g, '-');
+    }
+
+    function buildManualToc() {
+      const content = document.getElementById('manual-content');
+      const tocList = document.getElementById('manual-toc-list');
+      if (!content || !tocList) return;
+
+      const headings = Array.from(
+        content.querySelectorAll('.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4'),
+      );
+
+      const tocCandidates = [];
+      const usedIds = new Set();
+      let firstLevel = null;
+
+      headings.forEach((el, idx) => {
+        const tag = (el.tagName || '').toLowerCase();
+        const rawLevel = Number(tag.replace('h', '')) || 2;
+        const text = (el.textContent || '').trim();
+        if (!text) return;
+
+        if (el.classList.contains('endpoint-path')) return;
+
+        if (!el.id) {
+          let base = slugifyHeading(text) || ('section-' + idx);
+          let finalId = base;
+          let seq = 2;
+          while (usedIds.has(finalId) || document.getElementById(finalId)) {
+            finalId = base + '-' + seq++;
+          }
+          el.id = finalId;
+          usedIds.add(finalId);
+        } else {
+          usedIds.add(el.id);
+        }
+
+        if (firstLevel === null) firstLevel = rawLevel;
+        const visualLevel = rawLevel <= firstLevel ? 1 : 2;
+        tocCandidates.push({ id: el.id, text, level: visualLevel, el });
+      });
+
+      manualTocItems = tocCandidates;
+      if (!manualTocItems.length) {
+        tocList.innerHTML = '<div class="manual-toc-empty">Sem tópicos</div>';
+        return;
+      }
+
+      tocList.innerHTML = manualTocItems
+        .map((item, i) =>
+          '<button type="button" class="manual-toc-item level-' + item.level + '" data-toc-index="' + i + '" title="' + escapeHtml(item.text) + '">' +
+            escapeHtml(item.text) +
+          '</button>',
+        )
+        .join('');
+
+      tocList.querySelectorAll('.manual-toc-item').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const idx = Number(btn.dataset.tocIndex);
+          const item = manualTocItems[idx];
+          if (!item) return;
+          item.el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          setActiveTocItem(idx);
+        });
+      });
+
+      bindManualTocScrollSpy();
+      updateManualTocActive();
+    }
+
+    function setActiveTocItem(index) {
+      const tocList = document.getElementById('manual-toc-list');
+      if (!tocList) return;
+      tocList.querySelectorAll('.manual-toc-item').forEach((el, i) => {
+        el.classList.toggle('active', i === index);
+      });
+    }
+
+    function updateManualTocActive() {
+      const content = document.getElementById('manual-content');
+      if (!content || !manualTocItems.length) return;
+
+      const contentRect = content.getBoundingClientRect();
+      const anchorLine = contentRect.top + 40;
+      let activeIndex = 0;
+
+      manualTocItems.forEach((item, i) => {
+        const rect = item.el.getBoundingClientRect();
+        if (rect.top <= anchorLine) activeIndex = i;
+      });
+
+      setActiveTocItem(activeIndex);
+    }
+
+    function bindManualTocScrollSpy() {
+      const content = document.getElementById('manual-content');
+      if (!content || content.dataset.tocSpyBound === 'true') return;
+      content.addEventListener('scroll', () => {
+        if (activeView === 'manual') updateManualTocActive();
+      });
+      content.dataset.tocSpyBound = 'true';
+    }
+
+    function renderManualHtml(html) {
+      const content = document.getElementById('manual-content');
+      content.innerHTML = '<div class="markdown-body">' + html + '</div>';
+      content.scrollTop = 0;
+      buildManualToc();
     }
 
     // ── Init ─────────────────────────────────────
@@ -619,8 +792,7 @@ export function buildDocsPortalHtml(
       const content = document.getElementById('manual-content');
       const tag = manualTags[index];
       if (tag) {
-        content.innerHTML = '<div class="markdown-body">' + marked.parse(tag.description) + '</div>';
-        content.scrollTop = 0;
+        renderManualHtml(marked.parse(tag.description));
       }
     }
 
@@ -641,9 +813,7 @@ export function buildDocsPortalHtml(
       });
 
       const ep = endpointsByTag[tag][index];
-      const content = document.getElementById('manual-content');
-      content.innerHTML = '<div class="markdown-body">' + buildEndpointDoc(ep, tag) + '</div>';
-      content.scrollTop = 0;
+      renderManualHtml(buildEndpointDoc(ep, tag));
     }
 
     function selectGroupOverview(tag) {
@@ -660,7 +830,6 @@ export function buildDocsPortalHtml(
       });
 
       const linked = getLinkedManual(tag);
-      const content = document.getElementById('manual-content');
       let html = '';
       if (linked) {
         html += marked.parse(linked.description);
@@ -679,8 +848,9 @@ export function buildDocsPortalHtml(
       });
       html += '</tbody></table>';
 
-      content.innerHTML = '<div class="markdown-body">' + html + '</div>';
-      content.scrollTop = 0;
+      renderManualHtml(html);
+
+      const content = document.getElementById('manual-content');
 
       // Bind click events via delegation
       content.querySelectorAll('.endpoint-row').forEach(row => {
@@ -920,6 +1090,7 @@ export function buildDocsPortalHtml(
     window.addEventListener('resize', () => {
       syncNavbarOffset();
       if (!isMobileLayout()) closeManualSidebar();
+      if (activeView === 'manual') updateManualTocActive();
     });
 
     // ── Boot ─────────────────────────────────────
