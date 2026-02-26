@@ -21,8 +21,10 @@ export class SwaggerService {
   generateDocument(app: INestApplication): void {
     try {
       const config = new DocumentBuilder()
-        .setTitle('School System API')
-        .setDescription('API Documentation for School System')
+        .setTitle('Payments API')
+        .setDescription(
+          'API de pagamentos que integra múltiplos provedores financeiros para processamento de transações PIX, Boletos, TED e Pagamentos de Contas.',
+        )
         .setVersion('1.0')
         .addBearerAuth(
           {
@@ -58,6 +60,7 @@ export class SwaggerService {
       if (!this.isOpenApiObject(normalized)) {
         throw new Error('Normalized swagger document is invalid');
       }
+
       this.document = normalized;
     } catch (error) {
       this.logger.error(

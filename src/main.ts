@@ -12,6 +12,12 @@ console.log = (...args: any[]) => {
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule } from '@nestjs/swagger';
+import {
+  apiReference,
+  type NestJSReferenceConfiguration,
+} from '@scalar/nestjs-api-reference';
+import { buildDocsPortalHtml } from './swagger/templates/docs-portal.template';
+import { getManualTags } from './swagger/helpers/manual-tags.registry';
 import { HttpExceptionFilter } from './common/errors/filters/http-exception.filter';
 import { ValidationPipe } from '@nestjs/common';
 import { ConditionalClassSerializerInterceptor } from './common/interceptors/conditional-class-serializer.interceptor';
@@ -21,7 +27,10 @@ import { SwaggerService } from './swagger/swagger.service';
 import { createStandaloneLogger } from './common/logger/standalone-logger';
 import { RequestLoggingInterceptor } from './common/logger/interceptors/request-logging.interceptor';
 import { loadSecretsFromVault } from './secrets/vault/vault.loader';
-import { getErrorMessage, getErrorTrace } from './common/helpers/exception.helper';
+import {
+  getErrorMessage,
+  getErrorTrace,
+} from './common/helpers/exception.helper';
 import { ResponseSanitizationInterceptor } from './common/interceptors/response-sanitization.interceptor';
 
 async function bootstrap() {
@@ -120,32 +129,111 @@ async function bootstrap() {
       },
     );
 
+    // ── Scalar API Reference ──────────────────────────────────────────
+    const scalarBaseConfig: NestJSReferenceConfiguration = {
+      theme: 'deepSpace',
+      layout: 'modern',
+      forceDarkModeState: 'dark',
+      hideDarkModeToggle: true,
+      persistAuth: true,
+      hideModels: false,
+      defaultOpenAllTags: false,
+      searchHotKey: 'k',
+      showSidebar: true,
+      withDefaultFonts: true,
+      showDeveloperTools: 'localhost',
+      defaultHttpClient: {
+        targetKey: 'node',
+        clientKey: 'axios',
+      },
+    };
+
+    const expressApp = app.getHttpAdapter().getInstance();
+
+    // ── Portal de Documentação (navbar Manual/API) ────────────────────
+    const portalHtml = buildDocsPortalHtml(
+      {
+        title: 'Payments API',
+        apiSpecUrl: '/api/openapi.json',
+        scalarUrl: '/docs/api',
+      },
+      getManualTags(),
+    );
+
+    expressApp.get(
+      '/docs',
+      (
+        _req: unknown,
+        res: { type: (t: string) => { send: (h: string) => void } },
+      ) => {
+        res.type('html').send(portalHtml);
+      },
+    );
+
+    // ── Scalar API Reference ──────────────────────────────────────────
+    expressApp.use(
+      '/docs/api',
+      apiReference({
+        ...scalarBaseConfig,
+        pageTitle: 'Payments API - API Reference',
+        url: '/api/openapi.json',
+      }),
+    );
+
+    expressApp.use(
+      '/docs/api/provider',
+      apiReference({
+        ...scalarBaseConfig,
+        pageTitle: 'Payments API - Provider',
+        url: '/api/provider/openapi.json',
+      }),
+    );
+
+    expressApp.use(
+      '/docs/api/backoffice',
+      apiReference({
+        ...scalarBaseConfig,
+        pageTitle: 'Payments API - Backoffice',
+        url: '/api/backoffice/openapi.json',
+      }),
+    );
+
+    expressApp.use(
+      '/docs/api/internal',
+      apiReference({
+        ...scalarBaseConfig,
+        pageTitle: 'Payments API - Internal',
+        url: '/api/internal/openapi.json',
+      }),
+    );
+
     const port = configService.get<number>('PORT', 3000);
     await app.listen(port);
 
     app.useLogger(logger);
 
-    console.log('\n✅  Application Successfully Started\n');
-    console.log(`📍  Server:     http://localhost:${port}`);
-    console.log(`📚  Swagger UI:`);
+    console.log('\n\u2705  Application Successfully Started\n');
+    console.log(`\ud83d\udccd  Server:     http://localhost:${port}`);
+    console.log(`\ud83d\udcda  Docs Portal: http://localhost:${port}/docs`);
+    console.log(`\u26a1  Scalar API Reference:`);
+    console.log(`    - Completo:    http://localhost:${port}/docs/api`);
+    console.log(
+      `    - Provider:    http://localhost:${port}/docs/api/provider`,
+    );
+    console.log(
+      `    - Backoffice:  http://localhost:${port}/docs/api/backoffice`,
+    );
+    console.log(
+      `    - Internal:    http://localhost:${port}/docs/api/internal`,
+    );
+    console.log(`\ud83d\udcda  Swagger UI (legacy):`);
     console.log(`    - Completo:    http://localhost:${port}/api`);
     console.log(`    - Provider:    http://localhost:${port}/api/provider`);
     console.log(`    - Backoffice:  http://localhost:${port}/api/backoffice`);
     console.log(`    - Internal:    http://localhost:${port}/api/internal`);
-    console.log(`📄  OpenAPI JSON:`);
-    console.log(`    - Completo:    http://localhost:${port}/api/openapi.json`);
+    console.log(`\ud83d\udcca  Queues:     http://localhost:${port}/queues`);
     console.log(
-      `    - Provider:    http://localhost:${port}/api/provider/openapi.json`,
-    );
-    console.log(
-      `    - Backoffice:  http://localhost:${port}/api/backoffice/openapi.json`,
-    );
-    console.log(
-      `    - Internal:    http://localhost:${port}/api/internal/openapi.json`,
-    );
-    console.log(`📊  Queues:     http://localhost:${port}/queues`);
-    console.log(
-      '\n═══════════════════════════════════════════════════════════\n',
+      '\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n',
     );
   } catch (error) {
     standaloneLogger.error(
