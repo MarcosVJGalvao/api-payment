@@ -22,6 +22,7 @@
     let manualTocItems = [];
     let currentEndpointSelection = null;
     let currentManualSelection = null;
+    let scalarRouteSyncTimer = null;
 
     function isMobileLayout() {
       return window.matchMedia('(max-width: 820px)').matches;
@@ -114,6 +115,18 @@
       return null;
     }
 
+    function getScalarRefFromPortalHash() {
+      const hash = window.location.hash || '';
+      if (!hash.startsWith('#scalarRef=')) return null;
+      const raw = hash.slice('#scalarRef='.length);
+      if (!raw) return null;
+      try {
+        return decodeURIComponent(raw);
+      } catch {
+        return raw;
+      }
+    }
+
     function setManualUrl(slug) {
       const nextPath = '/docs/manual/' + slug;
       const nextUrl = nextPath + (window.location.search || '');
@@ -195,6 +208,363 @@
       const nextUrl = nextPath + (window.location.search || '');
       if (window.location.pathname === nextPath) return;
       window.history.replaceState({}, '', nextUrl);
+    }
+
+    function getEndpointByTagAndIndex(tag, index) {
+      const endpoints = endpointsByTag && endpointsByTag[tag];
+      if (!Array.isArray(endpoints)) return null;
+      if (!Number.isInteger(index) || index < 0 || index >= endpoints.length) return null;
+      return endpoints[index];
+    }
+
+    function buildScalarHashForEndpoint(tag, index) {
+      const endpoint = getEndpointByTagAndIndex(tag, index);
+      if (!endpoint) return '';
+      const tagSlug = slugifyEndpointTag(tag);
+      const method = String(endpoint.method || '').toUpperCase();
+      const pathPart = String(endpoint.path || '')
+        .replace(/^\/+/, '')
+        .split('/')
+        .map((segment) => encodeURIComponent(segment))
+        .join('/');
+      if (!tagSlug || !method) return '';
+      return '#/tag/' + tagSlug + '/' + method + '/' + pathPart;
+    }
+
+    function applyScalarEndpointSelectionToIframe() {
+      const scalarRefFromHash = getScalarRefFromPortalHash();
+      if (scalarRefFromHash) {
+        const iframe = document.getElementById('scalar-iframe');
+        if (!iframe) return;
+        const nextSrc = scalarUrl + scalarRefFromHash;
+        if (!scalarLoaded) {
+          iframe.src = nextSrc;
+          scalarLoaded = true;
+          return;
+        }
+        try {
+          const loc = iframe.contentWindow && iframe.contentWindow.location;
+          const currentRef = loc ? String(loc.search || '') + String(loc.hash || '') : '';
+          if (currentRef !== scalarRefFromHash) {
+            iframe.src = nextSrc;
+          }
+        } catch {
+          iframe.src = nextSrc;
+        }
+        return;
+      }
+
+      if (
+        !currentEndpointSelection ||
+        !currentEndpointSelection.tag ||
+        !Number.isInteger(currentEndpointSelection.index)
+      ) {
+        return;
+      }
+
+      const iframe = document.getElementById('scalar-iframe');
+      if (!iframe) return;
+
+      const hash = buildScalarHashForEndpoint(
+        currentEndpointSelection.tag,
+        currentEndpointSelection.index,
+      );
+      if (!hash) return;
+
+      if (!scalarLoaded) {
+        iframe.src = scalarUrl + hash;
+        scalarLoaded = true;
+        return;
+      }
+
+      try {
+        if (iframe.contentWindow && iframe.contentWindow.location.hash !== hash) {
+          iframe.contentWindow.location.hash = hash;
+        }
+      } catch {
+        // Fallback if direct hash access fails for any reason.
+        iframe.src = scalarUrl + hash;
+      }
+    }
+
+    function parseScalarSelectionFromIframe() {
+      const iframe = document.getElementById('scalar-iframe');
+      if (!iframe || !iframe.contentWindow) return null;
+
+      try {
+        const loc = iframe.contentWindow.location;
+        const hash = String(loc.hash || '');
+        const search = String(loc.search || '');
+
+        const tryFindByMethodAndPath = (method, normalizedPath, preferredTagSlug = null) => {
+          if (!method || !normalizedPath) return null;
+          const upperMethod = String(method).toUpperCase();
+          for (const [tag, endpoints] of Object.entries(endpointsByTag || {})) {
+            if (preferredTagSlug && slugifyEndpointTag(tag) !== preferredTagSlug) {
+              continue;
+            }
+            const index = (endpoints || []).findIndex(
+              (ep) =>
+                String(ep.method || '').toUpperCase() === upperMethod &&
+                String(ep.path || '') === normalizedPath,
+            );
+            if (index >= 0) return { tag, index };
+          }
+          return null;
+        };
+
+        const normalizeExtractedPath = (value) => {
+          if (!value) return null;
+          let raw = String(value).trim();
+          raw = raw.replace(/^[`'"\s]+|[`'",;\s]+$/g, '');
+          raw = raw.replace(/^https?:\/\/[^/]+/i, '');
+          const hashIndex = raw.indexOf('#');
+          if (hashIndex >= 0) raw = raw.slice(0, hashIndex);
+          const queryIndex = raw.indexOf('?');
+          if (queryIndex >= 0) raw = raw.slice(0, queryIndex);
+          if (!raw) return null;
+          return raw.startsWith('/') ? raw : '/' + raw;
+        };
+
+        const decodePath = (value) => {
+          if (!value) return null;
+          const decoded = String(value)
+            .split('/')
+            .map((segment) => {
+              try {
+                return decodeURIComponent(segment);
+              } catch {
+                return segment;
+              }
+            })
+            .join('/');
+          return normalizeExtractedPath(decoded);
+        };
+
+        const tryExtractVisibleOperationHeader = (iframeDoc) => {
+          const root =
+            iframeDoc?.querySelector('[role="main"]') ||
+            iframeDoc?.querySelector('main') ||
+            iframeDoc?.body;
+          if (!root || !root.querySelectorAll) return null;
+
+          const viewportWidth =
+            iframe.contentWindow?.innerWidth ||
+            iframe.clientWidth ||
+            0;
+
+          let best = null;
+          const elements = root.querySelectorAll('*');
+          for (const el of elements) {
+            if (!(el instanceof iframe.contentWindow.HTMLElement)) continue;
+            if (!el.offsetParent) continue;
+
+            const text = (el.textContent || '').trim().replace(/\s+/g, ' ');
+            if (!text || text.length > 240) continue;
+
+            // Scalar often renders method/path in separate spans with extra text
+            // (e.g. client selector) in the same container.
+            const match = text.match(/\b(GET|POST|PUT|PATCH|DELETE)\b\s+(\/[^\s`'",;)\]]+)/);
+            if (!match) continue;
+
+            const rect = el.getBoundingClientRect();
+            if (rect.width < 120 || rect.height < 10) continue;
+            if (rect.bottom < 0 || rect.top > (iframe.contentWindow.innerHeight || 10000)) continue;
+
+            const path = normalizeExtractedPath(match[2]);
+            if (!path) continue;
+            const found = tryFindByMethodAndPath(match[1], path);
+            if (!found) continue;
+
+            // Prefer visible operation headers in the right/code panel and nearest to top.
+            const inRightPane = viewportWidth ? rect.left > viewportWidth * 0.45 : false;
+            const looksLikeHeaderRow = rect.height <= 80;
+            const score =
+              (inRightPane ? 1000 : 0) -
+              (looksLikeHeaderRow ? 0 : 120) -
+              Math.max(0, rect.top) -
+              Math.max(0, text.length - 80);
+
+            if (!best || score > best.score) {
+              best = { score, selection: found };
+            }
+          }
+
+          return best ? best.selection : null;
+        };
+
+        const tryExtractFromVisibleCodeSnippet = (iframeDoc) => {
+          const root =
+            iframeDoc?.querySelector('[role="main"]') ||
+            iframeDoc?.querySelector('main') ||
+            iframeDoc?.body;
+          if (!root || !root.querySelectorAll) return null;
+
+          const blocks = root.querySelectorAll('pre, code');
+          let best = null;
+          for (const el of blocks) {
+            if (!(el instanceof iframe.contentWindow.HTMLElement)) continue;
+            if (!el.offsetParent) continue;
+
+            const rect = el.getBoundingClientRect();
+            if (rect.width < 220 || rect.height < 80) continue;
+            if (rect.bottom < 0 || rect.top > (iframe.contentWindow.innerHeight || 10000)) continue;
+
+            const text = String(el.innerText || el.textContent || '');
+            if (!text) continue;
+            if (!/\bmethod\s*:/.test(text) || !/\burl\s*:/.test(text)) continue;
+
+            const methodMatch = text.match(/\bmethod\s*:\s*['"`]?(GET|POST|PUT|PATCH|DELETE)['"`]?/i);
+            const urlMatch = text.match(/\burl\s*:\s*['"`]([^'"`\n]+)['"`]/i);
+            if (!methodMatch || !urlMatch) continue;
+
+            const found = tryFindByMethodAndPath(
+              methodMatch[1],
+              normalizeExtractedPath(urlMatch[1]),
+            );
+            if (!found) continue;
+
+            // Prefer the code sample panel on the right and near the top.
+            const viewportWidth =
+              iframe.contentWindow?.innerWidth ||
+              iframe.clientWidth ||
+              0;
+            const inRightPane = viewportWidth ? rect.left > viewportWidth * 0.45 : false;
+            const score = (inRightPane ? 1000 : 0) - Math.max(0, rect.top) + Math.min(rect.height, 500);
+
+            if (!best || score > best.score) {
+              best = { score, selection: found };
+            }
+          }
+
+          return best ? best.selection : null;
+        };
+
+        // Scalar hash format observed in some versions: #/tag/<tagSlug>/<METHOD>/<path...>
+        let match = hash.match(/^#\/tag\/([^/]+)\/([A-Za-z]+)\/(.+)$/);
+        if (match) {
+          const preferredTagSlug = decodeURIComponent(match[1] || '');
+          const method = match[2];
+          const normalizedPath = decodePath(match[3]);
+          const found = tryFindByMethodAndPath(method, normalizedPath, preferredTagSlug);
+          if (found) return found;
+        }
+
+        // Alternate hash format: #/<METHOD>/<path...> or #operation/<METHOD>/<path...>
+        match = hash.match(/^#(?:\/|\/?operation\/)([A-Za-z]+)\/(.+)$/);
+        if (match) {
+          const found = tryFindByMethodAndPath(match[1], decodePath(match[2]));
+          if (found) return found;
+        }
+
+        // Query param based formats (?method=get&path=/audit/{id})
+        const params = new URLSearchParams(search);
+        const qMethod = params.get('method') || params.get('httpMethod');
+        const qPath =
+          params.get('path') ||
+          params.get('endpoint') ||
+          params.get('route');
+        if (qMethod && qPath) {
+          const found = tryFindByMethodAndPath(qMethod, decodePath(qPath));
+          if (found) return found;
+        }
+
+        // Fallback: inspect visible operation title in Scalar DOM (same-origin iframe).
+        const iframeDoc = iframe.contentWindow.document;
+
+        const codeSnippetSelection = tryExtractFromVisibleCodeSnippet(iframeDoc);
+        if (codeSnippetSelection) return codeSnippetSelection;
+
+        const visibleHeaderSelection = tryExtractVisibleOperationHeader(iframeDoc);
+        if (visibleHeaderSelection) return visibleHeaderSelection;
+
+        const focusedText =
+          iframeDoc?.querySelector('main')?.innerText ||
+          iframeDoc?.querySelector('[role="main"]')?.innerText ||
+          iframeDoc?.body?.innerText ||
+          '';
+
+        const endpointPattern = /\b(GET|POST|PUT|PATCH|DELETE)\s+(\/[^\s`'",;)\]]+|https?:\/\/[^\s`'",;)\]]+)/g;
+        const endpointCandidates = [];
+        let endpointMatch;
+        while ((endpointMatch = endpointPattern.exec(focusedText)) != null) {
+          const normalizedPath = normalizeExtractedPath(endpointMatch[2]);
+          const found = tryFindByMethodAndPath(endpointMatch[1], normalizedPath);
+          if (found) {
+            endpointCandidates.push(found);
+          }
+        }
+        if (endpointCandidates.length) {
+          // Prefer the latest match because Scalar sidebars usually render before the active content panel.
+          return endpointCandidates[endpointCandidates.length - 1];
+        }
+
+        const urlPattern = /\burl\s*[:=]\s*[`'"](https?:\/\/[^`'"]+|\/[^`'"]+)/gi;
+        let urlMatch;
+        while ((urlMatch = urlPattern.exec(focusedText)) != null) {
+          const normalizedPath = normalizeExtractedPath(urlMatch[1]);
+          if (!normalizedPath) continue;
+          // Prefer method declarations near the URL line in code snippets.
+          const windowStart = Math.max(0, urlMatch.index - 240);
+          const localChunk = focusedText.slice(windowStart, urlMatch.index + 80);
+          const localMethodMatches = Array.from(
+            localChunk.matchAll(/\bmethod\s*:\s*['"]?(GET|POST|PUT|PATCH|DELETE)['"]?/gi),
+          );
+          const localMethods = localMethodMatches.map((m) => m[1].toUpperCase());
+          const methodHints =
+            localMethods.length
+              ? localMethods.reverse()
+              : (focusedText.match(/\b(GET|POST|PUT|PATCH|DELETE)\b/g) || []);
+          for (const hint of methodHints) {
+            const found = tryFindByMethodAndPath(hint, normalizedPath);
+            if (found) return found;
+          }
+        }
+      } catch {
+        return null;
+      }
+
+      return null;
+    }
+
+    function syncApiPortalUrlFromScalarSelection() {
+      if (activeView !== 'api') return;
+      const iframe = document.getElementById('scalar-iframe');
+      if (!iframe || !iframe.contentWindow) return;
+
+      try {
+        const loc = iframe.contentWindow.location;
+        const scalarRef = String(loc.search || '') + String(loc.hash || '');
+        const portalPath = window.location.pathname || '/docs/api/portal';
+        const encodedRef = scalarRef ? '#scalarRef=' + encodeURIComponent(scalarRef) : '';
+        const nextUrl = portalPath + (window.location.search || '') + encodedRef;
+        const currentUrl =
+          window.location.pathname + (window.location.search || '') + (window.location.hash || '');
+        if (currentUrl !== nextUrl) {
+          window.history.replaceState({}, '', nextUrl);
+        }
+        return;
+      } catch {
+        // Fall back to endpoint inference if direct iframe URL access fails.
+      }
+
+      const selection = parseScalarSelectionFromIframe();
+      if (!selection) return;
+
+      const nextPath =
+        '/docs/api/endpoint/' +
+        slugifyEndpointTag(selection.tag) +
+        '/' +
+        selection.index;
+      const nextUrl = nextPath + (window.location.search || '');
+      if (window.location.pathname !== nextPath || window.location.hash) {
+        window.history.replaceState({}, '', nextUrl);
+      }
+    }
+
+    function ensureScalarRouteSyncRunning() {
+      if (scalarRouteSyncTimer != null) return;
+      scalarRouteSyncTimer = window.setInterval(syncApiPortalUrlFromScalarSelection, 700);
     }
 
     function applyRouteFromHash() {
@@ -282,6 +652,7 @@
       const tocCandidates = [];
       const usedIds = new Set();
       let firstLevel = null;
+      let secondLevel = null;
 
       headings.forEach((el, idx) => {
         const tag = (el.tagName || '').toLowerCase();
@@ -290,6 +661,7 @@
         if (!text) return;
 
         if (el.classList.contains('endpoint-path')) return;
+        if (el.closest && el.closest('.enum-definitions-section')) return;
 
         if (!el.id) {
           let base = slugifyHeading(text) || ('section-' + idx);
@@ -305,8 +677,21 @@
         }
 
         if (firstLevel === null) firstLevel = rawLevel;
-        const visualLevel = rawLevel <= firstLevel ? 1 : 2;
-        tocCandidates.push({ id: el.id, text, level: visualLevel, el });
+        if (rawLevel === firstLevel) {
+          tocCandidates.push({ id: el.id, text, level: 1, el });
+          return;
+        }
+
+        if (rawLevel > firstLevel) {
+          if (secondLevel === null) {
+            secondLevel = rawLevel;
+          }
+          if (rawLevel !== secondLevel) {
+            return;
+          }
+          tocCandidates.push({ id: el.id, text, level: 2, el });
+          return;
+        }
       });
 
       manualTocItems = tocCandidates;
@@ -370,10 +755,54 @@
       content.dataset.tocSpyBound = 'true';
     }
 
+    function decorateHeadingAnchors() {
+      const content = document.getElementById('manual-content');
+      if (!content) return;
+
+      const headings = content.querySelectorAll(
+        '.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6',
+      );
+
+      headings.forEach((heading, idx) => {
+        const text = (heading.textContent || '').trim();
+        if (!text) return;
+
+        const tagName = (heading.tagName || '').toLowerCase();
+        if (tagName === 'h1') return;
+
+        if (!heading.id) {
+          heading.id = slugifyHeading(text) || ('section-' + idx);
+        }
+
+        if (heading.querySelector('.heading-anchor-link')) return;
+
+        const anchor = document.createElement('a');
+        anchor.className = 'heading-anchor-link';
+        anchor.href = '#' + heading.id;
+        anchor.setAttribute('aria-label', 'Link para esta seção');
+        anchor.setAttribute('title', 'Link para esta seção');
+        anchor.innerHTML =
+          '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+          '<path fill="currentColor" d="M12 2a2.25 2.25 0 1 1 0 4.5A2.25 2.25 0 0 1 12 2Zm-1 5.5h2v8.25a3.75 3.75 0 0 0 2.92-2.72l-1.48-.74a1 1 0 1 1 .9-1.78l2.73 1.36a1 1 0 0 1 .47 1.28A5.75 5.75 0 0 1 13 17.84V20h2.5a1 1 0 1 1 0 2h-7a1 1 0 1 1 0-2H11v-2.16a5.75 5.75 0 0 1-5.46-4.97a1 1 0 0 1 .56-1.01l2.73-1.36a1 1 0 1 1 .9 1.78l-1.5.75A3.75 3.75 0 0 0 11 15.75V7.5Z"></path>' +
+          '</svg>';
+        anchor.addEventListener('click', (event) => {
+          event.preventDefault();
+          const hash = '#' + heading.id;
+          const nextUrl =
+            window.location.pathname + (window.location.search || '') + hash;
+          window.history.replaceState({}, '', nextUrl);
+          heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        heading.classList.add('has-heading-anchor');
+        heading.insertBefore(anchor, heading.firstChild);
+      });
+    }
+
     function renderManualHtml(html) {
       const content = document.getElementById('manual-content');
       content.innerHTML = '<div class="markdown-body">' + html + '</div>';
       content.scrollTop = 0;
+      decorateHeadingAnchors();
       buildManualToc();
     }
 
@@ -384,6 +813,7 @@
       scalarIframe.addEventListener('load', () => {
         scalarReady = true;
         document.getElementById('api-view').classList.add('loaded');
+        syncApiPortalUrlFromScalarSelection();
       });
       renderSidebar();
       if (!applyRouteFromPath() && !applyRouteFromHash() && manualTags.length > 0) {
@@ -515,12 +945,15 @@
         html += '<p>N\u00e3o \u00e9 necess\u00e1rio enviar headers adicionais nesta requisi\u00e7\u00e3o.</p>';
         return html;
       }
-      html += '<table><thead><tr><th>Nome</th><th>Obrigat\u00f3rio</th><th>Descri\u00e7\u00e3o</th></tr></thead><tbody>';
+      html += '<table><thead><tr><th>Nome</th><th>Descrição</th></tr></thead><tbody>';
       headers.forEach((h) => {
         html += '<tr>';
         html += '<td><code>' + escapeHtml(h.name) + '</code></td>';
-        html += '<td>' + (h.required ? 'Sim' : 'N\u00e3o') + '</td>';
-        html += '<td>' + escapeHtml(h.description || 'Header da requisi\u00e7\u00e3o') + '</td>';
+        const headerDescription = h.required
+          ? '<strong>Obrigatório.</strong> ' +
+            escapeHtml(h.description || 'Header da requisição')
+          : escapeHtml(h.description || 'Header da requisição');
+        html += '<td>' + headerDescription + '</td>';
         html += '</tr>';
       });
       html += '</tbody></table>';
@@ -760,26 +1193,31 @@
 
       // Parameters (query/path only; headers are shown in "Headers Necessários")
       const routeParams = (ep.parameters || []).filter((p) => p && (p.in === 'query' || p.in === 'path'));
+      const routeParamEnums = collectEnumDefinitionsFromParameters(routeParams);
       md += '<h2>Parâmetros</h2>';
       if (routeParams.length > 0) {
-        md += '<table><thead><tr><th>Nome</th><th>Em</th><th>Tipo</th><th>Obrigatório</th><th>Descrição</th></tr></thead><tbody>';
+        md += '<table><thead><tr><th>Nome</th><th>Local</th><th>Tipo</th><th>Descrição</th></tr></thead><tbody>';
         routeParams.forEach(p => {
-          const type = p.schema ? (p.schema.type || p.schema.enum ? 'enum' : '—') : '—';
-          const enumVals = p.schema && p.schema.enum
-            ? ' <span class="enum-value-list">(' + p.schema.enum.map(v => escapeHtml(String(v))).join(',<wbr> ') + ')</span>'
-            : '';
+          const type = p.schema
+            ? (Array.isArray(p.schema.enum) && p.schema.enum.length > 0
+              ? 'enum'
+              : (p.schema.type || '—'))
+            : '—';
           md += '<tr>';
           md += '<td><code>' + escapeHtml(p.name) + '</code></td>';
           md += '<td>' + escapeHtml(p.in) + '</td>';
-          md += '<td>' + escapeHtml(type) + enumVals + '</td>';
-          md += '<td>' + (p.required ? 'Sim' : 'Não') + '</td>';
-          md += '<td>' + escapeHtml(p.description || '—') + '</td>';
+          md += '<td>' + escapeHtml(type) + '</td>';
+          const paramDescription = p.required
+            ? '<strong>Obrigatório.</strong> ' + escapeHtml(p.description || '—')
+            : escapeHtml(p.description || '—');
+          md += '<td>' + paramDescription + '</td>';
           md += '</tr>';
         });
         md += '</tbody></table>';
       } else {
         md += '<p>N\u00e3o \u00e9 necess\u00e1rio enviar par\u00e2metros nesta requisi\u00e7\u00e3o.</p>';
       }
+      md += renderEnumDefinitionsSection(routeParamEnums, 'Enums dos Parâmetros');
 
       // Request Body
       md += '<h2>Corpo da Requisição</h2>';
@@ -791,6 +1229,10 @@
           if (schema && schema.properties) {
             md += renderSchemaTable(schema, { showRequired: false });
           }
+          md += renderEnumDefinitionsSection(
+            collectEnumDefinitionsFromSchema(schema),
+            'Enums do Corpo da Requisição',
+          );
           // Examples
           if (jsonContent.examples) {
             md += '<h3>Exemplos</h3>';
@@ -850,7 +1292,7 @@
           if (errorResponses.some(([status]) => String(status) === '400')) {
             md += '<p>Recordamos que esta API também poderá retornar erros comuns entre todos os endpoints que acompanham os erros <strong>400</strong> (se houver). Consulte a seção <a href="/docs#manual=tratamento-de-erros">Padrões de Erros</a>.</p>';
           }
-          md += '<table><thead><tr><th>StatusCode</th><th>ErrorCode</th><th>Message</th><th>Descri\u00e7\u00e3o</th></tr></thead><tbody>';
+          md += '<table><thead><tr><th>Status Code</th><th>Error Code</th><th>Message</th><th>Descrição</th></tr></thead><tbody>';
 
           errorResponses.forEach(([status, resp]) => {
             const errorSummary = extractErrorSummary(resp);
@@ -1028,19 +1470,101 @@
         type = 'array<' + itemType + '>';
       }
       if (p.format) type += ' (' + p.format + ')';
-      if (p.enum) type = 'enum: ' + p.enum.join(', ');
+      if (Array.isArray(p.enum) && p.enum.length > 0) type = 'enum';
       return type;
     }
 
     function renderSchemaTable(schema, options = { showRequired: true }) {
-      let html = '<table><thead><tr><th>Campo</th><th>Tipo</th>';
-      if (options.showRequired) {
-        html += '<th>Obrigatório</th>';
-      }
-      html += '<th>Descrição</th></tr></thead><tbody>';
+      let html = '<table><thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead><tbody>';
       html += renderSchemaRows(schema, '', 0, new Set(), options);
       html += '</tbody></table>';
       return html;
+    }
+
+    function renderEnumDefinitionsSection(enumDefs, title) {
+      if (!Array.isArray(enumDefs) || enumDefs.length === 0) return '';
+
+      let html = '<section class="enum-definitions-section"><h3>' + escapeHtml(title) + '</h3>';
+      enumDefs.forEach((def) => {
+        html += '<h4>' + escapeHtml(def.title) + '</h4>';
+        if (def.description) {
+          html += '<p>' + escapeHtml(def.description) + '</p>';
+        }
+        html += '<table><thead><tr><th>Valor</th></tr></thead><tbody>';
+        (def.values || []).forEach((value) => {
+          html += '<tr><td><code>' + escapeHtml(String(value)) + '</code></td></tr>';
+        });
+        html += '</tbody></table>';
+      });
+      html += '</section>';
+      return html;
+    }
+
+    function collectEnumDefinitionsFromParameters(params) {
+      const defs = [];
+      (params || []).forEach((p) => {
+        const schema = p && p.schema ? (resolveSchema(p.schema) || p.schema) : null;
+        if (!schema || !Array.isArray(schema.enum) || schema.enum.length === 0) return;
+        defs.push({
+          title: p.name + ' (' + (p.in || 'param') + ')',
+          description: p.description || '',
+          values: schema.enum,
+        });
+      });
+      return defs;
+    }
+
+    function collectEnumDefinitionsFromSchema(schema, prefix = '', visited = new Set()) {
+      const resolved = resolveSchema(schema) || schema;
+      if (!resolved || typeof resolved !== 'object') return [];
+
+      const results = [];
+      const visitKey = prefix + '|' + (resolved.$ref || '');
+      if (visited.has(visitKey)) return results;
+      visited.add(visitKey);
+
+      if (Array.isArray(resolved.enum) && resolved.enum.length > 0) {
+        results.push({
+          title: prefix || 'body',
+          description: typeof resolved.description === 'string' ? resolved.description : '',
+          values: resolved.enum,
+        });
+      }
+
+      const props = (resolved.properties && typeof resolved.properties === 'object')
+        ? resolved.properties
+        : null;
+      if (props) {
+        Object.entries(props).forEach(([name, propSchema]) => {
+          const fieldPath = prefix ? (prefix + '.' + name) : name;
+          results.push(...collectEnumDefinitionsFromSchema(propSchema, fieldPath, visited));
+        });
+      }
+
+      if (resolved.items) {
+        const itemPath = prefix ? (prefix + '[]') : 'items[]';
+        results.push(...collectEnumDefinitionsFromSchema(resolved.items, itemPath, visited));
+      }
+
+      ['allOf', 'oneOf', 'anyOf'].forEach((key) => {
+        const list = resolved[key];
+        if (!Array.isArray(list)) return;
+        list.forEach((part) => {
+          results.push(...collectEnumDefinitionsFromSchema(part, prefix, visited));
+        });
+      });
+
+      return dedupeEnumDefinitions(results);
+    }
+
+    function dedupeEnumDefinitions(defs) {
+      const seen = new Set();
+      return (defs || []).filter((def) => {
+        const key = def.title + '|' + JSON.stringify(def.values || []);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
     }
 
     function renderSchemaRows(schema, prefix = '', depth = 0, visited = new Set(), options = { showRequired: true }) {
@@ -1057,22 +1581,21 @@
       for (const [name, prop] of Object.entries(resolvedSchema.properties)) {
         const p = resolveSchema(prop) || prop;
         const fullName = prefix ? (prefix + '.' + name) : name;
-        const indent = depth * 10;
         const fieldLabel = fullName;
         const type = getSchemaDisplayType(p);
         const desc = p.description || (p.example !== undefined ? 'Ex: ' + p.example : '—');
 
         html += '<tr>';
-        html += '<td><code style="padding-left:' + indent + 'px; display:inline-block;">' + escapeHtml(fieldLabel) + '</code></td>';
+        html += '<td><code>' + escapeHtml(fieldLabel) + '</code></td>';
         if (p.enum) {
           html += '<td><span class="enum-value-list">' + escapeHtml(type).replaceAll(', ', ',<wbr> ') + '</span></td>';
         } else {
           html += '<td>' + escapeHtml(type) + '</td>';
         }
-        if (options.showRequired) {
-          html += '<td>' + (required.includes(name) ? 'Sim' : 'Não') + '</td>';
-        }
-        html += '<td>' + escapeHtml(String(desc)) + '</td>';
+        const finalDesc = required.includes(name)
+          ? '<strong>Obrigatório.</strong> ' + escapeHtml(String(desc))
+          : escapeHtml(String(desc));
+        html += '<td>' + finalDesc + '</td>';
         html += '</tr>';
 
         if (p.type === 'object' || p.properties) {
@@ -1104,8 +1627,16 @@
       apiView.classList.toggle('active', view === 'api');
       apiView.classList.toggle('loaded', scalarReady);
       if (view === 'api' && !scalarLoaded) {
-        document.getElementById('scalar-iframe').src = scalarUrl;
-        scalarLoaded = true;
+        applyScalarEndpointSelectionToIframe();
+      }
+      if (view === 'api') {
+        if (!scalarLoaded) {
+          document.getElementById('scalar-iframe').src = scalarUrl;
+          scalarLoaded = true;
+        } else {
+          applyScalarEndpointSelectionToIframe();
+        }
+        ensureScalarRouteSyncRunning();
       }
       if (view === 'manual') {
         ensureManualContentRendered();

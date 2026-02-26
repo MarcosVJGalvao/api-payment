@@ -218,6 +218,44 @@
     .markdown-body h2 { font-size: 22px; font-weight: 700; margin: 28px 0 10px; color: var(--scalar-color-1); letter-spacing: -0.3px; }
     .markdown-body h3 { font-size: 17px; font-weight: 600; margin: 24px 0 8px; color: var(--scalar-color-1); }
     .markdown-body h4 { font-size: 14px; font-weight: 600; margin: 18px 0 6px; color: var(--scalar-color-1); }
+    .markdown-body h1,
+    .markdown-body h2,
+    .markdown-body h3,
+    .markdown-body h4,
+    .markdown-body h5,
+    .markdown-body h6 { position: relative; }
+    .markdown-body .has-heading-anchor {
+      padding-left: 20px;
+      margin-left: -20px;
+    }
+    .heading-anchor-link {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--scalar-color-3);
+      text-decoration: none;
+      font-weight: 500;
+      opacity: 0;
+      transition: opacity var(--transition), color var(--transition);
+      font-size: 0.9em;
+      line-height: 1;
+    }
+    .heading-anchor-link svg {
+      width: 13px;
+      height: 13px;
+      display: block;
+    }
+    .markdown-body h1:hover .heading-anchor-link,
+    .markdown-body h2:hover .heading-anchor-link,
+    .markdown-body h3:hover .heading-anchor-link,
+    .markdown-body h4:hover .heading-anchor-link,
+    .markdown-body h5:hover .heading-anchor-link,
+    .markdown-body h6:hover .heading-anchor-link,
+    .heading-anchor-link:focus {
+      opacity: 1;
+      color: var(--scalar-color-1);
+    }
     .markdown-body p { font-size: 14px; line-height: 1.7; color: var(--scalar-color-2); margin-bottom: 14px; }
     .markdown-body p,
     .markdown-body li,
@@ -257,7 +295,7 @@
     .markdown-body th {
       text-align: left; padding: 9px 12px; background: var(--scalar-background-3);
       border: 1px solid var(--scalar-border); color: var(--scalar-color-1);
-      font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+      font-weight: 600; font-size: 11px; text-transform: none; letter-spacing: 0.2px;
     }
     .markdown-body td {
       padding: 9px 12px;
