@@ -15,3 +15,7 @@ export interface IManualTag {
    */
   apiTag?: string;
 }
+
+export interface ManualTagDefinition extends IManualTag {
+  order?: number;
+}

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>__DOCS_PORTAL_TITLE__</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/docs/assets/css/docs-portal.css">
+  <script src="/docs/assets/marked.js"></script>
+
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <button class="navbar-manual-toggle" type="button" onclick="toggleManualSidebar()" aria-label="Abrir menu do manual">☰</button>
+    <div class="navbar-brand">💳 __DOCS_PORTAL_TITLE__</div>
+    <div class="navbar-tabs">
+      <div class="navbar-tab active" data-view="manual" onclick="switchView('manual')">📘 Manual</div>
+      <div class="navbar-tab" data-view="api" onclick="switchView('api')">⚡ API</div>
+    </div>
+    <div class="navbar-spacer"></div>
+    <div class="navbar-search" onclick="openSearch()">
+      🔍 Pesquisar <kbd>Ctrl</kbd> <kbd>K</kbd>
+    </div>
+  </nav>
+
+  <!-- Search Modal -->
+  <div class="search-overlay" id="search-overlay" onclick="if(event.target===this)closeSearch()">
+    <div class="search-modal">
+      <div class="search-input-wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" id="search-input" type="text" placeholder="Buscar na documentação..." autocomplete="off" oninput="onSearchInput(this.value)">
+      </div>
+      <div class="search-results" id="search-results"></div>
+      <div class="search-footer">
+        <span><kbd>↑</kbd> <kbd>↓</kbd> Navegar</span>
+        <span><kbd>Enter</kbd> Selecionar</span>
+        <span><kbd>Esc</kbd> Fechar</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content-area">
+    <div class="manual-view active" id="manual-view">
+      <div class="manual-sidebar-backdrop" id="manual-sidebar-backdrop" onclick="closeManualSidebar()"></div>
+      <div class="manual-sidebar" id="manual-sidebar"></div>
+      <div class="manual-content" id="manual-content">
+        <div class="markdown-body"></div>
+      </div>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-toc-title">Table of Contents</div>
+        <div class="manual-toc-list" id="manual-toc-list">
+          <div class="manual-toc-empty">Sem tópicos</div>
+        </div>
+      </aside>
+    </div>
+    <div class="api-view" id="api-view">
+      <div class="api-loading">Carregando referência da API...</div>
+      <iframe id="scalar-iframe" loading="lazy"></iframe>
+    </div>
+  </div>
+  <script id="docs-portal-data" type="application/json">__DOCS_PORTAL_DATA__</script>
+  <script src="/docs/assets/js/docs-portal.js"></script>
+</body>
+</html>

@@ -1,4 +1,7 @@
-import { IManualTag } from '@/swagger/interfaces/manual-tag.interface';
+import {
+  IManualTag,
+  ManualTagDefinition,
+} from '@/swagger/interfaces/manual-tag.interface';
 
 // Importações dos manual tags de cada módulo
 import { introducaoManualTag } from '@/swagger/docs/manual/introducao.manual';
@@ -39,8 +42,7 @@ import { webhooksTedManualTag } from '@/webhook-processor/docs/webhooks-ted.manu
  * 3. Para vincular a um controller, defina `apiTag` com o nome da tag OpenAPI
  * 4. Importe e adicione ao array abaixo
  */
-export function getManualTags(): IManualTag[] {
-  return [
+const MANUAL_TAGS: ManualTagDefinition[] = [
     // Standalone — aparecem como itens diretos no sidebar
     introducaoManualTag,
     autenticacaoManualTag,
@@ -70,5 +72,25 @@ export function getManualTags(): IManualTag[] {
     webhooksBoletoManualTag,
     webhooksPixManualTag,
     webhooksTedManualTag,
-  ];
+];
+
+function validateManualTags(tags: ManualTagDefinition[]): void {
+  const seen = new Set<string>();
+  for (const tag of tags) {
+    const key = `${tag.name}|${tag.apiTag ?? ''}`;
+    if (seen.has(key)) {
+      throw new Error(`Duplicate manual tag detected: ${key}`);
+    }
+    seen.add(key);
+  }
+}
+
+export function getManualTags(): IManualTag[] {
+  validateManualTags(MANUAL_TAGS);
+  return [...MANUAL_TAGS].sort((a, b) => {
+    const ao = a.order ?? Number.MAX_SAFE_INTEGER;
+    const bo = b.order ?? Number.MAX_SAFE_INTEGER;
+    if (ao !== bo) return ao - bo;
+    return 0;
+  });
 }
