@@ -1,13 +1,63 @@
 (function initDocsPortalRoutingModule(globalScope) {
-    function createRoutingModule(deps) {
+    interface ManualTag {
+        name: string;
+        description: string;
+        apiTag?: string;
+    }
+    interface EndpointDoc {
+        method: string;
+        path: string;
+        [key: string]: unknown;
+    }
+    type EndpointsByTag = Record<string, EndpointDoc[]>;
+    interface EndpointSelection {
+        tag: string;
+        index: number;
+    }
+    interface ManualSelection {
+        type: 'manual';
+        slug: string;
+        index?: number;
+        tag?: string;
+    }
+    interface EndpointManualSelection {
+        type: 'endpoint';
+        tag: string;
+        index: number;
+    }
+    type CurrentManualSelection = ManualSelection | EndpointManualSelection | null;
+    interface ApiEndpointRoute {
+        type: 'endpoint';
+        tagSlug: string;
+        index: number;
+    }
+    interface ApiPortalRoute {
+        type: 'portal';
+    }
+    type ApiRoute = ApiEndpointRoute | ApiPortalRoute;
+    interface RoutingDeps {
+        getManualTags: () => ManualTag[];
+        getEndpointsByTag: () => EndpointsByTag;
+        getActiveView: () => 'manual' | 'api';
+        switchView: (view: 'manual' | 'api') => void;
+        selectManualItem: (index: number) => void;
+        selectEndpoint: (tag: string, index: number) => void;
+        slugifyHeading: (value: string) => string;
+        getCurrentManualSelection: () => CurrentManualSelection;
+        getCurrentEndpointSelection: () => EndpointSelection | null;
+        setScalarRouteSyncTimer: (timerId: number) => void;
+        getScalarRouteSyncTimer: () => number | null;
+        onSyncApiPortalUrlFromScalarSelection: () => void;
+    }
+    function createRoutingModule(deps: RoutingDeps) {
         const { getManualTags, getEndpointsByTag, getActiveView, switchView, selectManualItem, selectEndpoint, slugifyHeading, getCurrentManualSelection, getCurrentEndpointSelection, setScalarRouteSyncTimer, getScalarRouteSyncTimer, onSyncApiPortalUrlFromScalarSelection, } = deps;
-        function slugifyManualName(name) {
+        function slugifyManualName(name: string) {
             return slugifyHeading(name);
         }
-        function slugifyEndpointTag(tag) {
+        function slugifyEndpointTag(tag: string) {
             return slugifyHeading(tag);
         }
-        function navigateToManualByName(name) {
+        function navigateToManualByName(name: string) {
             const manualTags = getManualTags();
             const index = manualTags.findIndex((tag) => tag && tag.name === name);
             if (index < 0)
@@ -18,7 +68,7 @@
             selectManualItem(index);
             return true;
         }
-        function navigateToManualBySlug(slug) {
+        function navigateToManualBySlug(slug: string) {
             const manualTags = getManualTags();
             const index = manualTags.findIndex((tag) => tag && slugifyManualName(tag.name) === slug);
             if (index < 0)
@@ -34,7 +84,7 @@
             const match = path.match(/^\/docs\/manual\/([^/]+)$/);
             return match ? decodeURIComponent(match[1]) : null;
         }
-        function getEndpointRouteFromPath() {
+        function getEndpointRouteFromPath(): { tagSlug: string; index: number } | null {
             const path = window.location.pathname || '';
             const match = path.match(/^\/docs\/endpoint\/([^/]+)\/(\d+)$/);
             if (!match)
@@ -44,7 +94,7 @@
                 index: Number(match[2]),
             };
         }
-        function getApiPortalRouteFromPath() {
+        function getApiPortalRouteFromPath(): ApiRoute | null {
             const path = window.location.pathname || '';
             const endpointMatch = path.match(/^\/docs\/api\/endpoint\/([^/]+)\/(\d+)$/);
             if (endpointMatch) {
@@ -59,14 +109,14 @@
             }
             return null;
         }
-        function setManualUrl(slug) {
+        function setManualUrl(slug: string) {
             const nextPath = '/docs/manual/' + slug;
             const nextUrl = nextPath + (window.location.search || '');
             if (window.location.pathname === nextPath)
                 return;
             window.history.replaceState({}, '', nextUrl);
         }
-        function setEndpointUrl(tag, index) {
+        function setEndpointUrl(tag: string, index: number) {
             const nextPath = '/docs/endpoint/' + slugifyEndpointTag(tag) + '/' + index;
             const nextUrl = nextPath + (window.location.search || '');
             if (window.location.pathname === nextPath)
@@ -124,7 +174,10 @@
             if (manualSelection &&
                 manualSelection.type === 'manual' &&
                 Number.isInteger(manualSelection.index)) {
-                selectManualItem(manualSelection.index);
+                const index = manualSelection.index;
+                if (typeof index === 'number') {
+                    selectManualItem(index);
+                }
                 return;
             }
             if (manualTags.length > 0) {
@@ -152,7 +205,7 @@
                     const match = Object.entries(getEndpointsByTag() || {}).find(([tag]) => slugifyEndpointTag(tag) === apiRoute.tagSlug);
                     if (match) {
                         const [tag, endpoints] = match;
-                        if (apiRoute.index >= 0 && apiRoute.index < (endpoints || []).length) {
+                        if (apiRoute.index >= 0 && apiRoute.index < endpoints.length) {
                             selectEndpoint(tag, apiRoute.index);
                             if (getActiveView() !== 'api')
                                 switchView('api');
@@ -172,7 +225,7 @@
                 if (match) {
                     const [tag, endpoints] = match;
                     if (endpointRoute.index >= 0 &&
-                        endpointRoute.index < (endpoints || []).length) {
+                        endpointRoute.index < endpoints.length) {
                         if (getActiveView() !== 'manual')
                             switchView('manual');
                         selectEndpoint(tag, endpointRoute.index);

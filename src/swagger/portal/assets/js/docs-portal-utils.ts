@@ -1,5 +1,5 @@
 (function portalUtilsBootstrap(globalScope) {
-    function slugifyHeading(text) {
+    function slugifyHeading(text: string) {
         return String(text || '')
             .toLowerCase()
             .normalize('NFD')
@@ -9,10 +9,10 @@
             .replace(/\s+/g, '-')
             .replace(/-+/g, '-');
     }
-    function stripMd(md) {
+    function stripMd(md: string) {
         return String(md || '').replace(/[#*_`>\-\[\]()]/g, '').replace(/\n+/g, ' ');
     }
-    function escapeHtml(value) {
+    function escapeHtml(value: string) {
         return String(value || '')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
