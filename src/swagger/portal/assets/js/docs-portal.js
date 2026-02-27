@@ -536,7 +536,9 @@
         const loc = iframe.contentWindow.location;
         const scalarRef = String(loc.search || '') + String(loc.hash || '');
         const portalPath = window.location.pathname || '/docs/api/portal';
-        const encodedRef = scalarRef ? '#scalarRef=' + encodeURIComponent(scalarRef) : '';
+        const encodedRef = scalarRef
+          ? '#scalarRef=' + encodeURI(scalarRef).replace(/\?/g, '%3F').replace(/#/g, '%23')
+          : '';
         const nextUrl = portalPath + (window.location.search || '') + encodedRef;
         const currentUrl =
           window.location.pathname + (window.location.search || '') + (window.location.hash || '');

@@ -14,6 +14,7 @@ export default [
       'dist/**',
       'ecosystem.config.js',
       '.env',
+      'src/swagger/portal/assets/js/**',
     ],
   },
 
@@ -80,4 +81,5 @@ export default [
       '@typescript-eslint/no-require-imports': 'off',
     },
   },
+
 ];
