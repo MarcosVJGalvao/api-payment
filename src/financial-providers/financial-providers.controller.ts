@@ -74,9 +74,6 @@ export class FinancialProvidersController {
     return this.credentialsService.getPublicCredentials(provider, loginType);
   }
 
-  /**
-   * Rotas padronizadas (plugáveis) por provedor.
-   */
   @Post(':provider/auth/backoffice')
   @ApiHideFromPortalScalar()
   @ApiBackofficeLogin()

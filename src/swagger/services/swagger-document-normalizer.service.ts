@@ -52,6 +52,10 @@ export class SwaggerDocumentNormalizerService {
       }
     }
 
+    if (parentKey === 'paths' && method) {
+      this.normalizeOperationHeaderParameters(swaggerObj);
+    }
+
     if (keys.includes('responses')) {
       const responses = swaggerObj['responses'];
       if (isRecord(responses)) {
@@ -78,8 +82,80 @@ export class SwaggerDocumentNormalizerService {
     return swaggerObj;
   }
 
+  private normalizeOperationHeaderParameters(operation: Record<string, unknown>): void {
+    const rawParameters = operation['parameters'];
+    if (!Array.isArray(rawParameters) || rawParameters.length === 0) return;
+
+    const grouped = new Map<string, Record<string, unknown>>();
+    const passthrough: unknown[] = [];
+
+    for (const parameter of rawParameters) {
+      if (!isRecord(parameter)) {
+        passthrough.push(parameter);
+        continue;
+      }
+
+      const location = parameter['in'];
+      const name = parameter['name'];
+      if (typeof location !== 'string' || typeof name !== 'string') {
+        passthrough.push(parameter);
+        continue;
+      }
+
+      const normalizedLocation = location.toLowerCase();
+      const normalizedName = name.toLowerCase();
+      const key = `${normalizedLocation}:${normalizedName}`;
+
+      const current = grouped.get(key);
+      if (!current) {
+        const initial = { ...parameter };
+        if (normalizedLocation === 'header') {
+          initial['name'] = this.getCanonicalHeaderName(name);
+        }
+        grouped.set(key, initial);
+        continue;
+      }
+
+      grouped.set(
+        key,
+        this.mergeSwaggerParameter(current, parameter, normalizedLocation),
+      );
+    }
+
+    operation['parameters'] = [...passthrough, ...grouped.values()];
+  }
+
+  private mergeSwaggerParameter(
+    existing: Record<string, unknown>,
+    candidate: Record<string, unknown>,
+    normalizedLocation: string,
+  ): Record<string, unknown> {
+    const existingScore = Object.keys(existing).length;
+    const candidateScore = Object.keys(candidate).length;
+    const base = candidateScore > existingScore ? { ...candidate } : { ...existing };
+    const fallback = candidateScore > existingScore ? existing : candidate;
+
+    for (const [key, value] of Object.entries(fallback)) {
+      if (base[key] === undefined) {
+        base[key] = value;
+      }
+    }
+
+    if (normalizedLocation === 'header' && typeof base['name'] === 'string') {
+      base['name'] = this.getCanonicalHeaderName(base['name']);
+    }
+
+    return base;
+  }
+
+  private getCanonicalHeaderName(name: string): string {
+    const normalized = name.toLowerCase();
+    if (normalized === 'x-client-id') return 'X-Client-Id';
+    if (normalized === 'x-account-id') return 'X-Account-Id';
+    return name;
+  }
+
   isOpenApiObject(value: unknown): value is OpenAPIObject {
     return isRecord(value) && typeof value.openapi === 'string' && typeof value.info === 'object';
   }
 }
-

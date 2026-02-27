@@ -2,6 +2,7 @@ import { IManualTag } from '@/swagger/interfaces/manual-tag.interface';
 
 export const webhooksManualTag: IManualTag = {
   name: 'Webhooks (Manual)',
+  apiTag: 'Webhooks',
   description: [
     '## Webhooks',
     '',

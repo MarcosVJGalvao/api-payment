@@ -1,5 +1,9 @@
 import type { INestApplication } from '@nestjs/common';
 import type { DocsPortalBootstrapData } from '@/swagger/interfaces/docs-portal.interface';
+import type {
+  PortalAssetRoute,
+  PortalPageRoute,
+} from '../interfaces/portal-route.interface';
 import { buildDocsPortalHtmlFromTemplate } from '../templates/docs-portal.html.template';
 import { PortalAssetsService } from '../services/portal-assets.service';
 
@@ -28,37 +32,79 @@ export function registerDocsPortalRoutes(
   const htmlTemplate = assets.getPortalHtmlTemplate().body;
   const portalHtml = buildDocsPortalHtmlFromTemplate(htmlTemplate, portalData);
 
-  expressApp.get(
-    '/docs/assets/marked.js',
-    (_req: unknown, res: LightweightResponse) => {
-      const asset = assets.getMarkedJs();
-      sendCachedAsset(res, asset.contentType, asset.body);
+  const assetRoutes: PortalAssetRoute[] = [
+    {
+      path: '/docs/assets/marked.js',
+      contentType: assets.getMarkedJs().contentType,
+      load: () => assets.getMarkedJs().body,
     },
-  );
+    {
+      path: '/docs/assets/scalar.js',
+      contentType: assets.getScalarJs().contentType,
+      load: () => assets.getScalarJs().body,
+    },
+    {
+      path: '/docs/assets/css/docs-portal.css',
+      contentType: assets.getPortalCss().contentType,
+      load: () => assets.getPortalCss().body,
+    },
+    {
+      path: '/docs/assets/js/docs-portal-utils.js',
+      contentType: assets.getPortalUtilsJs().contentType,
+      load: () => assets.getPortalUtilsJs().body,
+    },
+    {
+      path: '/docs/assets/js/docs-portal-routing.js',
+      contentType: assets.getPortalRoutingJs().contentType,
+      load: () => assets.getPortalRoutingJs().body,
+    },
+    {
+      path: '/docs/assets/js/docs-portal-toc.js',
+      contentType: assets.getPortalTocJs().contentType,
+      load: () => assets.getPortalTocJs().body,
+    },
+    {
+      path: '/docs/assets/js/docs-portal-search.js',
+      contentType: assets.getPortalSearchJs().contentType,
+      load: () => assets.getPortalSearchJs().body,
+    },
+    {
+      path: '/docs/assets/js/docs-portal-endpoint-doc.js',
+      contentType: assets.getPortalEndpointDocJs().contentType,
+      load: () => assets.getPortalEndpointDocJs().body,
+    },
+    {
+      path: '/docs/assets/js/docs-portal-scalar-sync.js',
+      contentType: assets.getPortalScalarSyncJs().contentType,
+      load: () => assets.getPortalScalarSyncJs().body,
+    },
+    {
+      path: '/docs/assets/js/docs-portal-sidebar.js',
+      contentType: assets.getPortalSidebarJs().contentType,
+      load: () => assets.getPortalSidebarJs().body,
+    },
+    {
+      path: '/docs/assets/js/docs-portal-auth.js',
+      contentType: assets.getPortalAuthJs().contentType,
+      load: () => assets.getPortalAuthJs().body,
+    },
+    {
+      path: '/docs/assets/js/docs-portal-openapi.js',
+      contentType: assets.getPortalOpenApiJs().contentType,
+      load: () => assets.getPortalOpenApiJs().body,
+    },
+    {
+      path: '/docs/assets/js/docs-portal.js',
+      contentType: assets.getPortalJs().contentType,
+      load: () => assets.getPortalJs().body,
+    },
+  ];
 
-  expressApp.get(
-    '/docs/assets/scalar.js',
-    (_req: unknown, res: LightweightResponse) => {
-      const asset = assets.getScalarJs();
-      sendCachedAsset(res, asset.contentType, asset.body);
-    },
-  );
-
-  expressApp.get(
-    '/docs/assets/css/docs-portal.css',
-    (_req: unknown, res: LightweightResponse) => {
-      const asset = assets.getPortalCss();
-      sendCachedAsset(res, asset.contentType, asset.body);
-    },
-  );
-
-  expressApp.get(
-    '/docs/assets/js/docs-portal.js',
-    (_req: unknown, res: LightweightResponse) => {
-      const asset = assets.getPortalJs();
-      sendCachedAsset(res, asset.contentType, asset.body);
-    },
-  );
+  assetRoutes.forEach((route) => {
+    expressApp.get(route.path, (_req: unknown, res: LightweightResponse) => {
+      sendCachedAsset(res, route.contentType, route.load());
+    });
+  });
 
   expressApp.get('/favicon.ico', (_req: unknown, res: LightweightResponse) => {
     res.status?.(204).end();
@@ -77,9 +123,15 @@ export function registerDocsPortalRoutes(
     res.type('html').send(portalHtml);
   };
 
-  expressApp.get('/docs', sendPortalHtml);
-  expressApp.get('/docs/manual/:slug', sendPortalHtml);
-  expressApp.get('/docs/endpoint/:tag/:index', sendPortalHtml);
-  expressApp.get('/docs/api/portal', sendPortalHtml);
-  expressApp.get('/docs/api/endpoint/:tag/:index', sendPortalHtml);
+  const portalRoutes: PortalPageRoute[] = [
+    { path: '/docs' },
+    { path: '/docs/manual/:slug' },
+    { path: '/docs/endpoint/:tag/:index' },
+    { path: '/docs/api/portal' },
+    { path: '/docs/api/endpoint/:tag/:index' },
+  ];
+
+  portalRoutes.forEach((route) => {
+    expressApp.get(route.path, sendPortalHtml);
+  });
 }

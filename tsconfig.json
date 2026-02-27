@@ -39,6 +39,7 @@
     "dist",
     "ecosystem.config.js",
     "jest.config.ts",
-    ".env"
+    ".env",
+    "src/swagger/portal/assets/js/**/*.ts"
   ]
 }

@@ -16,6 +16,10 @@
       --navbar-height: 48px;
       --navbar-offset: 49px; /* fallback; overwritten in runtime */
       --sidebar-width: clamp(220px, 24vw, 280px);
+      --toc-width: clamp(240px, 20vw, 300px);
+      --content-max-width: 1180px;
+      --content-gutter-x: 48px;
+      --content-gutter-top: 16px;
       --transition: 150ms ease;
     }
 
@@ -86,11 +90,16 @@
       flex: 1 1 auto;
       min-height: 0;
       min-width: 0;
+      padding-top: var(--content-gutter-top);
     }
 
     /* ── Manual View ───────────────────────────── */
     .manual-view { display: none; height: 100%; min-width: 0; }
-    .manual-view.active { display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 280px; min-width: 0; }
+    .manual-view.active {
+      display: grid;
+      grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--toc-width);
+      min-width: 0;
+    }
 
     .manual-sidebar {
       width: var(--sidebar-width); min-width: var(--sidebar-width);
@@ -166,13 +175,24 @@
     .method-DELETE { background: rgba(239, 68, 68, 0.15); color: #f87171; }
 
     /* ── Manual Content ────────────────────────── */
-    .manual-content { min-width: 0; overflow-y: auto; overflow-x: hidden; padding: 28px 20px 36px 12px; scroll-padding-top: 16px; }
-.manual-content .markdown-body { max-width: 1180px; margin: 0 auto; width: 100%; min-width: 0; }
+    .manual-content {
+      min-width: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 28px var(--content-gutter-x) 40px;
+      scroll-padding-top: calc(var(--navbar-offset) + 12px);
+    }
+.manual-content .markdown-body {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  width: 100%;
+  min-width: 0;
+}
     .manual-content::-webkit-scrollbar { width: 5px; }
     .manual-content::-webkit-scrollbar-track { background: transparent; }
     .manual-content::-webkit-scrollbar-thumb { background: var(--scalar-border); border-radius: 3px; }
     .manual-toc {
-      width: 280px;
+      width: var(--toc-width);
       min-width: 0;
       height: 100%;
       border-left: 1px solid var(--scalar-border);
@@ -455,13 +475,51 @@
 
     @media (max-width: 1024px) {
       :root { --sidebar-width: 240px; }
-      .manual-view.active { grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 240px; }
-      .manual-content { padding: 22px 14px 28px 10px; }
-      .manual-toc { width: 240px; padding: 16px 10px; }
+      :root { --toc-width: 240px; }
+      :root { --content-gutter-x: 34px; }
+      :root { --content-gutter-top: 12px; }
+      .manual-view.active { grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--toc-width); }
+      .manual-content { padding: 24px var(--content-gutter-x) 34px; }
+      .manual-toc { width: var(--toc-width); padding: 16px 10px; }
       .search-modal { width: min(520px, calc(100vw - 20px)); }
     }
 
+    @media (min-width: 1400px) {
+      :root {
+        --sidebar-width: clamp(250px, 18vw, 320px);
+        --toc-width: clamp(250px, 18vw, 320px);
+        --content-max-width: 1320px;
+        --content-gutter-x: 56px;
+      }
+    }
+
+    @media (min-width: 1920px) {
+      :root {
+        --sidebar-width: clamp(270px, 16vw, 360px);
+        --toc-width: clamp(270px, 16vw, 360px);
+        --content-max-width: 1560px;
+        --content-gutter-x: 72px;
+      }
+      .markdown-body p,
+      .markdown-body li { font-size: 15px; }
+    }
+
+    @media (min-width: 2560px) {
+      :root {
+        --sidebar-width: clamp(300px, 15vw, 420px);
+        --toc-width: clamp(300px, 15vw, 420px);
+        --content-max-width: 1840px;
+        --content-gutter-x: 96px;
+      }
+      .markdown-body h1 { font-size: 32px; }
+      .markdown-body h2 { font-size: 25px; }
+      .markdown-body p,
+      .markdown-body li { font-size: 16px; }
+    }
+
     @media (max-width: 820px) {
+      :root { --content-gutter-x: 24px; }
+      :root { --content-gutter-top: 10px; }
       .navbar { padding: 0 10px; }
       .navbar-brand { margin-right: 6px; font-size: 13px; }
       .navbar-manual-toggle { display: inline-flex; }
@@ -485,7 +543,7 @@
       }
       .manual-view.sidebar-open .manual-sidebar { transform: translateX(0); }
 
-      .manual-content { width: 100%; padding: 18px 14px; }
+      .manual-content { width: 100%; padding: 22px var(--content-gutter-x) 30px; }
       .manual-content .markdown-body { max-width: none; }
       .manual-toc { display: none; }
       .endpoint-header { flex-wrap: wrap; align-items: flex-start; }

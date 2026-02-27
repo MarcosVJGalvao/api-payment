@@ -11,10 +11,9 @@ export const SCALAR_BASE_CONFIG: NestJSReferenceConfiguration = {
   searchHotKey: 'k',
   showSidebar: true,
   withDefaultFonts: true,
-  showDeveloperTools: 'localhost',
+  showDeveloperTools: 'never',
   defaultHttpClient: {
     targetKey: 'node',
     clientKey: 'axios',
   },
 };
-

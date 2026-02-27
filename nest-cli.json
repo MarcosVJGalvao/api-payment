@@ -3,6 +3,15 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "assets": [
+      {
+        "include": "swagger/portal/assets/**/*"
+      },
+      {
+        "include": "swagger/portal/templates/**/*"
+      }
+    ],
+    "watchAssets": true
   }
 }
