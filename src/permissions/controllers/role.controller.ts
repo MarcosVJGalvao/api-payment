@@ -11,7 +11,7 @@ import {
   HttpStatus,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { RoleService } from '../services/role.service';
 import { CreateRoleDto } from '../dto/create-role.dto';
 import { UpdateRoleDto } from '../dto/update-role.dto';
@@ -31,9 +31,10 @@ import { ApiRemoveRole } from '../docs/api-remove-role.decorator';
 import { ApiAssignRole } from '../docs/api-assign-role.decorator';
 import { ApiRemoveRoleFromUser } from '../docs/api-remove-role-from-user.decorator';
 import { ApiUpdateRolePermissions } from '../docs/api-update-role-permissions.decorator';
+import { ApiControllerHideFromPortalScalar } from '@/swagger/docs/api-controller-hide-from-portal-scalar.decorator';
 
 @Controller('roles')
-@ApiTags('Roles')
+@ApiControllerHideFromPortalScalar('Roles')
 @UseGuards(PermissionsGuard)
 @ApiBearerAuth('internal-auth')
 export class RoleController {

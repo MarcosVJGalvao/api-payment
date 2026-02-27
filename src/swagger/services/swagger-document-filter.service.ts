@@ -48,6 +48,50 @@ export class SwaggerDocumentFilterService {
     return filteredDocument;
   }
 
+  getDocumentWithoutTags(
+    document: OpenAPIObject,
+    excludedTags: string[],
+    authKey?: string,
+  ): OpenAPIObject {
+    if (!excludedTags.length) return document;
+    const excluded = new Set(excludedTags);
+    const filteredDocument: OpenAPIObject = {
+      ...document,
+      paths: {},
+      components: { ...document.components },
+    };
+
+    const filteredPaths: OpenAPIObject['paths'] = {};
+
+    for (const [path, pathItem] of Object.entries(document.paths || {})) {
+      const filteredPathItem: OpenAPIObject['paths'][string] = {};
+      let hasVisibleMethod = false;
+      const pathItemRecord = isRecord(pathItem) ? pathItem : {};
+
+      for (const method of HTTP_METHODS) {
+        const operation = pathItemRecord[method];
+        if (!isRecord(operation)) continue;
+        const tags = Array.isArray(operation['tags']) ? operation['tags'] : [];
+        const hiddenByTag = tags.some((tag) => typeof tag === 'string' && excluded.has(tag));
+        if (hiddenByTag) continue;
+        filteredPathItem[method] = operation as never;
+        hasVisibleMethod = true;
+      }
+
+      if (hasVisibleMethod) filteredPaths[path] = filteredPathItem;
+    }
+
+    filteredDocument.paths = filteredPaths;
+    const usedSchemas = this.refs.collectUsedSchemas(filteredPaths);
+    filteredDocument.components = this.filterComponents(
+      filteredDocument.components,
+      usedSchemas,
+      authKey,
+    );
+
+    return filteredDocument;
+  }
+
   private filterComponents(
     components: OpenAPIObject['components'],
     usedSchemas: Set<string>,

@@ -5,6 +5,7 @@ import { SwaggerDocumentNormalizerService } from './services/swagger-document-no
 import { SwaggerExamplesService } from './services/swagger-examples.service';
 import { SwaggerDocumentFilterService } from './services/swagger-document-filter.service';
 import { SwaggerDocumentCacheService } from './services/swagger-document-cache.service';
+import { PORTAL_SCALAR_HIDDEN_TAGS } from './config/docs-visibility.config';
 
 @Injectable()
 export class SwaggerService {
@@ -89,9 +90,26 @@ export class SwaggerService {
     return filtered;
   }
 
+  getPortalScalarDocument(authKey?: string): OpenAPIObject {
+    const cacheKey = authKey
+      ? `portal-scalar:${authKey}:${PORTAL_SCALAR_HIDDEN_TAGS.join(',')}`
+      : `portal-scalar:full:${PORTAL_SCALAR_HIDDEN_TAGS.join(',')}`;
+
+    const cached = this.cache.getTaggedFilteredDocument(cacheKey);
+    if (cached) return cached;
+
+    const base = authKey ? this.getFilteredDocument(authKey) : this.getSwaggerDocument();
+    const filtered = this.filterService.getDocumentWithoutTags(
+      base,
+      PORTAL_SCALAR_HIDDEN_TAGS,
+      authKey,
+    );
+    this.cache.setTaggedFilteredDocument(cacheKey, filtered);
+    return filtered;
+  }
+
   // Test compatibility for existing unit tests that access private normalizeSwagger.
   private normalizeSwagger(obj: unknown): unknown {
     return this.normalizer.normalizeSwagger(obj);
   }
 }
-
