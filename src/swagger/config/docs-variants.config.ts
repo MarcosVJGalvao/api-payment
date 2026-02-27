@@ -40,4 +40,3 @@ export const DOCS_VARIANTS: DocsVariant[] = [
     authKey: 'internal-auth',
   },
 ];
-

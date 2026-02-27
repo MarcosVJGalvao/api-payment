@@ -13,7 +13,11 @@ import { shouldSkipResponseTransform } from './helpers/response-transform-skip.h
 @Injectable()
 export class ResponseSanitizationInterceptor implements NestInterceptor {
   private readonly sensitiveFields: Set<string>;
-  private readonly timestampFields = new Set(['createdAt', 'updatedAt', 'deletedAt']);
+  private readonly timestampFields = new Set([
+    'createdAt',
+    'updatedAt',
+    'deletedAt',
+  ]);
   private readonly maxDepth: number;
   private visitedObjects: WeakSet<object>;
 

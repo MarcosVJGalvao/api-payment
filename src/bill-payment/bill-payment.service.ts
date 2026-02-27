@@ -126,8 +126,8 @@ export class BillPaymentService {
 
       const savedPayment = await this.repository.save(payment);
 
-      const internalTransaction = await this.transactionService.createFromWebhook(
-        {
+      const internalTransaction =
+        await this.transactionService.createFromWebhook({
           authenticationCode: response.authenticationCode,
           type: TransactionType.BILL_PAYMENT,
           status: mapBillPaymentStatusToTransactionStatus(savedPayment.status),
@@ -140,8 +140,7 @@ export class BillPaymentService {
           providerTimestamp: response.settleDate
             ? parseDate(response.settleDate)
             : undefined,
-        },
-      );
+        });
 
       this.logger.log(
         `Bill payment confirmed and persisted, id: ${savedPayment.id}, authCode: ${response.authenticationCode}`,

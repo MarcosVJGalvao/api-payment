@@ -11,7 +11,6 @@ import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exce
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import type { BackofficeLoginDto } from '@/financial-providers/dto/backoffice-login.dto';
 import type { BankLoginDto } from '@/financial-providers/dto/bank-login.dto';
-import { isRecord } from '@/common/errors/helpers/type.helpers';
 
 @Injectable()
 export class HiperbancoAuthProvider implements AuthProvider {
@@ -28,17 +27,19 @@ export class HiperbancoAuthProvider implements AuthProvider {
 
   private isBackofficeLoginDto(value: unknown): value is BackofficeLoginDto {
     return (
-      isRecord(value) &&
-      typeof value['email'] === 'string' &&
-      typeof value['password'] === 'string'
+      typeof value === 'object' &&
+      value !== null &&
+      typeof (value as Record<string, unknown>)['email'] === 'string' &&
+      typeof (value as Record<string, unknown>)['password'] === 'string'
     );
   }
 
   private isBankLoginDto(value: unknown): value is BankLoginDto {
     return (
-      isRecord(value) &&
-      typeof value['document'] === 'string' &&
-      typeof value['password'] === 'string'
+      typeof value === 'object' &&
+      value !== null &&
+      typeof (value as Record<string, unknown>)['document'] === 'string' &&
+      typeof (value as Record<string, unknown>)['password'] === 'string'
     );
   }
 

@@ -13,14 +13,18 @@ export class SwaggerExamplesService {
         const operation = pathItem[method];
         if (!isRecord(operation) || !isRecord(operation.responses)) continue;
 
-        for (const [statusCode, response] of Object.entries(operation.responses)) {
-          if (!String(statusCode).startsWith('2') || !isRecord(response)) continue;
+        for (const [statusCode, response] of Object.entries(
+          operation.responses,
+        )) {
+          if (!String(statusCode).startsWith('2') || !isRecord(response))
+            continue;
 
           const content = response['content'];
           if (isRecord(content) && isRecord(content['application/json'])) {
             const jsonContent = content['application/json'];
             const hasExamples =
-              ('example' in jsonContent && jsonContent['example'] !== undefined) ||
+              ('example' in jsonContent &&
+                jsonContent['example'] !== undefined) ||
               (isRecord(jsonContent['examples']) &&
                 Object.keys(jsonContent['examples']).length > 0);
             if (!hasExamples) {
@@ -37,7 +41,8 @@ export class SwaggerExamplesService {
           if (!schema) continue;
           if (isRecord(schema) && schema['example'] !== undefined) continue;
           const generated = this.generateExampleFromSchema(schema, document);
-          if (generated !== undefined && isRecord(schema)) schema['example'] = generated;
+          if (generated !== undefined && isRecord(schema))
+            schema['example'] = generated;
         }
       }
     }
@@ -84,7 +89,11 @@ export class SwaggerExamplesService {
     }
 
     if (schema['type'] === 'array' || schema['items']) {
-      const item = this.generateExampleFromSchema(schema['items'], document, depth + 1);
+      const item = this.generateExampleFromSchema(
+        schema['items'],
+        document,
+        depth + 1,
+      );
       return item === undefined ? [] : [item];
     }
 
@@ -93,7 +102,11 @@ export class SwaggerExamplesService {
       const obj: Record<string, unknown> = {};
       if (isRecord(properties)) {
         for (const [key, propSchema] of Object.entries(properties)) {
-          const value = this.generateExampleFromSchema(propSchema, document, depth + 1);
+          const value = this.generateExampleFromSchema(
+            propSchema,
+            document,
+            depth + 1,
+          );
           obj[key] = value === undefined ? null : value;
         }
       }
@@ -115,4 +128,3 @@ export class SwaggerExamplesService {
     return undefined;
   }
 }
-

@@ -80,7 +80,10 @@ export class AuditInterceptor implements NestInterceptor {
     }
 
     const tokenIdentity = this.extractTokenIdentity(request);
-    const resolvedIdentity = this.resolveRequestIdentity(request, tokenIdentity);
+    const resolvedIdentity = this.resolveRequestIdentity(
+      request,
+      tokenIdentity,
+    );
     const userId = resolvedIdentity.userId;
     const username = resolvedIdentity.username;
 
@@ -273,12 +276,18 @@ export class AuditInterceptor implements NestInterceptor {
     tokenIdentity?: { userId?: string; username?: string },
   ): { userId?: string; username?: string } {
     const userRecord = isRecord(request.user) ? request.user : undefined;
-    const directUserId = userRecord ? getStringField(userRecord, 'userId') : undefined;
-    const subUserId = userRecord ? getStringField(userRecord, 'sub') : undefined;
+    const directUserId = userRecord
+      ? getStringField(userRecord, 'userId')
+      : undefined;
+    const subUserId = userRecord
+      ? getStringField(userRecord, 'sub')
+      : undefined;
     const directUsername = userRecord
       ? getStringField(userRecord, 'username')
       : undefined;
-    const emailUsername = userRecord ? getStringField(userRecord, 'email') : undefined;
+    const emailUsername = userRecord
+      ? getStringField(userRecord, 'email')
+      : undefined;
 
     let userId = directUserId || subUserId;
     let username = directUsername || emailUsername;
@@ -302,7 +311,9 @@ export class AuditInterceptor implements NestInterceptor {
     return { userId, username };
   }
 
-  private extractUserIdFromProviderSession(request: Request): string | undefined {
+  private extractUserIdFromProviderSession(
+    request: Request,
+  ): string | undefined {
     if (!('providerSession' in request) || !request.providerSession) {
       return undefined;
     }
@@ -364,7 +375,9 @@ export class AuditInterceptor implements NestInterceptor {
       sanitizedRecord = isRecord(removed) ? removed : {};
     }
 
-    return Object.keys(sanitizedRecord).length > 0 ? sanitizedRecord : undefined;
+    return Object.keys(sanitizedRecord).length > 0
+      ? sanitizedRecord
+      : undefined;
   }
 
   private extractEntityId(request: any, paramName: string): string | undefined {

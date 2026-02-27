@@ -28,7 +28,9 @@ export class SwaggerDocumentFilterService {
         if (!isRecord(operation)) continue;
         const security = operation['security'];
         if (!Array.isArray(security)) continue;
-        const hasAuthKey = security.some((sec) => isRecord(sec) && authKey in sec);
+        const hasAuthKey = security.some(
+          (sec) => isRecord(sec) && authKey in sec,
+        );
         if (!hasAuthKey) continue;
         filteredPathItem[method] = operation as never;
         hasMatchingMethod = true;
@@ -72,7 +74,9 @@ export class SwaggerDocumentFilterService {
         const operation = pathItemRecord[method];
         if (!isRecord(operation)) continue;
         const tags = Array.isArray(operation['tags']) ? operation['tags'] : [];
-        const hiddenByTag = tags.some((tag) => typeof tag === 'string' && excluded.has(tag));
+        const hiddenByTag = tags.some(
+          (tag) => typeof tag === 'string' && excluded.has(tag),
+        );
         if (hiddenByTag) continue;
         filteredPathItem[method] = operation as never;
         hasVisibleMethod = true;
@@ -117,7 +121,8 @@ export class SwaggerDocumentFilterService {
 
     const filteredSchemas: typeof allSchemas = {};
     for (const schemaName of finalUsedSchemas) {
-      if (allSchemas[schemaName]) filteredSchemas[schemaName] = allSchemas[schemaName];
+      if (allSchemas[schemaName])
+        filteredSchemas[schemaName] = allSchemas[schemaName];
     }
 
     const filteredSecuritySchemes = authKey
@@ -132,7 +137,9 @@ export class SwaggerDocumentFilterService {
   }
 
   private filterSecuritySchemes(
-    securitySchemes: NonNullable<OpenAPIObject['components']>['securitySchemes'],
+    securitySchemes: NonNullable<
+      OpenAPIObject['components']
+    >['securitySchemes'],
     authKey: string,
   ): NonNullable<OpenAPIObject['components']>['securitySchemes'] {
     if (!securitySchemes) return securitySchemes;

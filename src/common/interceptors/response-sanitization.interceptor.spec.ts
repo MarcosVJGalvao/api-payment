@@ -5,7 +5,10 @@ import { ResponseSanitizationInterceptor } from './response-sanitization.interce
 describe('ResponseSanitizationInterceptor', () => {
   const interceptor = new ResponseSanitizationInterceptor(['password']);
 
-  function createContext(path: string, method: string = 'GET'): ExecutionContext {
+  function createContext(
+    path: string,
+    method: string = 'GET',
+  ): ExecutionContext {
     return {
       switchToHttp: jest.fn().mockReturnValue({
         getRequest: jest.fn().mockReturnValue({ path, method }),

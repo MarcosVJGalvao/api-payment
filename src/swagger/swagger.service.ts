@@ -75,7 +75,9 @@ export class SwaggerService {
   getSwaggerDocument(): OpenAPIObject {
     const document = this.cache.getBaseDocument();
     if (!document) {
-      throw new Error('Swagger document not generated. Call generateDocument() first.');
+      throw new Error(
+        'Swagger document not generated. Call generateDocument() first.',
+      );
     }
     return document;
   }
@@ -98,7 +100,9 @@ export class SwaggerService {
     const cached = this.cache.getTaggedFilteredDocument(cacheKey);
     if (cached) return cached;
 
-    const base = authKey ? this.getFilteredDocument(authKey) : this.getSwaggerDocument();
+    const base = authKey
+      ? this.getFilteredDocument(authKey)
+      : this.getSwaggerDocument();
     const filtered = this.filterService.getDocumentWithoutTags(
       base,
       PORTAL_SCALAR_HIDDEN_TAGS,

@@ -53,7 +53,9 @@ describe('RequestLoggingInterceptor', () => {
   it('should log successful requests only', async () => {
     const state = createContext(200);
     await firstValueFrom(
-      interceptor.intercept(state.context, { handle: () => of({ ok: true }) } as any),
+      interceptor.intercept(state.context, {
+        handle: () => of({ ok: true }),
+      } as any),
     );
     state.getFinishHandler()?.();
 
@@ -71,10 +73,11 @@ describe('RequestLoggingInterceptor', () => {
   it('should not log non-2xx requests', async () => {
     const state = createContext(500);
     await firstValueFrom(
-      interceptor.intercept(
-        state.context,
-        { handle: () => throwError(() => new Error('boom')) } as any,
-      ).pipe(),
+      interceptor
+        .intercept(state.context, {
+          handle: () => throwError(() => new Error('boom')),
+        } as any)
+        .pipe(),
     ).catch(() => undefined);
     state.getFinishHandler()?.();
 

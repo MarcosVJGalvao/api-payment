@@ -191,7 +191,11 @@ export class TedWebhookService {
         ? parseDate(data.createdAt)
         : tedTransfer.providerCreatedAt;
       if (data.sender && tedTransfer.sender) {
-        setIfPresent(tedTransfer.sender, 'documentNumber', data.sender.document);
+        setIfPresent(
+          tedTransfer.sender,
+          'documentNumber',
+          data.sender.document,
+        );
         setIfPresent(tedTransfer.sender, 'name', data.sender.name);
         setIfPresent(
           tedTransfer.sender,
@@ -203,7 +207,11 @@ export class TedWebhookService {
           'accountNumber',
           data.sender.account?.number,
         );
-        setIfPresent(tedTransfer.sender, 'accountType', data.sender.account?.type);
+        setIfPresent(
+          tedTransfer.sender,
+          'accountType',
+          data.sender.account?.type,
+        );
         setIfPresent(
           tedTransfer.sender,
           'bankIspb',

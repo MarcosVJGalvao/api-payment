@@ -63,7 +63,8 @@ export function ApiDeleteWebhook() {
               summary: 'Webhook não encontrado',
               value: {
                 errorCode: 'WEBHOOK_CONFIG_NOT_FOUND',
-                message: 'Webhook não encontrado ou não pertence a este cliente',
+                message:
+                  'Webhook não encontrado ou não pertence a este cliente',
                 correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
               },
             },

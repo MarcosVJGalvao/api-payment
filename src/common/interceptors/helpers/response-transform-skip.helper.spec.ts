@@ -3,9 +3,9 @@ import { shouldSkipResponseTransform } from './response-transform-skip.helper';
 describe('shouldSkipResponseTransform', () => {
   it('should skip docs and openapi routes', () => {
     expect(shouldSkipResponseTransform({ path: '/api/docs' })).toBe(true);
-    expect(shouldSkipResponseTransform({ path: '/api/docs/openapi.json' })).toBe(
-      true,
-    );
+    expect(
+      shouldSkipResponseTransform({ path: '/api/docs/openapi.json' }),
+    ).toBe(true);
     expect(shouldSkipResponseTransform({ path: '/api-json' })).toBe(true);
   });
 
@@ -26,7 +26,10 @@ describe('shouldSkipResponseTransform', () => {
 
   it('should not skip regular routes', () => {
     expect(
-      shouldSkipResponseTransform({ path: '/financial-providers', method: 'GET' }),
+      shouldSkipResponseTransform({
+        path: '/financial-providers',
+        method: 'GET',
+      }),
     ).toBe(false);
   });
 });

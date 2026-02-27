@@ -21,7 +21,8 @@ export function ApiResetPassword() {
     ApiHeader({
       name: 'X-Client-Id',
       required: true,
-      description: 'ID do cliente para identificar o contexto do usuário backoffice',
+      description:
+        'ID do cliente para identificar o contexto do usuário backoffice',
       schema: { type: 'string' },
     }),
     ApiBody({

@@ -66,7 +66,11 @@ export class RequestLoggingInterceptor implements NestInterceptor {
         correlationId,
       };
 
-      if (responseBody && typeof responseBody === 'object' && !Array.isArray(responseBody)) {
+      if (
+        responseBody &&
+        typeof responseBody === 'object' &&
+        !Array.isArray(responseBody)
+      ) {
         Object.assign(responseData, responseBody);
       } else if (responseBody) {
         responseData.body = responseBody;

@@ -69,4 +69,3 @@ export class SwaggerSchemaReferenceService {
     return refs;
   }
 }
-

@@ -20,4 +20,3 @@ export function resolvePixKeyType(
       return PixKeyType.EVP;
   }
 }
-

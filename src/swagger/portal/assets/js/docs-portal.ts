@@ -96,6 +96,7 @@ let manualTocItems: unknown[] = [];
 let currentEndpointSelection: EndpointSelection | null = null;
 let currentManualSelection: CurrentManualSelection = null;
 let scalarRouteSyncTimer: number | null = null;
+let scalarLoadFallbackTimer: number | null = null;
 
 const routingModule = window.DocsPortalRouting.createRoutingModule({
   getManualTags: () => manualTags,
@@ -261,13 +262,24 @@ function renderManualHtml(html: string): void {
 async function init(): Promise<void> {
   syncNavbarOffset();
 
+  const markScalarReady = (): void => {
+    scalarReady = true;
+    const apiView = document.getElementById('api-view');
+    apiView?.classList.add('loaded');
+    if (scalarLoadFallbackTimer != null) {
+      window.clearTimeout(scalarLoadFallbackTimer);
+      scalarLoadFallbackTimer = null;
+    }
+  };
+
   const scalarIframe = document.getElementById('scalar-iframe') as HTMLIFrameElement | null;
   if (scalarIframe) {
     scalarIframe.addEventListener('load', () => {
-      scalarReady = true;
-      const apiView = document.getElementById('api-view');
-      apiView?.classList.add('loaded');
+      markScalarReady();
       syncApiPortalUrlFromScalarSelection();
+    });
+    scalarIframe.addEventListener('error', () => {
+      markScalarReady();
     });
   }
 
@@ -360,6 +372,13 @@ function switchView(view: PortalView): void {
     applyScalarEndpointSelectionToIframe();
   }
   if (view === 'api') {
+    if (!scalarReady && scalarLoadFallbackTimer == null) {
+      scalarLoadFallbackTimer = window.setTimeout(() => {
+        const apiViewFallback = document.getElementById('api-view');
+        apiViewFallback?.classList.add('loaded');
+        scalarLoadFallbackTimer = null;
+      }, 12000);
+    }
     if (!scalarLoaded) {
       const iframe = document.getElementById('scalar-iframe') as HTMLIFrameElement | null;
       if (iframe) iframe.src = scalarUrl;

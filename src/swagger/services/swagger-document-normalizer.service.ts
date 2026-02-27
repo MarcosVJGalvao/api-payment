@@ -15,7 +15,9 @@ export class SwaggerDocumentNormalizerService {
     const keys = Object.keys(swaggerObj);
 
     if (keys.length && keys.every((k, i) => String(i) === k)) {
-      return keys.map((k) => this.normalizeSwagger(swaggerObj[k], parentKey, method));
+      return keys.map((k) =>
+        this.normalizeSwagger(swaggerObj[k], parentKey, method),
+      );
     }
 
     const enumValue = swaggerObj['enum'];
@@ -40,7 +42,10 @@ export class SwaggerDocumentNormalizerService {
       } else {
         swaggerObj['security'] = securityValue.filter(
           (v, i, a) =>
-            i === a.findIndex((candidate) => JSON.stringify(candidate) === JSON.stringify(v)),
+            i ===
+            a.findIndex(
+              (candidate) => JSON.stringify(candidate) === JSON.stringify(v),
+            ),
         );
       }
     }
@@ -61,7 +66,11 @@ export class SwaggerDocumentNormalizerService {
       if (isRecord(responses)) {
         for (const status of Object.keys(responses)) {
           const response = responses[status];
-          if (isRecord(response) && response['schema'] && !response['content']) {
+          if (
+            isRecord(response) &&
+            response['schema'] &&
+            !response['content']
+          ) {
             response['content'] = {
               'application/json': { schema: response['schema'] },
             };
@@ -76,13 +85,19 @@ export class SwaggerDocumentNormalizerService {
         ? key
         : method;
       const nextParentKey = key === 'paths' ? key : parentKey;
-      swaggerObj[key] = this.normalizeSwagger(swaggerObj[key], nextParentKey, nextMethod);
+      swaggerObj[key] = this.normalizeSwagger(
+        swaggerObj[key],
+        nextParentKey,
+        nextMethod,
+      );
     }
 
     return swaggerObj;
   }
 
-  private normalizeOperationHeaderParameters(operation: Record<string, unknown>): void {
+  private normalizeOperationHeaderParameters(
+    operation: Record<string, unknown>,
+  ): void {
     const rawParameters = operation['parameters'];
     if (!Array.isArray(rawParameters) || rawParameters.length === 0) return;
 
@@ -132,7 +147,8 @@ export class SwaggerDocumentNormalizerService {
   ): Record<string, unknown> {
     const existingScore = Object.keys(existing).length;
     const candidateScore = Object.keys(candidate).length;
-    const base = candidateScore > existingScore ? { ...candidate } : { ...existing };
+    const base =
+      candidateScore > existingScore ? { ...candidate } : { ...existing };
     const fallback = candidateScore > existingScore ? existing : candidate;
 
     for (const [key, value] of Object.entries(fallback)) {
@@ -156,6 +172,10 @@ export class SwaggerDocumentNormalizerService {
   }
 
   isOpenApiObject(value: unknown): value is OpenAPIObject {
-    return isRecord(value) && typeof value.openapi === 'string' && typeof value.info === 'object';
+    return (
+      isRecord(value) &&
+      typeof value.openapi === 'string' &&
+      typeof value.info === 'object'
+    );
   }
 }

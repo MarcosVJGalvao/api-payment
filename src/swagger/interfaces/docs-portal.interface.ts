@@ -9,4 +9,3 @@ export interface DocsPortalConfig {
 export interface DocsPortalBootstrapData extends DocsPortalConfig {
   manualTags: IManualTag[];
 }
-

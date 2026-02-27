@@ -5,9 +5,7 @@ import { WebhookPayload } from '@/webhook-processor/interfaces/webhook-base.inte
 import { BoletoWebhookData } from '@/webhook-processor/interfaces/boleto-webhook.interface';
 
 @Injectable()
-export class HiperbancoBoletoWebhookNormalizer
-  implements BoletoWebhookNormalizer
-{
+export class HiperbancoBoletoWebhookNormalizer implements BoletoWebhookNormalizer {
   readonly providerSlug = FinancialProvider.HIPERBANCO;
 
   normalizeRegistered(

@@ -1,8 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { SwaggerModule } from '@nestjs/swagger';
-import {
-  apiReference,
-} from '@scalar/nestjs-api-reference';
+import { apiReference } from '@scalar/nestjs-api-reference';
 import { SwaggerService } from './swagger.service';
 import { getManualTags } from './helpers/manual-tags.registry';
 import { DOCS_VARIANTS } from './config/docs-variants.config';
@@ -40,8 +38,10 @@ export function setupApiDocumentation(
     return res.json(document);
   };
 
-  expressApp.get('/api/docs/portal-scalar/openapi.json', (_req: Request, res: Response) =>
-    sendJson(res, swaggerService.getPortalScalarDocument()),
+  expressApp.get(
+    '/api/docs/portal-scalar/openapi.json',
+    (_req: Request, res: Response) =>
+      sendJson(res, swaggerService.getPortalScalarDocument()),
   );
   expressApp.get(
     '/api/docs/portal-scalar/provider/openapi.json',
@@ -66,9 +66,12 @@ export function setupApiDocumentation(
 
   const getScalarOpenApiUrl = (authKey?: string) => {
     if (!authKey) return '/api/docs/portal-scalar/openapi.json';
-    if (authKey === 'provider-auth') return '/api/docs/portal-scalar/provider/openapi.json';
-    if (authKey === 'backoffice-auth') return '/api/docs/portal-scalar/backoffice/openapi.json';
-    if (authKey === 'internal-auth') return '/api/docs/portal-scalar/internal/openapi.json';
+    if (authKey === 'provider-auth')
+      return '/api/docs/portal-scalar/provider/openapi.json';
+    if (authKey === 'backoffice-auth')
+      return '/api/docs/portal-scalar/backoffice/openapi.json';
+    if (authKey === 'internal-auth')
+      return '/api/docs/portal-scalar/internal/openapi.json';
     return '/api/docs/portal-scalar/openapi.json';
   };
 
