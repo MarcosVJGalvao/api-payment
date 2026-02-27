@@ -27,6 +27,7 @@ import { RequireClientPermission } from '@/common/decorators/require-client-perm
 import type { RequestWithClient } from '@/common/guards/client.guard';
 import { ProviderLoginType } from './enums/provider-login-type.enum';
 import { AuthProviderRegistry } from './registry/auth-provider.registry';
+import { ApiHideFromPortalScalar } from '@/swagger/docs/api-hide-from-portal-scalar.decorator';
 
 @ApiTags('Provedores Financeiros')
 @Controller('providers')
@@ -38,6 +39,7 @@ export class FinancialProvidersController {
   ) {}
 
   @Post(':provider/config')
+  @ApiHideFromPortalScalar()
   @RequireClient()
   @ApiConfigureProvider()
   @Audit({
@@ -61,6 +63,7 @@ export class FinancialProvidersController {
   }
 
   @Get(':provider/config/:loginType')
+  @ApiHideFromPortalScalar()
   @ApiGetProviderConfig()
   async getConfig(
     @Param('provider', new ParseEnumPipe(FinancialProvider))
@@ -75,6 +78,7 @@ export class FinancialProvidersController {
    * Rotas padronizadas (plugáveis) por provedor.
    */
   @Post(':provider/auth/backoffice')
+  @ApiHideFromPortalScalar()
   @ApiBackofficeLogin()
   async loginBackofficeByProvider(
     @Param('provider', new ParseEnumPipe(FinancialProvider))
