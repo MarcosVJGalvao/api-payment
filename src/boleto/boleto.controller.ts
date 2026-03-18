@@ -73,7 +73,7 @@ export class BoletoController {
     return this.boletoService.listBoletos(query, req.clientId!, req.accountId!);
   }
 
-  @Delete(':provider/:id')
+  @Delete(':id')
   @ApiCancelBoleto()
   @Audit({
     action: AuditAction.BOLETO_CANCELLED,
@@ -82,10 +82,9 @@ export class BoletoController {
     captureNewValues: true,
   })
   async cancelBoleto(
-    @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
     @Param('id') id: string,
     @Req() req: RequestWithSession,
   ) {
-    return this.boletoService.cancelBoleto(id, provider, req.providerSession);
+    return this.boletoService.cancelBoleto(id, req.providerSession);
   }
 }

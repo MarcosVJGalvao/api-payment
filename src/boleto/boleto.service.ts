@@ -225,7 +225,6 @@ export class BoletoService {
 
   async cancelBoleto(
     id: string,
-    provider: FinancialProvider,
     session: ProviderSession,
   ): Promise<BoletoCancelResponse> {
     this.logger.log(`Cancelling boleto: ${id}`, this.context);
@@ -241,6 +240,14 @@ export class BoletoService {
 
     const boleto = await this.findById(id, session.clientId, session.accountId);
 
+    if (session.providerSlug !== boleto.providerSlug) {
+      throw new CustomHttpException(
+        'Authenticated session belongs to a different provider',
+        HttpStatus.FORBIDDEN,
+        ErrorCode.INVALID_SESSION,
+      );
+    }
+
     const nonCancellableStatuses = [BoletoStatus.PAID, BoletoStatus.CANCELLED];
     if (nonCancellableStatuses.includes(boleto.status)) {
       throw new CustomHttpException(
@@ -252,7 +259,7 @@ export class BoletoService {
 
     try {
       const response = await this.providerHelper.cancelBoleto(
-        provider,
+        boleto.providerSlug,
         boleto,
         session,
       );

@@ -7,7 +7,6 @@ import {
   getSchemaPath,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '@/common/dto/error-response.dto';
-import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 
 export function ApiCancelBoleto() {
   return applyDecorators(
@@ -15,18 +14,12 @@ export function ApiCancelBoleto() {
     ApiOperation({
       summary: 'Cancelar boleto',
       description:
-        'Cancela um boleto emitido no provedor financeiro especificado. O boleto não pode ser cancelado se já estiver pago ou cancelado. ' +
-        'Requer autenticação `provider-auth`, `X-Client-Id` e contexto de conta.',
-    }),
-    ApiParam({
-      name: 'provider',
-      description: 'Provedor financeiro',
-      example: FinancialProvider.HIPERBANCO,
-      enum: FinancialProvider,
+        'Cancela um boleto pelo seu ID interno. O provider e os identificadores externos sao resolvidos a partir do registro salvo no banco. ' +
+        'O boleto nao pode ser cancelado se ja estiver pago ou cancelado. Requer autenticacao `provider-auth`, `X-Client-Id` e contexto de conta.',
     }),
     ApiParam({
       name: 'id',
-      description: 'ID do boleto',
+      description: 'ID interno do boleto',
       type: String,
     }),
     ApiResponse({
@@ -42,13 +35,13 @@ export function ApiCancelBoleto() {
     }),
     ApiResponse({
       status: 400,
-      description: 'Sessão inválida',
+      description: 'Sessao invalida',
       content: {
         'application/json': {
           schema: { $ref: getSchemaPath(ErrorResponseDto) },
           examples: {
             INVALID_SESSION: {
-              summary: 'Sessão inválida',
+              summary: 'Sessao invalida',
               value: {
                 errorCode: 'INVALID_SESSION',
                 message: 'Account ID is required for boleto operations',
@@ -61,16 +54,16 @@ export function ApiCancelBoleto() {
     }),
     ApiResponse({
       status: 401,
-      description: 'Erro de autenticação',
+      description: 'Erro de autenticacao',
       content: {
         'application/json': {
           schema: { $ref: getSchemaPath(ErrorResponseDto) },
           examples: {
             UNAUTHORIZED: {
-              summary: 'Token inválido ou expirado',
+              summary: 'Token invalido ou expirado',
               value: {
                 errorCode: 'UNAUTHORIZED',
-                message: 'Token de autenticação inválido ou expirado',
+                message: 'Token de autenticacao invalido ou expirado',
                 correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
               },
             },
@@ -86,10 +79,18 @@ export function ApiCancelBoleto() {
           schema: { $ref: getSchemaPath(ErrorResponseDto) },
           examples: {
             ACCESS_DENIED: {
-              summary: 'Boleto não pertence à conta',
+              summary: 'Boleto nao pertence a conta',
               value: {
                 errorCode: 'ACCESS_DENIED',
                 message: 'Boleto does not belong to this account',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+            INVALID_SESSION: {
+              summary: 'Sessao autenticada em outro provider',
+              value: {
+                errorCode: 'INVALID_SESSION',
+                message: 'Authenticated session belongs to a different provider',
                 correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
               },
             },
@@ -99,13 +100,13 @@ export function ApiCancelBoleto() {
     }),
     ApiResponse({
       status: 404,
-      description: 'Boleto não encontrado',
+      description: 'Boleto nao encontrado',
       content: {
         'application/json': {
           schema: { $ref: getSchemaPath(ErrorResponseDto) },
           examples: {
             BOLETO_NOT_FOUND: {
-              summary: 'Boleto não encontrado',
+              summary: 'Boleto nao encontrado',
               value: {
                 errorCode: 'BOLETO_NOT_FOUND',
                 message: 'Boleto not found',
@@ -118,13 +119,13 @@ export function ApiCancelBoleto() {
     }),
     ApiResponse({
       status: 422,
-      description: 'Boleto não pode ser cancelado',
+      description: 'Boleto nao pode ser cancelado',
       content: {
         'application/json': {
           schema: { $ref: getSchemaPath(ErrorResponseDto) },
           examples: {
             BOLETO_CANNOT_BE_CANCELLED: {
-              summary: 'Boleto já está pago ou cancelado',
+              summary: 'Boleto ja esta pago ou cancelado',
               value: {
                 errorCode: 'BOLETO_CANNOT_BE_CANCELLED',
                 message: 'Boleto cannot be cancelled with status: PAID',
