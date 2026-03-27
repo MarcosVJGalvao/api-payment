@@ -144,7 +144,7 @@ export function mapAccountsToResponse(
 export interface CreateSessionAndTokenParams {
   providerSlug: FinancialProvider;
   clientId: string;
-  hiperbancoToken: string;
+  accessToken: string;
   loginType: ProviderLoginType;
   userId?: string;
   accountId?: string;
@@ -173,10 +173,12 @@ export async function createSessionAndToken(
   const session = await sessionService.createSession({
     providerSlug: params.providerSlug,
     clientId: params.clientId,
-    hiperbancoToken: params.hiperbancoToken,
     loginType: params.loginType,
-    userId: params.userId,
     accountId: params.accountId,
+    accessToken: params.accessToken,
+    metadata: {
+      userId: params.userId,
+    },
   });
 
   const token = jwtService.generateToken({

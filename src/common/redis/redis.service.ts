@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { AppLoggerService } from '@/common/logger/logger.service';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
@@ -132,7 +133,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       ]);
     } catch (error) {
       this.logger.warn(
-        `Redis not available (mode: ${this.mode}): ${error instanceof Error ? error.message : String(error)}. Application will continue without Redis.`,
+        `Redis not available (mode: ${this.mode}): ${getErrorMessage(error)}. Application will continue without Redis.`,
         'RedisService',
       );
       // Don't throw - allow application to continue without Redis

@@ -7,8 +7,9 @@ import {
   ListWebhooksResponse,
   UpdateWebhookResponse,
 } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { HiperbancoEndpoint } from '@/financial-providers/hiperbanco/enums/hiperbanco-endpoint.enum';
+import { getProviderAccessToken } from '@/financial-providers/hiperbanco/helpers/session-token.helper';
 
 /**
  * Helper responsável pela comunicação com o Hiperbanco para operações de webhooks.
@@ -37,7 +38,7 @@ export class HiperbancoWebhookHelper {
       },
       {
         headers: {
-          Authorization: `Bearer ${session.hiperbancoToken}`,
+          Authorization: `Bearer ${getProviderAccessToken(session)}`,
         },
       },
     );
@@ -70,7 +71,7 @@ export class HiperbancoWebhookHelper {
       {
         params,
         headers: {
-          Authorization: `Bearer ${session.hiperbancoToken}`,
+          Authorization: `Bearer ${getProviderAccessToken(session)}`,
         },
       },
     );
@@ -93,7 +94,7 @@ export class HiperbancoWebhookHelper {
       { uri },
       {
         headers: {
-          Authorization: `Bearer ${session.hiperbancoToken}`,
+          Authorization: `Bearer ${getProviderAccessToken(session)}`,
         },
       },
     );
@@ -113,7 +114,7 @@ export class HiperbancoWebhookHelper {
       undefined,
       {
         headers: {
-          Authorization: `Bearer ${session.hiperbancoToken}`,
+          Authorization: `Bearer ${getProviderAccessToken(session)}`,
         },
       },
     );

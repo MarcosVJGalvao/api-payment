@@ -33,6 +33,14 @@ export interface BackofficeLoginResponse extends Record<string, unknown> {
   access_token: string;
 }
 
+export interface AuthLoginResponse {
+  access_token: string;
+  sessionId: string;
+  documentNumber?: string;
+  registerName?: string;
+  accounts?: HiperbancoAccount[];
+}
+
 export interface RegisterWebhookResponse {
   id: string;
   name: string;
@@ -422,4 +430,49 @@ export interface PixQrCodeDecodeResponse {
   location: PixQrCodeLocation;
   qrCodePurpose: string;
   additionalData?: Record<string, unknown>[];
+}
+
+// ============ TED ============
+
+export interface HiperbancoTedResponse {
+  authenticationCode: string;
+  transactionId: string;
+}
+
+export interface HiperbancoTedStatusResponse {
+  companyKey: string;
+  authenticationCode: string;
+  amount: number;
+  description: string;
+  correlationId: string;
+  sender: {
+    document: string;
+    name: string;
+    account: {
+      branch: string;
+      number: string;
+      bank: {
+        ispb: string;
+        name: string;
+        compe: string;
+      };
+    };
+  };
+  recipient: {
+    document: string;
+    name: string;
+    account: {
+      branch: string;
+      number: string;
+      bank: {
+        ispb: string;
+        name: string;
+        compe: string;
+      };
+    };
+  };
+  channel: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
 }

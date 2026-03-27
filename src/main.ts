@@ -11,11 +11,8 @@ console.log = (...args: any[]) => {
 
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { SwaggerModule } from '@nestjs/swagger';
 import { HttpExceptionFilter } from './common/errors/filters/http-exception.filter';
 import { ValidationPipe } from '@nestjs/common';
-import { RemoveSensitiveFieldsInterceptor } from './common/interceptors/remove-sensitive-fields.interceptor';
-import { RemoveNestedTimestampsInterceptor } from './common/interceptors/remove-nested-timestamps.interceptor';
 import { ConditionalClassSerializerInterceptor } from './common/interceptors/conditional-class-serializer.interceptor';
 import { AppLoggerService } from './common/logger/logger.service';
 import { ConfigService } from '@nestjs/config';
@@ -23,6 +20,12 @@ import { SwaggerService } from './swagger/swagger.service';
 import { createStandaloneLogger } from './common/logger/standalone-logger';
 import { RequestLoggingInterceptor } from './common/logger/interceptors/request-logging.interceptor';
 import { loadSecretsFromVault } from './secrets/vault/vault.loader';
+import {
+  getErrorMessage,
+  getErrorTrace,
+} from './common/helpers/exception.helper';
+import { ResponseSanitizationInterceptor } from './common/interceptors/response-sanitization.interceptor';
+import { setupApiDocumentation } from './swagger/setup-api-documentation';
 
 async function bootstrap() {
   const standaloneLogger = createStandaloneLogger();
@@ -35,8 +38,8 @@ async function bootstrap() {
     await loadSecretsFromVault();
   } catch (error) {
     standaloneLogger.error(
-      `Failed to load secrets from Vault: ${error instanceof Error ? error.message : String(error)}`,
-      error instanceof Error ? error.stack : undefined,
+      `Failed to load secrets from Vault: ${getErrorMessage(error)}`,
+      getErrorTrace(error),
     );
     if (process.env.SECRETS_SOURCE?.toUpperCase() === 'VAULT') {
       process.exit(1);
@@ -52,7 +55,12 @@ async function bootstrap() {
 
     const logger = app.get(AppLoggerService);
     const configService = app.get(ConfigService);
+    const trustProxy = configService.get<string>('TRUST_PROXY');
 
+    app
+      .getHttpAdapter()
+      .getInstance()
+      .set('trust proxy', trustProxy ? Number(trustProxy) : 1);
     app.enableCors();
 
     app.useGlobalPipes(
@@ -67,8 +75,7 @@ async function bootstrap() {
     app.useGlobalInterceptors(
       new RequestLoggingInterceptor(logger),
       new ConditionalClassSerializerInterceptor(app.get(Reflector)),
-      new RemoveNestedTimestampsInterceptor(),
-      new RemoveSensitiveFieldsInterceptor([
+      new ResponseSanitizationInterceptor([
         'password',
         'secret',
         'secretEncrypted',
@@ -81,77 +88,40 @@ async function bootstrap() {
 
     const swaggerService = app.get(SwaggerService);
     swaggerService.generateDocument(app);
-
-    const swaggerOptions = {
-      persistAuthorization: true,
-    };
-
-    SwaggerModule.setup('api', app, swaggerService.getSwaggerDocument(), {
-      jsonDocumentUrl: '/api/openapi.json',
-      swaggerOptions,
-    });
-
-    SwaggerModule.setup(
-      'api/provider',
-      app,
-      swaggerService.getFilteredDocument('provider-auth'),
-      {
-        jsonDocumentUrl: '/api/provider/openapi.json',
-        swaggerOptions,
-      },
-    );
-
-    SwaggerModule.setup(
-      'api/backoffice',
-      app,
-      swaggerService.getFilteredDocument('backoffice-auth'),
-      {
-        jsonDocumentUrl: '/api/backoffice/openapi.json',
-        swaggerOptions,
-      },
-    );
-
-    SwaggerModule.setup(
-      'api/internal',
-      app,
-      swaggerService.getFilteredDocument('internal-auth'),
-      {
-        jsonDocumentUrl: '/api/internal/openapi.json',
-        swaggerOptions,
-      },
-    );
+    setupApiDocumentation(app, swaggerService);
 
     const port = configService.get<number>('PORT', 3000);
     await app.listen(port);
 
     app.useLogger(logger);
 
-    console.log('\n✅  Application Successfully Started\n');
-    console.log(`📍  Server:     http://localhost:${port}`);
-    console.log(`📚  Swagger UI:`);
+    console.log('\n\u2705  Application Successfully Started\n');
+    console.log(`\ud83d\udccd  Server:     http://localhost:${port}`);
+    console.log(`\ud83d\udcda  Docs Portal: http://localhost:${port}/docs`);
+    console.log(`\u26a1  Scalar API Reference:`);
+    console.log(`    - Completo:    http://localhost:${port}/docs/api`);
+    console.log(
+      `    - Provider:    http://localhost:${port}/docs/api/provider`,
+    );
+    console.log(
+      `    - Backoffice:  http://localhost:${port}/docs/api/backoffice`,
+    );
+    console.log(
+      `    - Internal:    http://localhost:${port}/docs/api/internal`,
+    );
+    console.log(`\ud83d\udcda  Swagger UI (legacy):`);
     console.log(`    - Completo:    http://localhost:${port}/api`);
     console.log(`    - Provider:    http://localhost:${port}/api/provider`);
     console.log(`    - Backoffice:  http://localhost:${port}/api/backoffice`);
     console.log(`    - Internal:    http://localhost:${port}/api/internal`);
-    console.log(`📄  OpenAPI JSON:`);
-    console.log(`    - Completo:    http://localhost:${port}/api/openapi.json`);
+    console.log(`\ud83d\udcca  Queues:     http://localhost:${port}/queues`);
     console.log(
-      `    - Provider:    http://localhost:${port}/api/provider/openapi.json`,
-    );
-    console.log(
-      `    - Backoffice:  http://localhost:${port}/api/backoffice/openapi.json`,
-    );
-    console.log(
-      `    - Internal:    http://localhost:${port}/api/internal/openapi.json`,
-    );
-    console.log(`📊  Queues:     http://localhost:${port}/queues`);
-    console.log(
-      '\n═══════════════════════════════════════════════════════════\n',
+      '\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n',
     );
   } catch (error) {
     standaloneLogger.error(
-      `Failed to start application: ${error instanceof Error ? error.message : String(error)}`,
-      error instanceof Error ? error.stack : undefined,
+      `Failed to start application: ${getErrorMessage(error)}`,
+      getErrorTrace(error),
     );
     throw error;
   }

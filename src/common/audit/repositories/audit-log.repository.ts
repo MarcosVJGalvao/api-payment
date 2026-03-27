@@ -12,6 +12,7 @@ import { QueryAuditLogDto } from '../dto/query-audit-log.dto';
 import { AuditExportDto } from '../dto/audit-export.dto';
 import { AuditAction } from '../enums/audit-action.enum';
 import { AuditLogStatus } from '../enums/audit-log-status.enum';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 @Injectable()
 export class AuditLogRepository {
@@ -43,7 +44,7 @@ export class AuditLogRepository {
     } catch (error) {
       // Re-throw com mais contexto para que o AuditService possa logar adequadamente
       throw new CustomHttpException(
-        `Failed to save audit log to database: ${error instanceof Error ? error.message : String(error)}. Data: action=${data.action}, entityType=${data.entityType}, status=${data.status}`,
+        `Failed to save audit log to database: ${getErrorMessage(error)}. Data: action=${data.action}, entityType=${data.entityType}, status=${data.status}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
         ErrorCode.AUDIT_LOG_CREATION_FAILED,
       );

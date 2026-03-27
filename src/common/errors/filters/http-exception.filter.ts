@@ -19,6 +19,10 @@ import { ThrottlerException } from '@nestjs/throttler';
 import { AppLoggerService } from '@/common/logger/logger.service';
 import { extractModuleFromUrl } from '@/common/logger/helpers/url-module.helper';
 
+function hasMessageProperty(value: unknown): value is { message?: unknown } {
+  return typeof value === 'object' && value !== null && 'message' in value;
+}
+
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   constructor(private readonly logger: AppLoggerService) {}
@@ -89,14 +93,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
       status = HttpStatus.TOO_MANY_REQUESTS;
       errorCode = ErrorCode.TOO_MANY_REQUESTS;
       const exceptionResponse = exception.getResponse();
+      let exceptionMessage: string | string[] | undefined;
+      if (hasMessageProperty(exceptionResponse)) {
+        const msg = exceptionResponse.message;
+        if (typeof msg === 'string' || Array.isArray(msg)) {
+          exceptionMessage = msg;
+        }
+      }
       message =
         typeof exceptionResponse === 'string'
           ? exceptionResponse
-          : typeof exceptionResponse === 'object' &&
-              exceptionResponse !== null &&
-              'message' in exceptionResponse
-            ? (exceptionResponse as any).message
-            : 'Too many requests';
+          : (exceptionMessage ?? 'Too many requests');
 
       this.logException(
         correlationId,
@@ -105,7 +112,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         errorCode,
         message,
         request,
-        (exception as Error).stack,
+        exception instanceof Error ? exception.stack : undefined,
       );
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -126,11 +133,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
         errorCode,
         message,
         request,
-        (exception as Error).stack,
+        exception instanceof Error ? exception.stack : undefined,
       );
     } else {
-      const error = exception as Error;
-      const result = processUnhandledError(error);
+      const result = processUnhandledError(exception);
 
       status = result.status;
       errorCode = result.errorCode;
@@ -143,8 +149,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
         errorCode,
         message,
         request,
-        error?.stack,
-        error?.name,
+        exception instanceof Error ? exception.stack : undefined,
+        exception instanceof Error ? exception.name : undefined,
       );
     }
 

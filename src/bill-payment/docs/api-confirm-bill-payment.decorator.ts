@@ -51,6 +51,11 @@ export function ApiConfirmBillPayment() {
           settleDate: { type: 'string', format: 'date-time' },
           transactionId: { type: 'string' },
           paymentId: { type: 'string', description: 'ID interno do pagamento' },
+          internalTransactionId: {
+            type: 'string',
+            format: 'uuid',
+            description: 'ID interno (tabela transaction)',
+          },
         },
       },
     }),

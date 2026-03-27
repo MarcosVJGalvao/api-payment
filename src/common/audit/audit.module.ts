@@ -13,12 +13,17 @@ import { AuditAlertService } from './services/audit-alert.service';
 import { AuditController } from './controllers/audit.controller';
 import { AuditLogRepository } from './repositories/audit-log.repository';
 import { PermissionsModule } from '@/permissions/permissions.module';
+import { BullModule } from '@nestjs/bull';
+import { AuditProcessor } from './processors/audit.processor';
 
 @Global()
 @Module({
   imports: [
     TypeOrmModule.forFeature([AuditLog]),
     PermissionsModule,
+    BullModule.registerQueue({
+      name: 'audit',
+    }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
@@ -38,6 +43,7 @@ import { PermissionsModule } from '@/permissions/permissions.module';
     AuditExportService,
     AuditDashboardService,
     AuditAlertService,
+    AuditProcessor,
     {
       provide: APP_INTERCEPTOR,
       useClass: AuditInterceptor,
@@ -50,6 +56,7 @@ import { PermissionsModule } from '@/permissions/permissions.module';
     AuditExportService,
     AuditDashboardService,
     AuditAlertService,
+    BullModule,
   ],
 })
 export class AuditModule {}

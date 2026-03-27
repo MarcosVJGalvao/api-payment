@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "none",
+    "lib": ["ES2020", "DOM"],
+    "rootDir": "src/swagger/portal/assets/js",
+    "outDir": "dist/swagger/portal/assets/js",
+    "strict": false,
+    "noImplicitAny": false,
+    "removeComments": false,
+    "sourceMap": false,
+    "declaration": false,
+    "noCheck": true,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": [
+    "src/swagger/portal/assets/js/docs-portal*.ts",
+    "src/swagger/portal/assets/js/docs-portal-globals.d.ts"
+  ]
+}

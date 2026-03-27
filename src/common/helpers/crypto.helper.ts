@@ -17,7 +17,17 @@ export class CryptoHelper {
    * Deriva uma chave de 32 bytes a partir da chave de ambiente.
    */
   private static async getKey(): Promise<Buffer> {
-    return (await promisify(scrypt)(ENCRYPTION_KEY, 'salt', 32)) as Buffer;
+    const derived = await promisify(scrypt)(ENCRYPTION_KEY, 'salt', 32);
+    if (Buffer.isBuffer(derived)) {
+      return derived;
+    }
+    if (derived instanceof Uint8Array) {
+      return Buffer.from(derived);
+    }
+    if (typeof derived === 'string') {
+      return Buffer.from(derived, 'hex');
+    }
+    throw new Error('Invalid derived key type');
   }
 
   /**

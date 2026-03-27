@@ -22,14 +22,10 @@ export function applySearch<T extends ObjectLiteral>(
     return `${convertedField} LIKE :${paramName}`;
   });
 
-  queryBuilder.andWhere(
-    `(${conditions.join(' OR ')})`,
-    fields.reduce(
-      (acc, field, index) => {
-        acc[`search_${index}`] = `%${search}%`;
-        return acc;
-      },
-      {} as Record<string, string>,
-    ),
-  );
+  const params: Record<string, string> = {};
+  fields.forEach((_field, index) => {
+    params[`search_${index}`] = `%${search}%`;
+  });
+
+  queryBuilder.andWhere(`(${conditions.join(' OR ')})`, params);
 }

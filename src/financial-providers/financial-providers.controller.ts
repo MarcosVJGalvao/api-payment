@@ -10,7 +10,6 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { FinancialCredentialsService } from './services/financial-credentials.service';
-import { HiperbancoAuthService } from './hiperbanco/hiperbanco-auth.service';
 import { CreateProviderCredentialDto } from './dto/create-provider-credential.dto';
 import { BankLoginDto } from './dto/bank-login.dto';
 import { BackofficeLoginDto } from './dto/backoffice-login.dto';
@@ -27,6 +26,8 @@ import { RequireClient } from '@/common/decorators/require-client.decorator';
 import { RequireClientPermission } from '@/common/decorators/require-client-permission.decorator';
 import type { RequestWithClient } from '@/common/guards/client.guard';
 import { ProviderLoginType } from './enums/provider-login-type.enum';
+import { AuthProviderRegistry } from './registry/auth-provider.registry';
+import { ApiHideFromPortalScalar } from '@/swagger/docs/api-hide-from-portal-scalar.decorator';
 
 @ApiTags('Provedores Financeiros')
 @Controller('providers')
@@ -34,10 +35,11 @@ import { ProviderLoginType } from './enums/provider-login-type.enum';
 export class FinancialProvidersController {
   constructor(
     private readonly credentialsService: FinancialCredentialsService,
-    private readonly hiperbancoAuth: HiperbancoAuthService,
+    private readonly authProviders: AuthProviderRegistry,
   ) {}
 
   @Post(':provider/config')
+  @ApiHideFromPortalScalar()
   @RequireClient()
   @ApiConfigureProvider()
   @Audit({
@@ -61,6 +63,7 @@ export class FinancialProvidersController {
   }
 
   @Get(':provider/config/:loginType')
+  @ApiHideFromPortalScalar()
   @ApiGetProviderConfig()
   async getConfig(
     @Param('provider', new ParseEnumPipe(FinancialProvider))
@@ -71,18 +74,28 @@ export class FinancialProvidersController {
     return this.credentialsService.getPublicCredentials(provider, loginType);
   }
 
-  @Post('hiperbanco/auth/backoffice')
+  @Post(':provider/auth/backoffice')
+  @ApiHideFromPortalScalar()
   @ApiBackofficeLogin()
-  async loginBackoffice(@Body() dto: BackofficeLoginDto) {
-    return this.hiperbancoAuth.loginBackoffice(dto);
+  async loginBackofficeByProvider(
+    @Param('provider', new ParseEnumPipe(FinancialProvider))
+    provider: FinancialProvider,
+    @Body() dto: BackofficeLoginDto,
+  ) {
+    return this.authProviders.get(provider).loginBackoffice(dto);
   }
 
-  @Post('hiperbanco/auth/bank')
+  @Post(':provider/auth/bank')
   @RequireClient()
   @RequireClientPermission('auth:bank')
   @ApiBearerAuth('provider-auth')
   @ApiBankLogin()
-  async loginBank(@Body() dto: BankLoginDto, @Req() req: RequestWithClient) {
-    return this.hiperbancoAuth.loginApiBank(dto, req.clientId!);
+  async loginBankByProvider(
+    @Param('provider', new ParseEnumPipe(FinancialProvider))
+    provider: FinancialProvider,
+    @Body() dto: BankLoginDto,
+    @Req() req: RequestWithClient,
+  ) {
+    return this.authProviders.get(provider).loginBank(dto, req.clientId!);
   }
 }

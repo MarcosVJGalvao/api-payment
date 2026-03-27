@@ -14,8 +14,13 @@ import type { Queue } from 'bull';
 import { WebhookPublicKeyGuard } from '../guards/webhook-public-key.guard';
 import { WebhookPayload } from '../interfaces/webhook-base.interface';
 import { BoletoWebhookData } from '../interfaces/boleto-webhook.interface';
-import type { BoletoWebhookJob } from '../processors/boleto-webhook.processor';
-import { enqueueWebhookEvent } from '../helpers/enqueue-webhook.helper';
+import {
+  enqueueWebhookEvent,
+  WebhookJobBase,
+} from '../helpers/enqueue-webhook.helper';
+import { BoletoWebhookNormalizerRegistry } from '../registries/boleto-webhook-normalizer.registry';
+import { parseFinancialProvider } from '../helpers/provider-slug.helper';
+import { isRecord } from '@/common/errors/helpers/type.helpers';
 
 @ApiTags('Webhooks - Boleto')
 @Controller('webhook/:provider/boleto')
@@ -23,8 +28,17 @@ import { enqueueWebhookEvent } from '../helpers/enqueue-webhook.helper';
 export class BoletoWebhookController {
   constructor(
     @InjectQueue('webhook-boleto')
-    private readonly webhookQueue: Queue<BoletoWebhookJob>,
+    private readonly webhookQueue: Queue<WebhookJobBase>,
+    private readonly normalizerRegistry: BoletoWebhookNormalizerRegistry,
   ) {}
+
+  private getProvider(request: Request) {
+    return parseFinancialProvider(String(request.params?.provider || ''));
+  }
+
+  private getHeaders(request: Request): Record<string, unknown> {
+    return isRecord(request.headers) ? request.headers : {};
+  }
 
   @Post('registered')
   @HttpCode(HttpStatus.ACCEPTED)
@@ -34,10 +48,15 @@ export class BoletoWebhookController {
     @Body() events: WebhookPayload<BoletoWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeRegistered(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'REGISTERED',
-      events,
+      normalized,
       request,
     );
   }
@@ -50,10 +69,15 @@ export class BoletoWebhookController {
     @Body() events: WebhookPayload<BoletoWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeCashInReceived(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CASH_IN_RECEIVED',
-      events,
+      normalized,
       request,
     );
   }
@@ -66,10 +90,15 @@ export class BoletoWebhookController {
     @Body() events: WebhookPayload<BoletoWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeCashInCleared(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CASH_IN_CLEARED',
-      events,
+      normalized,
       request,
     );
   }
@@ -82,10 +111,15 @@ export class BoletoWebhookController {
     @Body() events: WebhookPayload<BoletoWebhookData>[],
     @Req() request: Request,
   ): Promise<{ received: boolean }> {
+    const provider = this.getProvider(request);
+    const headers = this.getHeaders(request);
+    const normalized = this.normalizerRegistry
+      .get(provider)
+      .normalizeCancelled(events, headers);
     return await enqueueWebhookEvent(
       this.webhookQueue,
       'CANCELLED',
-      events,
+      normalized,
       request,
     );
   }

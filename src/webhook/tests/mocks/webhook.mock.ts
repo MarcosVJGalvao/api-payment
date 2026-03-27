@@ -3,7 +3,7 @@ import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { RegisterWebhookDto } from '../../dto/register-webhook.dto';
 import { Webhook } from '../../entities/webhook.entity';
 import { RegisterWebhookResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { ProviderLoginType } from '@/financial-providers/enums/provider-login-type.enum';
 import { Client } from '@/client/entities/client.entity';
 import { ClientStatus } from '@/client/enums/client-status.enum';
@@ -53,7 +53,7 @@ export const mockProviderSession = (): ProviderSession => ({
   sessionId: 'mock-session-id',
   providerSlug: FinancialProvider.HIPERBANCO,
   clientId: 'mock-client-id',
-  hiperbancoToken: 'mock-hiperbanco-token',
+  accessToken: 'mock-hiperbanco-token',
   loginType: ProviderLoginType.BACKOFFICE,
   createdAt: Date.now(),
   expiresAt: Date.now() + 30 * 60 * 1000,

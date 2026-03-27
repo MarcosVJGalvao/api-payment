@@ -3,6 +3,26 @@ import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exce
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { AppLoggerService } from '@/common/logger/logger.service';
 
+export function getErrorMessageAndStack(error: unknown): {
+  message: string;
+  stack?: string;
+} {
+  if (error instanceof Error) {
+    return { message: error.message, stack: error.stack };
+  }
+
+  return { message: String(error) };
+}
+
+export function getErrorMessage(error: unknown): string {
+  return getErrorMessageAndStack(error).message;
+}
+
+export function getErrorTrace(error: unknown): string {
+  const { message, stack } = getErrorMessageAndStack(error);
+  return stack ?? message;
+}
+
 /**
  * Trata exceções genéricas, logando o erro e lançando uma CustomHttpException padronizada.
  * Se o erro já for uma CustomHttpException, ele é relançado sem alterações.
@@ -28,8 +48,7 @@ export function handleGenericException(
     throw error;
   }
 
-  const errorMessage = error instanceof Error ? error.message : String(error);
-  const stack = error instanceof Error ? error.stack : undefined;
+  const { message: errorMessage, stack } = getErrorMessageAndStack(error);
 
   logger?.error(logMessage, stack || errorMessage, context);
 

@@ -11,7 +11,7 @@ import {
   HttpStatus,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { PermissionService } from '../services/permission.service';
 import { CreatePermissionDto } from '../dto/create-permission.dto';
 import { UpdatePermissionDto } from '../dto/update-permission.dto';
@@ -32,9 +32,10 @@ import { Permission } from '../entities/permission.entity';
 import { ApiAssignPermissionToUser } from '../docs/api-assign-permission-to-user.decorator';
 import { ApiRemovePermissionFromUser } from '../docs/api-remove-permission-from-user.decorator';
 import { ApiGetUserDirectPermissions } from '../docs/api-get-user-direct-permissions.decorator';
+import { ApiControllerHideFromPortalScalar } from '@/swagger/docs/api-controller-hide-from-portal-scalar.decorator';
 
 @Controller('permissions')
-@ApiTags('Permissões')
+@ApiControllerHideFromPortalScalar('Permissões')
 @UseGuards(PermissionsGuard)
 @ApiBearerAuth('internal-auth')
 export class PermissionController {

@@ -8,7 +8,7 @@ import { RedisService } from '@/common/redis/redis.service';
 import {
   BackofficeLoginResponse,
   BankLoginResponse,
-  HiperbancoAccount,
+  AuthLoginResponse,
 } from './interfaces/hiperbanco-responses.interface';
 import { BankLoginDto } from '../dto/bank-login.dto';
 import { BackofficeLoginDto } from '../dto/backoffice-login.dto';
@@ -19,6 +19,7 @@ import { OnboardingService } from '@/onboarding/onboarding.service';
 import { Onboarding } from '@/onboarding/entities/onboarding.entity';
 import { ProviderLoginType } from '../enums/provider-login-type.enum';
 import { HiperbancoEndpoint } from './enums/hiperbanco-endpoint.enum';
+import { getErrorMessageAndStack } from '@/common/helpers/exception.helper';
 import {
   persistAccounts,
   getPrimaryAccount,
@@ -26,14 +27,6 @@ import {
   mapAccountsToResponse,
   createSessionAndToken,
 } from './helpers/bank-login.helper';
-
-export interface AuthLoginResponse {
-  access_token: string;
-  sessionId: string;
-  documentNumber?: string;
-  registerName?: string;
-  accounts?: HiperbancoAccount[];
-}
 
 @Injectable()
 export class HiperbancoAuthService {
@@ -69,7 +62,6 @@ export class HiperbancoAuthService {
    * Usado quando a sessão expira durante uma operação.
    */
   async refreshSharedBackofficeSession(): Promise<string> {
-    // Limpa o token antigo do Redis
     await this.redisService.del(this.CACHE_KEY);
 
     this.logger.log(
@@ -89,7 +81,6 @@ export class HiperbancoAuthService {
         payload,
       );
 
-      // Cache for 29 minutes
       await this.redisService.set(
         this.CACHE_KEY,
         response.access_token,
@@ -99,9 +90,8 @@ export class HiperbancoAuthService {
       this.logger.log('Shared Backoffice login successful', this.context);
       return response.access_token;
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      const errorStack = error instanceof Error ? error.stack : undefined;
+      const { message: errorMessage, stack: errorStack } =
+        getErrorMessageAndStack(error);
 
       this.logger.error(
         `Failed to login with shared backoffice credentials: ${errorMessage}`,
@@ -138,7 +128,7 @@ export class HiperbancoAuthService {
       {
         providerSlug: this.PROVIDER_SLUG,
         clientId: credentials.clientId!,
-        hiperbancoToken: response.access_token,
+        accessToken: response.access_token,
         loginType: ProviderLoginType.BACKOFFICE,
       },
       this.sessionService,
@@ -172,7 +162,6 @@ export class HiperbancoAuthService {
     );
     this.logger.log('API Bank login successful', this.context);
 
-    // Persistir Onboarding primeiro (se houver userData)
     let onboarding: Onboarding | null = null;
     if (response.userData) {
       onboarding = await persistOnboarding(
@@ -182,7 +171,6 @@ export class HiperbancoAuthService {
       );
     }
 
-    // Persistir Accounts e associar ao onboarding
     const accountsFromProvider = response.userData?.accounts || [];
     const savedAccounts = await persistAccounts(
       accountsFromProvider,
@@ -191,23 +179,21 @@ export class HiperbancoAuthService {
       onboarding?.id,
     );
 
-    // Determinar primeira conta (principal) - usar ID interno gerado pelo banco
     const primaryAccount = getPrimaryAccount(savedAccounts);
 
     const { session, token } = await createSessionAndToken(
       {
         providerSlug: this.PROVIDER_SLUG,
         clientId,
-        hiperbancoToken: response.access_token,
+        accessToken: response.access_token,
         userId: response.userData?.id,
-        accountId: primaryAccount.id, // ID interno do banco
+        accountId: primaryAccount.id,
         loginType: ProviderLoginType.BANK,
       },
       this.sessionService,
       this.jwtService,
     );
 
-    // Mapear accounts salvos no banco para resposta (com ID interno)
     const accountsFromResponse = mapAccountsToResponse(savedAccounts);
 
     return {

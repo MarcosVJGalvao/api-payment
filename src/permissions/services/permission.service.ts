@@ -6,17 +6,18 @@ import { Permission } from '../entities/permission.entity';
 import { Role } from '../entities/role.entity';
 import { ClientRole } from '../entities/client-role.entity';
 import { ClientPermission } from '../entities/client-permission.entity';
-import { RedisService } from '@/common/redis/redis.service';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { CreatePermissionDto } from '../dto/create-permission.dto';
 import { UpdatePermissionDto } from '../dto/update-permission.dto';
 import { QueryPermissionDto } from '../dto/query-permission.dto';
 import { CreateBulkPermissionsDto } from '../dto/create-bulk-permissions.dto';
+import { CacheService } from '@/common/redis/cache.service';
 import { checkPermissionHierarchy } from '../helpers/permission.helper';
 import { BaseQueryService } from '@/common/base-query/service/base-query.service';
 import { PaginationResult } from '@/common/base-query/interfaces/pagination-result.interface';
 import { FilterOperator } from '@/common/base-query/enums/filter-operator.enum';
+import { isRecord } from '@/common/errors/helpers/type.helpers';
 
 @Injectable()
 export class PermissionService {
@@ -31,21 +32,39 @@ export class PermissionService {
     private clientRoleRepository: Repository<ClientRole>,
     @InjectRepository(ClientPermission)
     private clientPermissionRepository: Repository<ClientPermission>,
-    private redisService: RedisService,
+    private cacheService: CacheService,
     private configService: ConfigService,
     private baseQueryService: BaseQueryService,
   ) {
     this.cacheTtl = this.configService.get<number>('REDIS_TTL', 3600);
   }
 
-  async getUserPermissions(userId: string): Promise<string[]> {
-    // TODO: Implement generic user permission retrieval or integrate when User module exists
-    return [];
+  private isRole(value: unknown): value is Role {
+    return (
+      isRecord(value) &&
+      typeof value['id'] === 'string' &&
+      typeof value['name'] === 'string'
+    );
   }
 
-  async getUserRoles(userId: string): Promise<string[]> {
+  private isRoleArray(value: unknown): value is Role[] {
+    return Array.isArray(value) && value.every((item) => this.isRole(item));
+  }
+
+  private isStringArray(value: unknown): value is string[] {
+    return (
+      Array.isArray(value) && value.every((item) => typeof item === 'string')
+    );
+  }
+
+  getUserPermissions(_userId: string): Promise<string[]> {
+    // TODO: Implement generic user permission retrieval or integrate when User module exists
+    return Promise.resolve([]);
+  }
+
+  getUserRoles(_userId: string): Promise<string[]> {
     // TODO: Implement generic user role retrieval or integrate when User module exists
-    return [];
+    return Promise.resolve([]);
   }
 
   async hasPermission(
@@ -60,32 +79,30 @@ export class PermissionService {
     userId: string,
     permissions: string[],
   ): Promise<boolean> {
-    for (const permission of permissions) {
-      if (await this.hasPermission(userId, permission)) {
-        return true;
-      }
-    }
-    return false;
+    if (permissions.length === 0) return false;
+    const userPermissions = await this.getUserPermissions(userId);
+    return permissions.some((required) =>
+      checkPermissionHierarchy(userPermissions, required),
+    );
   }
 
   async hasAllPermissions(
     userId: string,
     permissions: string[],
   ): Promise<boolean> {
-    for (const permission of permissions) {
-      if (!(await this.hasPermission(userId, permission))) {
-        return false;
-      }
-    }
-    return true;
+    if (permissions.length === 0) return true;
+    const userPermissions = await this.getUserPermissions(userId);
+    return permissions.every((required) =>
+      checkPermissionHierarchy(userPermissions, required),
+    );
   }
 
   async invalidateUserCache(userId: string): Promise<void> {
     const permissionsKey = `user_permissions:${userId}`;
     const rolesKey = `user_roles:${userId}`;
 
-    await this.redisService.del(permissionsKey);
-    await this.redisService.del(rolesKey);
+    await this.cacheService.del(permissionsKey);
+    await this.cacheService.del(rolesKey);
   }
 
   async getAllPermissions(
@@ -276,9 +293,9 @@ export class PermissionService {
     await this.permissionRepository.remove(permission);
   }
 
-  async assignPermissionToUser(
-    userId: string,
-    permissionId: string,
+  assignPermissionToUser(
+    _userId: string,
+    _permissionId: string,
   ): Promise<void> {
     // TODO: Implement when User module is available
     throw new CustomHttpException(
@@ -288,17 +305,17 @@ export class PermissionService {
     );
   }
 
-  async removePermissionFromUser(
-    userId: string,
-    permissionId: string,
+  removePermissionFromUser(
+    _userId: string,
+    _permissionId: string,
   ): Promise<void> {
     // TODO: Implement when User module is available
-    return;
+    return Promise.resolve();
   }
 
-  async getUserDirectPermissions(userId: string): Promise<Permission[]> {
+  getUserDirectPermissions(_userId: string): Promise<Permission[]> {
     // TODO: Implement when User module is available
-    return [];
+    return Promise.resolve([]);
   }
 
   /**
@@ -307,6 +324,12 @@ export class PermissionService {
    * @returns Array de roles com suas permissões
    */
   async getClientRoles(clientId: string): Promise<Role[]> {
+    const cacheKey = `client_roles:${clientId}`;
+    const cached = await this.cacheService.get(cacheKey, (value) =>
+      this.isRoleArray(value),
+    );
+    if (cached) return cached;
+
     const clientRoles = await this.clientRoleRepository.find({
       where: { clientId },
       relations: [
@@ -316,7 +339,9 @@ export class PermissionService {
       ],
     });
 
-    return clientRoles.map((cr) => cr.role);
+    const roles = clientRoles.map((cr) => cr.role);
+    await this.cacheService.set(cacheKey, roles, this.cacheTtl);
+    return roles;
   }
 
   /**
@@ -353,25 +378,8 @@ export class PermissionService {
     clientId: string,
     permissionName: string,
   ): Promise<boolean> {
-    // Verificar permissões vinculadas diretamente ao client via ClientPermission
-    const clientPermissions = await this.clientPermissionRepository.find({
-      where: { clientId },
-      relations: ['permission'],
-    });
-
-    const allPermissionNames = new Set<string>();
-
-    for (const cp of clientPermissions) {
-      if (cp.permission) {
-        allPermissionNames.add(cp.permission.name);
-      }
-    }
-
-    if (allPermissionNames.size === 0) {
-      return false;
-    }
-
-    const permissionNames = Array.from(allPermissionNames);
+    const permissionNames = await this.getClientEffectivePermissions(clientId);
+    if (permissionNames.length === 0) return false;
     return checkPermissionHierarchy(permissionNames, permissionName);
   }
 
@@ -389,6 +397,7 @@ export class PermissionService {
       return; // Já está vinculado
     }
 
+    await this.invalidateClientCache(clientId);
     const clientRole = this.clientRoleRepository.create({
       clientId,
       roleId,
@@ -408,6 +417,7 @@ export class PermissionService {
     });
 
     if (clientRole) {
+      await this.invalidateClientCache(clientId);
       await this.clientRoleRepository.remove(clientRole);
     }
   }
@@ -417,7 +427,21 @@ export class PermissionService {
    * @param clientId - ID do cliente
    * @param permissionName - Nome da permissão (ex: 'financial:boleto')
    */
+  private async invalidateClientCache(clientId: string): Promise<void> {
+    await this.cacheService.del(`client_permissions:${clientId}`);
+    await this.cacheService.del(`client_direct_permissions:${clientId}`);
+    await this.cacheService.del(`client_roles:${clientId}`);
+  }
+
   async assignPermissionToClient(
+    clientId: string,
+    permissionName: string,
+  ): Promise<void> {
+    await this.invalidateClientCache(clientId);
+    return this._assignPermissionToClient(clientId, permissionName);
+  }
+
+  private async _assignPermissionToClient(
     clientId: string,
     permissionName: string,
   ): Promise<void> {
@@ -451,15 +475,11 @@ export class PermissionService {
     await this.clientPermissionRepository.save(clientPermission);
   }
 
-  /**
-   * Remove vínculo de permissão (scope) de um client
-   * @param clientId - ID do cliente
-   * @param permissionName - Nome da permissão (ex: 'financial:boleto')
-   */
   async removePermissionFromClient(
     clientId: string,
     permissionName: string,
   ): Promise<void> {
+    await this.invalidateClientCache(clientId);
     // Buscar permissão global
     const permission = await this.permissionRepository.findOne({
       where: { name: permissionName },
@@ -478,11 +498,6 @@ export class PermissionService {
     }
   }
 
-  /**
-   * Valida se todas as permissões (scopes) existem
-   * @param permissionNames - Array de nomes de permissões
-   * @throws CustomHttpException se alguma permissão não existir
-   */
   async validatePermissionsExist(permissionNames: string[]): Promise<void> {
     if (permissionNames.length === 0) {
       return;
@@ -508,11 +523,6 @@ export class PermissionService {
     }
   }
 
-  /**
-   * Vincula múltiplas permissões (scopes) a um client
-   * @param clientId - ID do cliente
-   * @param permissionNames - Array de nomes de permissões
-   */
   async assignPermissionsToClient(
     clientId: string,
     permissionNames: string[],
@@ -525,11 +535,6 @@ export class PermissionService {
     }
   }
 
-  /**
-   * Remove múltiplas permissões (scopes) de um client
-   * @param clientId - ID do cliente
-   * @param permissionNames - Array de nomes de permissões
-   */
   async removePermissionsFromClient(
     clientId: string,
     permissionNames: string[],
@@ -539,16 +544,11 @@ export class PermissionService {
     }
   }
 
-  /**
-   * Atualiza as permissões (scopes) de um client
-   * Remove todas as permissões atuais e adiciona as novas
-   * @param clientId - ID do cliente
-   * @param permissionNames - Array de nomes de permissões
-   */
   async updateClientPermissions(
     clientId: string,
     permissionNames: string[],
   ): Promise<void> {
+    await this.invalidateClientCache(clientId);
     // Remover todas as permissões atuais do client
     const currentClientPermissions = await this.clientPermissionRepository.find(
       {
@@ -564,19 +564,51 @@ export class PermissionService {
     await this.assignPermissionsToClient(clientId, permissionNames);
   }
 
-  /**
-   * Retorna todas as permissões (scopes) vinculadas diretamente a um client
-   * @param clientId - ID do cliente
-   * @returns Array de nomes de permissões
-   */
   async getClientDirectPermissions(clientId: string): Promise<string[]> {
+    const cacheKey = `client_direct_permissions:${clientId}`;
+    const cached = await this.cacheService.get(cacheKey, (value) =>
+      this.isStringArray(value),
+    );
+    if (cached) return cached;
+
     const clientPermissions = await this.clientPermissionRepository.find({
       where: { clientId },
       relations: ['permission'],
     });
 
-    return clientPermissions
+    const result = clientPermissions
       .map((cp) => cp.permission?.name)
       .filter((name): name is string => !!name);
+
+    await this.cacheService.set(cacheKey, result, this.cacheTtl);
+    return result;
+  }
+
+  private async getClientEffectivePermissions(
+    clientId: string,
+  ): Promise<string[]> {
+    const cacheKey = `client_permissions:${clientId}`;
+    const cached = await this.cacheService.get(cacheKey, (value) =>
+      this.isStringArray(value),
+    );
+    if (cached) return cached;
+
+    const [directPermissions, roles] = await Promise.all([
+      this.getClientDirectPermissions(clientId),
+      this.getClientRoles(clientId),
+    ]);
+
+    const allPermissionNames = new Set<string>(directPermissions);
+    for (const role of roles) {
+      for (const rp of role.rolePermissions || []) {
+        if (rp.permission?.name) {
+          allPermissionNames.add(rp.permission.name);
+        }
+      }
+    }
+
+    const result = Array.from(allPermissionNames);
+    await this.cacheService.set(cacheKey, result, this.cacheTtl);
+    return result;
   }
 }

@@ -1,4 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
+import { isRecord } from '@/common/errors/helpers/type.helpers';
 
 export interface LogicalError {
   message: string;
@@ -23,22 +24,17 @@ export class HiperbancoResponseHelper {
   ): LogicalError | null {
     // Regra específica para login de Backoffice
     if (path.includes('/Backoffice/Login')) {
-      if (
-        responseData &&
-        typeof responseData === 'object' &&
-        'status' in responseData
-      ) {
-        const data = responseData as {
-          status: unknown;
-          data?: string;
-          message?: string;
-          errorCode?: string;
-        };
-        const logicalStatus = Number(data.status);
+      if (isRecord(responseData) && 'status' in responseData) {
+        const statusValue = responseData['status'];
+        const logicalStatus = Number(statusValue);
 
         if (!isNaN(logicalStatus) && logicalStatus >= 400) {
+          const dataMessage = responseData['data'];
+          const messageValue = responseData['message'];
           const message =
-            data.data || data.message || 'Hiperbanco logical error';
+            (typeof dataMessage === 'string' && dataMessage) ||
+            (typeof messageValue === 'string' && messageValue) ||
+            'Hiperbanco logical error';
 
           return {
             message: String(message),
@@ -46,7 +42,10 @@ export class HiperbancoResponseHelper {
               logicalStatus >= 100 && logicalStatus < 600
                 ? logicalStatus
                 : HttpStatus.BAD_REQUEST,
-            errorCode: data.errorCode,
+            errorCode:
+              typeof responseData['errorCode'] === 'string'
+                ? responseData['errorCode']
+                : undefined,
           };
         }
       }

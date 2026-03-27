@@ -12,6 +12,7 @@ import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { REQUIRED_LOGIN_TYPE_KEY } from '../decorators/require-login-type.decorator';
 import { IS_PUBLIC_KEY } from '@/auth/decorators/public.decorator';
 import { ProviderLoginType } from '../enums/provider-login-type.enum';
+import type { RequestWithSession } from '../contracts/request-with-session.interface';
 
 @Injectable()
 export class ProviderAuthGuard implements CanActivate {
@@ -31,7 +32,7 @@ export class ProviderAuthGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<RequestWithSession>();
     const authHeader = request.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

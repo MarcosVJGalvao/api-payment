@@ -15,7 +15,8 @@ export function ApiDeleteWebhook() {
     ApiOperation({
       summary: 'Remover Webhook',
       description:
-        'Remove um webhook existente no provedor financeiro e marca como deletado localmente.',
+        'Remove um webhook existente no provedor financeiro e marca como deletado localmente. ' +
+        'Requer autenticação de backoffice e header `X-Client-Id`.',
     }),
     ApiParam({
       name: 'provider',
@@ -58,11 +59,30 @@ export function ApiDeleteWebhook() {
         'application/json': {
           schema: { $ref: getSchemaPath(ErrorResponseDto) },
           examples: {
-            WEBHOOK_NOT_FOUND: {
+            WEBHOOK_CONFIG_NOT_FOUND: {
               summary: 'Webhook não encontrado',
               value: {
-                errorCode: 'WEBHOOK_NOT_FOUND',
-                message: 'Webhook not found',
+                errorCode: 'WEBHOOK_CONFIG_NOT_FOUND',
+                message:
+                  'Webhook não encontrado ou não pertence a este cliente',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 403,
+      description: 'Permissão insuficiente',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            ACCESS_DENIED: {
+              value: {
+                errorCode: 'ACCESS_DENIED',
+                message: 'Access denied',
                 correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
               },
             },

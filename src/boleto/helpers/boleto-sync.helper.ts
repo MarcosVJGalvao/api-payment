@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { AppLoggerService } from '@/common/logger/logger.service';
 import { Boleto } from '../entities/boleto.entity';
 import { BoletoStatus } from '../enums/boleto-status.enum';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { BoletoProviderHelper } from './boleto-provider.helper';
 import { BoletoGetDataResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
@@ -12,6 +12,7 @@ import { parseBoletoStatus } from './boleto-validation.helper';
 import { TransactionService } from '@/transaction/transaction.service';
 import { TransactionType } from '@/transaction/enums/transaction-type.enum';
 import { TransactionStatus } from '@/transaction/enums/transaction-status.enum';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 /**
  * Helper responsável pela sincronização de dados de boletos com provedores externos.
@@ -120,7 +121,7 @@ export class BoletoSyncHelper {
     } catch (error) {
       // Logar erro completo mas não falhar a busca - retornar boleto do banco mesmo assim
       this.logger.error(
-        `Failed to fetch or persist updated boleto data from Hiperbanco: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to fetch or persist updated boleto data from Hiperbanco: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
         this.context,
       );
@@ -156,7 +157,7 @@ export class BoletoSyncHelper {
       }
     } catch (error) {
       this.logger.error(
-        `Failed to create transaction for boleto: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to create transaction for boleto: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
         this.context,
       );

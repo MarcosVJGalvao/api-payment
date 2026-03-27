@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { HiperbancoAuthService } from '@/financial-providers/hiperbanco/hiperbanco-auth.service';
 import { ProviderLoginType } from '@/financial-providers/enums/provider-login-type.enum';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
@@ -30,7 +30,7 @@ export class ProviderSessionHelper {
       sessionId: 'SHARED_BACKOFFICE_SESSION',
       providerSlug: provider,
       clientId: 'SHARED_BACKOFFICE',
-      hiperbancoToken: token,
+      accessToken: token,
       loginType: ProviderLoginType.BACKOFFICE,
       createdAt: Date.now(),
       expiresAt: Date.now() + 29 * 60 * 1000,

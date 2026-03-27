@@ -55,15 +55,15 @@ export function processHttpException(
   };
 }
 
-export function processUnhandledError(error: Error): {
+export function processUnhandledError(error: unknown): {
   errorCode: ErrorCode;
   message: string;
   status: HttpStatus;
 } {
-  const errorMessage = toLowerCase(error?.message || '');
+  const errorMessage = error instanceof Error ? toLowerCase(error.message) : '';
   const isDatabaseError =
-    error?.name === 'QueryFailedError' ||
-    error?.name === 'TypeORMError' ||
+    (error instanceof Error &&
+      (error.name === 'QueryFailedError' || error.name === 'TypeORMError')) ||
     includesString(errorMessage, 'relation') ||
     includesString(errorMessage, 'join') ||
     includesString(errorMessage, 'alias') ||

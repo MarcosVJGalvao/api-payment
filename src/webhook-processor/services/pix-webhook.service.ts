@@ -13,7 +13,6 @@ import { PixInitializationType } from '@/pix/enums/pix-initialization-type.enum'
 import { TransactionService } from '@/transaction/transaction.service';
 import { TransactionType } from '@/transaction/enums/transaction-type.enum';
 import { AccountService } from '@/account/account.service';
-import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { WebhookPayload } from '../interfaces/webhook-base.interface';
 import {
   PixCashInReceivedData,
@@ -25,10 +24,13 @@ import {
 import { mapWebhookEventToTransactionStatus } from '../helpers/transaction-status-mapper.helper';
 import { canProcessWebhook } from '../helpers/webhook-state-machine.helper';
 import { WebhookEventLogService } from './webhook-event-log.service';
+import { toPayload } from '../helpers/payload.helper';
 import { WebhookEvent } from '../enums/webhook-event.enum';
 import { TransactionNotFoundRetryableException } from '@/common/errors/exceptions/transaction-not-found-retryable.exception';
 import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
 import { parseDate } from '@/common/helpers/date.helpers';
+import { parseFinancialProvider } from '../helpers/provider-slug.helper';
+import { resolvePixKeyType } from '../helpers/pix-key-type.helper';
 
 @Injectable()
 export class PixWebhookService {
@@ -51,8 +53,10 @@ export class PixWebhookService {
   async handleCashInReceived(
     events: WebhookPayload<PixCashInReceivedData>[],
     _clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
+    const provider = parseFinancialProvider(providerSlug);
     if (!validPublicKey) {
       this.logger.warn('PIX_CASH_IN_WAS_RECEIVED: Invalid publicKey, skipping');
       return;
@@ -98,7 +102,7 @@ export class PixWebhookService {
         idempotencyKey: event.idempotencyKey,
         entityId: event.entityId,
         status: PixCashInStatus.RECEIVED,
-        providerSlug: FinancialProvider.HIPERBANCO,
+        providerSlug: provider,
         amount: data.amount?.value,
         currency: data.amount?.currency || 'BRL',
         description: data.description,
@@ -190,7 +194,7 @@ export class PixWebhookService {
         entityId: saved.id,
         eventName: WebhookEvent.PIX_CASH_IN_WAS_RECEIVED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
@@ -204,8 +208,10 @@ export class PixWebhookService {
   async handleCashInCleared(
     events: WebhookPayload<PixCashInClearedData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
+    parseFinancialProvider(providerSlug);
     if (!validPublicKey) {
       this.logger.warn('PIX_CASH_IN_WAS_CLEARED: Invalid publicKey, skipping');
       return;
@@ -290,7 +296,7 @@ export class PixWebhookService {
         entityId: pixCashIn.id,
         eventName: WebhookEvent.PIX_CASH_IN_WAS_CLEARED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
@@ -304,6 +310,7 @@ export class PixWebhookService {
   async handleCashOutCompleted(
     events: WebhookPayload<PixCashOutData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
     await this.processCashOutEvent(
@@ -311,6 +318,7 @@ export class PixWebhookService {
       PixTransferStatus.DONE,
       WebhookEvent.PIX_CASHOUT_WAS_COMPLETED,
       clientId,
+      providerSlug,
       validPublicKey,
     );
   }
@@ -318,6 +326,7 @@ export class PixWebhookService {
   async handleCashOutCanceled(
     events: WebhookPayload<PixCashOutData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
     await this.processCashOutEvent(
@@ -325,6 +334,7 @@ export class PixWebhookService {
       PixTransferStatus.CANCELED,
       WebhookEvent.PIX_CASHOUT_WAS_CANCELED,
       clientId,
+      providerSlug,
       validPublicKey,
     );
   }
@@ -332,6 +342,7 @@ export class PixWebhookService {
   async handleCashOutUndone(
     events: WebhookPayload<PixCashOutData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
     await this.processCashOutEvent(
@@ -339,6 +350,7 @@ export class PixWebhookService {
       PixTransferStatus.UNDONE,
       WebhookEvent.PIX_CASHOUT_WAS_UNDONE,
       clientId,
+      providerSlug,
       validPublicKey,
     );
   }
@@ -348,8 +360,10 @@ export class PixWebhookService {
     status: PixTransferStatus,
     eventName: WebhookEvent,
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
+    parseFinancialProvider(providerSlug);
     if (!validPublicKey) {
       this.logger.warn(`${eventName}: Invalid publicKey, skipping`);
       return;
@@ -421,7 +435,7 @@ export class PixWebhookService {
         entityId: pixTransfer.id,
         eventName,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
@@ -433,8 +447,10 @@ export class PixWebhookService {
   async handleRefundReceived(
     events: WebhookPayload<PixRefundData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
+    const provider = parseFinancialProvider(providerSlug);
     if (!validPublicKey) {
       this.logger.warn('PIX_REFUND_WAS_RECEIVED: Invalid publicKey, skipping');
       return;
@@ -488,7 +504,7 @@ export class PixWebhookService {
         idempotencyKey: event.idempotencyKey,
         entityId: event.entityId,
         status: PixRefundStatus.RECEIVED,
-        providerSlug: FinancialProvider.HIPERBANCO,
+        providerSlug: provider,
         amount: data.amount?.value,
         currency: data.amount?.currency || 'BRL',
         description: data.description,
@@ -539,7 +555,7 @@ export class PixWebhookService {
         entityId: saved.id,
         eventName: WebhookEvent.PIX_REFUND_WAS_RECEIVED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
@@ -553,8 +569,10 @@ export class PixWebhookService {
   async handleRefundCleared(
     events: WebhookPayload<PixRefundData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
+    parseFinancialProvider(providerSlug);
     if (!validPublicKey) {
       this.logger.warn('PIX_REFUND_WAS_CLEARED: Invalid publicKey, skipping');
       return;
@@ -629,7 +647,7 @@ export class PixWebhookService {
         entityId: pixRefund.id,
         eventName: WebhookEvent.PIX_REFUND_WAS_CLEARED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });
@@ -647,8 +665,10 @@ export class PixWebhookService {
   async handleQrCodeCreated(
     events: WebhookPayload<PixQrCodeCreatedData>[],
     clientId: string,
+    providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
+    const provider = parseFinancialProvider(providerSlug);
     if (!validPublicKey) {
       this.logger.warn('PIX_QRCODE_WAS_CREATED: Invalid publicKey, skipping');
       return;
@@ -688,6 +708,11 @@ export class PixWebhookService {
         }
 
         // Criar novo registro
+        const addressingKeyType = resolvePixKeyType(
+          data.addressingKey.type,
+          (message) => this.logger.warn(message),
+        );
+
         pixQrCode = this.pixQrCodeRepository.create({
           conciliationId: data.conciliationId,
           encodedValue: data.encodedValue,
@@ -697,13 +722,13 @@ export class PixWebhookService {
               : PixQrCodeType.DYNAMIC,
           status: PixQrCodeStatus.CREATED,
           amount: data.amount,
-          addressingKeyType: data.addressingKey.type as any,
+          addressingKeyType,
           addressingKeyValue: data.addressingKey.value,
           recipientName: data.recipient.name,
           singlePayment: data.singlePayment,
           changeAmountType: data.changeAmountType,
           expiresAt: data.expiresAt ? parseDate(data.expiresAt) : undefined,
-          providerSlug: FinancialProvider.HIPERBANCO,
+          providerSlug: provider,
           clientId: account.clientId,
           accountId: account.id,
         });
@@ -721,7 +746,7 @@ export class PixWebhookService {
         entityId: pixQrCode.id,
         eventName: WebhookEvent.PIX_QRCODE_WAS_CREATED,
         wasProcessed: true,
-        payload: event as unknown as Record<string, unknown>,
+        payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
         clientId,
       });

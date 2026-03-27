@@ -17,7 +17,7 @@ import { PixKeyType } from '../enums/pix-key-type.enum';
 /**
  * DTO para endereço do pagador
  */
-export class PayerAddressDto {
+export class PixPayerAddressDto {
   @ApiPropertyOptional({
     description: 'Logradouro',
     example: 'Av. Central, nº 456',
@@ -58,7 +58,7 @@ export class PayerAddressDto {
 /**
  * DTO para informações do pagador
  */
-export class PayerDto {
+export class PixPayerDto {
   @ApiProperty({
     description: 'Nome do pagador (máximo 25 caracteres)',
     example: 'João Souza',
@@ -87,12 +87,11 @@ export class PayerDto {
   type: 'CUSTOMER' | 'BUSINESS';
 
   @ApiProperty({
-    description: 'Endereço do pagador',
-    type: PayerAddressDto,
+    type: PixPayerAddressDto,
   })
   @ValidateNested()
-  @Type(() => PayerAddressDto)
-  address: PayerAddressDto;
+  @Type(() => PixPayerAddressDto)
+  address: PixPayerAddressDto;
 }
 
 /**
@@ -158,11 +157,11 @@ export class GenerateDynamicQrCodeDto {
 
   @ApiProperty({
     description: 'Informações do pagador',
-    type: PayerDto,
+    type: PixPayerDto,
   })
   @ValidateNested()
-  @Type(() => PayerDto)
-  payer: PayerDto;
+  @Type(() => PixPayerDto)
+  payer: PixPayerDto;
 
   @ApiPropertyOptional({
     description: 'Indica se o valor pode ser alterado (ALLOWED ou NOT_ALLOWED)',

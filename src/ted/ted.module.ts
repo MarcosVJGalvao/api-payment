@@ -17,6 +17,12 @@ import { BaseQueryModule } from '@/common/base-query/base-query.module';
 import { ClientModule } from '@/client/client.module';
 import { PermissionsModule } from '@/permissions/permissions.module';
 import { AccountModule } from '@/account/account.module';
+import { LoggerModule } from '@/common/logger/logger.module';
+import {
+  TedProviderRegistry,
+  TED_PROVIDERS,
+} from '@/financial-providers/registry/ted-provider.registry';
+import { HiperbancoTedProvider } from '@/financial-providers/providers/hiperbanco/hiperbanco-ted.provider';
 
 @Module({
   imports: [
@@ -31,6 +37,7 @@ import { AccountModule } from '@/account/account.module';
     TransactionModule,
     FinancialProvidersModule,
     BaseQueryModule,
+    LoggerModule,
     ClientModule,
     PermissionsModule,
     AccountModule,
@@ -39,6 +46,13 @@ import { AccountModule } from '@/account/account.module';
   providers: [
     TedService,
     HiperbancoTedHelper,
+    HiperbancoTedProvider,
+    {
+      provide: TED_PROVIDERS,
+      useFactory: (hiperbanco: HiperbancoTedProvider) => [hiperbanco],
+      inject: [HiperbancoTedProvider],
+    },
+    TedProviderRegistry,
     TedProviderHelper,
     TedSyncHelper,
   ],

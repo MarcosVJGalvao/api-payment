@@ -18,7 +18,7 @@ export function ApiRegisterWebhook() {
       summary: 'Registrar webhook em provedor financeiro',
       description:
         'Registra um webhook no provedor especificado para receber notificações de eventos. ' +
-        'Requer autenticação de backoffice.',
+        'Requer autenticação de backoffice e header `X-Client-Id`.',
     }),
     ApiParam({
       name: 'provider',
@@ -103,11 +103,29 @@ export function ApiRegisterWebhook() {
         'application/json': {
           schema: { $ref: getSchemaPath(ErrorResponseDto) },
           examples: {
-            INSUFFICIENT_PERMISSION: {
-              summary: 'Requer autenticação de backoffice',
+            ACCESS_DENIED: {
+              summary: 'Permissão insuficiente para gerenciar webhooks',
               value: {
-                errorCode: 'INSUFFICIENT_PERMISSION',
-                message: 'Esta operação requer autenticação de backoffice',
+                errorCode: 'ACCESS_DENIED',
+                message: 'Access denied',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 500,
+      description: 'Erro interno ao enfileirar registro do webhook',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNEXPECTED_ERROR: {
+              value: {
+                errorCode: 'UNEXPECTED_ERROR',
+                message: 'Internal server error',
                 correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
               },
             },

@@ -87,6 +87,7 @@ export function ApiPixTransfer() {
           amount: { type: 'number', example: 100.5 },
           transactionId: { type: 'string' },
           authenticationCode: { type: 'string' },
+          internalTransactionId: { type: 'string', format: 'uuid' },
         },
       },
     }),

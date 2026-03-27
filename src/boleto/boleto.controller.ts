@@ -21,15 +21,16 @@ import { Audit } from '@/common/audit/decorators/audit.decorator';
 import { AuditAction } from '@/common/audit/enums/audit-action.enum';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { ProviderAuthGuard } from '@/financial-providers/guards/provider-auth.guard';
+import { ProviderSessionGuard } from '@/financial-providers/guards/provider-session.guard';
 import { RequireLoginType } from '@/financial-providers/decorators/require-login-type.decorator';
 import { ProviderLoginType } from '@/financial-providers/enums/provider-login-type.enum';
 import { FinancialProviderPipe } from '@/financial-providers/pipes/financial-provider.pipe';
 import { RequireClientPermission } from '@/common/decorators/require-client-permission.decorator';
-import type { RequestWithSession } from '@/financial-providers/hiperbanco/interfaces/request-with-session.interface';
+import type { RequestWithSession } from '@/financial-providers/contracts/request-with-session.interface';
 
 @ApiTags('Boletos')
 @Controller('boleto')
-@UseGuards(ProviderAuthGuard)
+@UseGuards(ProviderAuthGuard, ProviderSessionGuard)
 @ApiBearerAuth('provider-auth')
 @RequireLoginType(ProviderLoginType.BANK)
 @RequireClientPermission('financial:boleto')
@@ -72,7 +73,7 @@ export class BoletoController {
     return this.boletoService.listBoletos(query, req.clientId!, req.accountId!);
   }
 
-  @Delete(':provider/:id')
+  @Delete(':id')
   @ApiCancelBoleto()
   @Audit({
     action: AuditAction.BOLETO_CANCELLED,
@@ -81,10 +82,9 @@ export class BoletoController {
     captureNewValues: true,
   })
   async cancelBoleto(
-    @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
     @Param('id') id: string,
     @Req() req: RequestWithSession,
   ) {
-    return this.boletoService.cancelBoleto(id, provider, req.providerSession);
+    return this.boletoService.cancelBoleto(id, req.providerSession);
   }
 }

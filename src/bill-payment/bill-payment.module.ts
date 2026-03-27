@@ -12,6 +12,11 @@ import { BillPaymentProviderHelper } from './helpers/bill-payment-provider.helpe
 import { BillPaymentSyncHelper } from './helpers/bill-payment-sync.helper';
 import { HiperbancoBillPaymentHelper } from './helpers/hiperbanco/hiperbanco-bill-payment.helper';
 import { FinancialProviderPipe } from '@/financial-providers/pipes/financial-provider.pipe';
+import {
+  BillPaymentProviderRegistry,
+  BILL_PAYMENT_PROVIDERS,
+} from '@/financial-providers/registry/bill-payment-provider.registry';
+import { HiperbancoBillPaymentProvider } from '@/financial-providers/providers/hiperbanco/hiperbanco-bill-payment.provider';
 import { ClientModule } from '../client/client.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { AccountModule } from '../account/account.module';
@@ -35,6 +40,13 @@ import { TransactionModule } from '../transaction/transaction.module';
     BillPaymentProviderHelper,
     BillPaymentSyncHelper,
     HiperbancoBillPaymentHelper,
+    HiperbancoBillPaymentProvider,
+    {
+      provide: BILL_PAYMENT_PROVIDERS,
+      useFactory: (hiperbanco: HiperbancoBillPaymentProvider) => [hiperbanco],
+      inject: [HiperbancoBillPaymentProvider],
+    },
+    BillPaymentProviderRegistry,
     FinancialProviderPipe,
   ],
   exports: [BillPaymentService],

@@ -1,7 +1,7 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import { compareData } from '@/common/helpers/password.helper';
 import { InternalUser } from '../entities/internal-user.entity';
 import { LoginInternalUserDto } from '../dto/login-internal-user.dto';
 import { InternalJwtService } from './internal-jwt.service';
@@ -32,10 +32,7 @@ export class InternalAuthService {
       );
     }
 
-    const isPasswordValid = await bcrypt.compare(
-      loginDto.password,
-      user.password,
-    );
+    const isPasswordValid = await compareData(loginDto.password, user.password);
 
     if (!isPasswordValid) {
       throw new CustomHttpException(

@@ -1,0 +1,33 @@
+import { IManualTag } from '@/swagger/interfaces/manual-tag.interface';
+
+export const autenticacaoManualTag: IManualTag = {
+  name: 'Autenticação',
+  description: [
+    '## Autenticação',
+    '',
+    'A API utiliza **JWT (JSON Web Token)** para autenticação stateless. Existem três contextos de autenticação distintos:',
+    '',
+    '| Contexto | Descrição | Uso |',
+    '|----------|-----------|-----|',
+    '| **Provider** | Provedores financeiros | Enviar webhooks e consultar status de operações |',
+    '| **Backoffice** | Usuários administrativos | Gestão completa via painel administrativo |',
+    '| **Internal** | Sistemas internos | Integrações internas com permissões elevadas |',
+    '',
+    '### Fluxo de Autenticação',
+    '',
+    '| Etapa | Ação | Detalhes |',
+    '|-------|------|----------|',
+    '| 1 | **Login** | `POST /auth/login` com credenciais |',
+    '| 2 | **Receber tokens** | API retorna `accessToken` + `refreshToken` |',
+    '| 3 | **Usar token** | Enviar `Authorization: Bearer <token>` em cada requisição |',
+    '| 4 | **Renovar** | Quando expirar, usar `refreshToken` para obter novo par |',
+    '',
+    '> ⚠️ **Importante**: O `accessToken` tem validade curta. O `refreshToken` tem validade estendida para permitir renovação sem novo login.',
+    '',
+    '### Permissões (RBAC)',
+    '',
+    'O sistema utiliza **Role-Based Access Control** (RBAC). Cada usuário possui um ou mais papéis (`roles`), e cada papel concede um conjunto de permissões.',
+    '',
+    'As permissões são verificadas automaticamente a cada requisição pelo `PermissionsGuard`.',
+  ].join('\n'),
+};

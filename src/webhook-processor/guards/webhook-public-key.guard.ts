@@ -8,6 +8,7 @@ import type { Request } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Webhook } from '@/webhook/entities/webhook.entity';
+import { parseFinancialProvider } from '../helpers/provider-slug.helper';
 
 /**
  * Guard para validar publicKey do header de webhooks.
@@ -25,8 +26,15 @@ export class WebhookPublicKeyGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
-    const publicKey = request.headers['publickey'] as string;
+    const headerValue = request.headers['publickey'];
+    const publicKey =
+      typeof headerValue === 'string'
+        ? headerValue
+        : Array.isArray(headerValue)
+          ? headerValue[0]
+          : undefined;
     const provider = request.params.provider;
+    const parsedProvider = parseFinancialProvider(provider);
 
     if (!publicKey) {
       this.logger.warn(
@@ -40,9 +48,9 @@ export class WebhookPublicKeyGuard implements CanActivate {
       where: { publicKey, isActive: true },
     });
 
-    if (!webhook) {
+    if (!webhook || webhook.providerSlug !== parsedProvider) {
       this.logger.warn(
-        `Invalid publicKey received: ${publicKey.substring(0, 8)}... from provider: ${provider}. Webhook will be IGNORED.`,
+        `Invalid publicKey/provider received: ${publicKey.substring(0, 8)}... from provider: ${provider}. Webhook will be IGNORED.`,
       );
       request['validPublicKey'] = false;
       return true;

@@ -8,7 +8,7 @@ import { CreateBoletoDto } from './dto/create-boleto.dto';
 import { UpdateBoletoDto } from './dto/update-boleto.dto';
 import { QueryBoletoDto } from './dto/query-boleto.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { BoletoProviderHelper } from './helpers/boleto-provider.helper';
 import { BoletoSyncHelper } from './helpers/boleto-sync.helper';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
@@ -25,6 +25,7 @@ import {
   parseBoletoStatus,
 } from './helpers/boleto-validation.helper';
 import { FilterOperator } from '@/common/base-query/enums/filter-operator.enum';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 @Injectable()
 export class BoletoService {
@@ -104,7 +105,7 @@ export class BoletoService {
       };
     } catch (error) {
       this.logger.error(
-        `Failed to create boleto: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to create boleto: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
         this.context,
       );
@@ -224,7 +225,6 @@ export class BoletoService {
 
   async cancelBoleto(
     id: string,
-    provider: FinancialProvider,
     session: ProviderSession,
   ): Promise<BoletoCancelResponse> {
     this.logger.log(`Cancelling boleto: ${id}`, this.context);
@@ -240,6 +240,14 @@ export class BoletoService {
 
     const boleto = await this.findById(id, session.clientId, session.accountId);
 
+    if (session.providerSlug !== boleto.providerSlug) {
+      throw new CustomHttpException(
+        'Authenticated session belongs to a different provider',
+        HttpStatus.FORBIDDEN,
+        ErrorCode.INVALID_SESSION,
+      );
+    }
+
     const nonCancellableStatuses = [BoletoStatus.PAID, BoletoStatus.CANCELLED];
     if (nonCancellableStatuses.includes(boleto.status)) {
       throw new CustomHttpException(
@@ -251,7 +259,7 @@ export class BoletoService {
 
     try {
       const response = await this.providerHelper.cancelBoleto(
-        provider,
+        boleto.providerSlug,
         boleto,
         session,
       );
@@ -264,7 +272,7 @@ export class BoletoService {
       return response;
     } catch (error) {
       this.logger.error(
-        `Failed to cancel boleto: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to cancel boleto: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
         this.context,
       );
@@ -333,7 +341,7 @@ export class BoletoService {
       return updatedBoleto;
     } catch (error) {
       this.logger.error(
-        `Failed to process webhook update: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to process webhook update: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
         this.context,
       );

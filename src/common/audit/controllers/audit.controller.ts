@@ -6,7 +6,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { AuditService } from '../services/audit.service';
 import { AuditExportService } from '../services/audit-export.service';
 import { AuditDashboardService } from '../services/audit-dashboard.service';
@@ -21,11 +21,12 @@ import { ApiGetAuditLogById } from '../docs/api-get-audit-log-by-id.decorator';
 import { ApiGetDashboard } from '../docs/api-get-dashboard.decorator';
 import { ApiExportLogs } from '../docs/api-export-logs.decorator';
 import { ExportResponseInterceptor } from '../interceptors/export-response.interceptor';
+import { ApiControllerHideFromPortalScalar } from '@/swagger/docs/api-controller-hide-from-portal-scalar.decorator';
 
 @Controller('audit')
-@ApiTags('Auditoria')
 @UseGuards(PermissionsGuard)
 @ApiBearerAuth('internal-auth')
+@ApiControllerHideFromPortalScalar('Auditoria')
 export class AuditController {
   constructor(
     private readonly auditService: AuditService,

@@ -3,6 +3,7 @@ import {
   ValidatorConstraintInterface,
   ValidationArguments,
 } from 'class-validator';
+import { isRecord } from '@/common/errors/helpers/type.helpers';
 
 @ValidatorConstraint({ name: 'requireBothDates', async: false })
 export class RequireBothDatesConstraint implements ValidatorConstraintInterface {
@@ -13,7 +14,7 @@ export class RequireBothDatesConstraint implements ValidatorConstraintInterface 
    * @returns true se ambos ou nenhum foram informados, false caso contrário
    */
   validate(value: unknown, args: ValidationArguments): boolean {
-    const obj = args.object as Record<string, unknown>;
+    const obj = isRecord(args.object) ? args.object : {};
     const hasStartDate = !!obj.startDate;
     const hasEndDate = !!obj.endDate;
 

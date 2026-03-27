@@ -42,7 +42,7 @@ export class PayerDto implements IPayer {
   @Length(1, 100)
   tradeName?: string;
 
-  @ApiProperty({ type: PayerAddressDto, description: 'Endereço do pagador' })
+  @ApiProperty({ type: PayerAddressDto })
   @ValidateNested()
   @Type(() => PayerAddressDto)
   address: PayerAddressDto;

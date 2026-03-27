@@ -16,6 +16,8 @@ import {
 } from './interfaces/transaction-webhook.interface';
 import { getDetailedStatuses } from './helpers/transaction-status.helper';
 import { FilterConfig } from '@/common/base-query/interfaces/query-options.interface';
+import { TransactionHydratorService } from './services/transaction-hydrator.service';
+import { applyDefined } from '@/common/helpers/apply-defined.helper';
 
 @Injectable()
 export class TransactionService {
@@ -26,6 +28,7 @@ export class TransactionService {
     @InjectRepository(Transaction)
     private readonly typeOrmRepository: Repository<Transaction>,
     private readonly baseQueryService: BaseQueryService,
+    private readonly transactionHydrator: TransactionHydratorService,
   ) {}
 
   async createFromWebhook(
@@ -97,12 +100,13 @@ export class TransactionService {
 
     transaction.status = data.status;
 
-    if (data.correlationId) transaction.correlationId = data.correlationId;
-    if (data.idempotencyKey) transaction.idempotencyKey = data.idempotencyKey;
-    if (data.entityId) transaction.entityId = data.entityId;
-    if (data.description) transaction.description = data.description;
-    if (data.providerTimestamp)
-      transaction.providerTimestamp = data.providerTimestamp;
+    applyDefined(transaction, data, [
+      'correlationId',
+      'idempotencyKey',
+      'entityId',
+      'description',
+      'providerTimestamp',
+    ]);
 
     const updated = await this.transactionRepository.save(transaction);
 
@@ -163,27 +167,7 @@ export class TransactionService {
         searchFields: ['authenticationCode', 'description'],
         defaultSortBy: 'createdAt',
         filters: filterConfigs,
-        relations: [
-          'pixCashIn',
-          'pixCashIn.sender',
-          'pixCashIn.recipient',
-          'pixTransfer',
-          'pixTransfer.sender',
-          'pixTransfer.recipient',
-          'pixRefund',
-          'boleto',
-          'boleto.payer',
-          'billPayment',
-          'billPayment.recipient',
-          'pixQrCode',
-          'tedTransfer',
-          'tedTransfer.sender',
-          'tedTransfer.recipient',
-          'tedCashIn',
-          'tedCashIn.sender',
-          'tedCashIn.recipient',
-          'tedRefund',
-        ],
+        relations: [],
       },
     );
 
@@ -200,12 +184,16 @@ export class TransactionService {
       });
     }
 
-    const transaction = await this.baseQueryService.findAll(
+    const result = await this.baseQueryService.findAll(
       this.typeOrmRepository,
       queryOptions,
     );
 
-    return transaction;
+    if (result.data.length > 0) {
+      await this.transactionHydrator.hydrate(result.data);
+    }
+
+    return result;
   }
 
   async findOne(
@@ -215,27 +203,6 @@ export class TransactionService {
   ): Promise<Transaction> {
     const transaction = await this.typeOrmRepository.findOne({
       where: { id, accountId, clientId },
-      relations: [
-        'pixCashIn',
-        'pixCashIn.sender',
-        'pixCashIn.recipient',
-        'pixTransfer',
-        'pixTransfer.sender',
-        'pixTransfer.recipient',
-        'pixRefund',
-        'boleto',
-        'boleto.payer',
-        'billPayment',
-        'billPayment.recipient',
-        'pixQrCode',
-        'tedTransfer',
-        'tedTransfer.sender',
-        'tedTransfer.recipient',
-        'tedCashIn',
-        'tedCashIn.sender',
-        'tedCashIn.recipient',
-        'tedRefund',
-      ],
     });
 
     if (!transaction) {
@@ -245,6 +212,8 @@ export class TransactionService {
         ErrorCode.TRANSACTION_NOT_FOUND,
       );
     }
+
+    await this.transactionHydrator.hydrate([transaction]);
 
     return transaction;
   }

@@ -6,6 +6,7 @@
     "dist",
     "**/*spec.ts",
     "src/swagger/tests",
-    "src/permissions/tests"
+    "src/permissions/tests",
+    "src/swagger/portal/assets/js/**/*.ts"
   ]
 }

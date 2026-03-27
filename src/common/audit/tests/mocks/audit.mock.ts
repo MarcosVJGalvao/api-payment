@@ -3,13 +3,14 @@ import { AuditLog } from '../../entities/audit-log.entity';
 import { AuditAction } from '../../enums/audit-action.enum';
 import { AuditLogStatus } from '../../enums/audit-log-status.enum';
 import { PaginationResult } from '@/common/base-query/interfaces/pagination-result.interface';
+import { SortOrder } from '@/common/base-query/enums/sort-order.enum';
 
 export const mockQueryAuditLogDto = (): QueryAuditLogDto => ({
   page: 1,
   limit: 10,
   action: AuditAction.USER_CREATED,
   sortBy: 'createdAt',
-  sortOrder: 'DESC',
+  sortOrder: SortOrder.DESC,
 });
 
 export const mockAuditLog = (): AuditLog => {

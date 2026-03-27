@@ -2,6 +2,7 @@ import { applyDecorators } from '@nestjs/common';
 import {
   ApiBody,
   ApiExtraModels,
+  ApiHeader,
   ApiOperation,
   ApiResponse,
   getSchemaPath,
@@ -12,7 +13,18 @@ import { ErrorResponseDto } from '@/common/dto/error-response.dto';
 export function ApiLoginBackofficeUser() {
   return applyDecorators(
     ApiExtraModels(ErrorResponseDto),
-    ApiOperation({ summary: 'Autenticar usuário Backoffice' }),
+    ApiOperation({
+      summary: 'Autenticar usuário Backoffice',
+      description:
+        'Endpoint público de login de backoffice. Não requer token Bearer prévio. Requer header `X-Client-Id`.',
+    }),
+    ApiHeader({
+      name: 'X-Client-Id',
+      required: true,
+      description:
+        'ID do cliente para identificar o contexto do usuário backoffice',
+      schema: { type: 'string' },
+    }),
     ApiBody({
       type: LoginBackofficeUserDto,
       examples: {
@@ -45,8 +57,8 @@ export function ApiLoginBackofficeUser() {
             VALIDATION_ERROR: {
               summary: 'Dados inválidos',
               value: {
-                errorCode: 'VALIDATION_ERROR',
-                message: 'Validation failed',
+                errorCode: 'INVALID_INPUT',
+                message: 'X-Client-Id header is required',
                 correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
               },
             },

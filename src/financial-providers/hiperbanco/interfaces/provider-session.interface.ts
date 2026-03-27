@@ -1,25 +1,15 @@
-import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import { ProviderLoginType } from '../../enums/provider-login-type.enum';
+import type { ProviderSession as CanonicalProviderSession } from '../../contracts/provider-session';
 
 /**
- * Interface para sessão de provedor armazenada no Redis
+ * Compatibilidade: a base do projeto migrou para `contracts/provider-session`.
+ * Este tipo permanece para evitar quebra imediata de imports existentes.
+ *
+ * @deprecated Use `@/financial-providers/contracts/provider-session`.
  */
-export interface ProviderSession {
-  sessionId: string;
-  providerSlug: FinancialProvider;
-  clientId: string;
-  hiperbancoToken: string;
-  userId?: string;
-  accountId?: string;
-  loginType: ProviderLoginType;
-  createdAt: number;
-  expiresAt: number;
-}
+export type ProviderSession = CanonicalProviderSession & {
+  /** @deprecated Use `accessToken` ou `metadata` no formato canônico. */
+  hiperbancoToken?: string;
+};
 
-export interface ProviderJwtPayload {
-  sessionId: string;
-  providerSlug: FinancialProvider;
-  clientId: string;
-  accountId?: string;
-  loginType: ProviderLoginType;
-}
+export type ProviderJwtPayload =
+  import('../../contracts/provider-session').ProviderJwtPayload;

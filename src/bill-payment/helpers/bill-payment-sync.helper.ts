@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AppLoggerService } from '@/common/logger/logger.service';
 import { BillPayment } from '../entities/bill-payment.entity';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { BillPaymentProviderHelper } from './bill-payment-provider.helper';
 import { BillPaymentDetailResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
@@ -13,6 +13,8 @@ import { TransactionService } from '@/transaction/transaction.service';
 import { TransactionType } from '@/transaction/enums/transaction-type.enum';
 import { mapBillPaymentStatusToTransactionStatus } from '@/common/helpers/status-mapper.helper';
 import { parseISO } from '@/common/helpers/date.helpers';
+import { PaymentRecipient } from '@/common/entities/payment-recipient.entity';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 /**
  * Helper responsável pela sincronização de dados de pagamento de contas com provedores externos.
@@ -117,7 +119,7 @@ export class BillPaymentSyncHelper {
 
       // Atualizar recipient
       if (detailData.recipientName || detailData.recipientDocument) {
-        payment.recipient = payment.recipient || ({} as any); // TypeORM validates on save
+        payment.recipient = payment.recipient || new PaymentRecipient();
         if (
           detailData.recipientName &&
           payment.recipient.name !== detailData.recipientName
@@ -227,7 +229,7 @@ export class BillPaymentSyncHelper {
       }
     } catch (error) {
       this.logger.error(
-        `Failed to sync bill payment from Hiperbanco: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to sync bill payment from Hiperbanco: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
         this.context,
       );
@@ -278,7 +280,7 @@ export class BillPaymentSyncHelper {
       }
     } catch (error) {
       this.logger.error(
-        `Failed to sync transaction for bill payment: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to sync transaction for bill payment: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
         this.context,
       );

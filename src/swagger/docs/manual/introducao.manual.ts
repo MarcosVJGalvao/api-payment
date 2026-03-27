@@ -1,0 +1,31 @@
+import { IManualTag } from '@/swagger/interfaces/manual-tag.interface';
+
+export const introducaoManualTag: IManualTag = {
+  name: 'Introdução',
+  description: [
+    '## Payments API',
+    '',
+    'API de pagamentos que integra múltiplos provedores financeiros para processamento de transações PIX, Boletos, TED e Pagamentos de Contas.',
+    '',
+    '### Visão Geral',
+    '',
+    'Esta API foi projetada para oferecer uma camada unificada de integração com provedores financeiros, abstraindo as complexidades de cada provedor e oferecendo uma interface consistente para:',
+    '',
+    '- **Transferências PIX** — Pagamentos instantâneos via chave PIX',
+    '- **Boletos** — Emissão, consulta e cancelamento de boletos bancários',
+    '- **TED** — Transferências bancárias entre contas',
+    '- **Pagamento de Contas** — Pagamento de contas de consumo e convênios',
+    '',
+    '### Ambientes',
+    '',
+    '| Ambiente | URL Base |',
+    '|----------|----------|',
+    '| Desenvolvimento | `http://localhost:3000` |',
+    '| Homologação | _A definir_ |',
+    '| Produção | _A definir_ |',
+    '',
+    '### Versionamento',
+    '',
+    'A API segue o versionamento semântico. A versão atual é **v1.0**.',
+  ].join('\n'),
+};

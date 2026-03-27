@@ -12,6 +12,7 @@ import {
   getSearchableFieldsFromDto,
   buildFiltersFromDto,
 } from '../helpers/dto.helpers';
+import { SortOrder } from '../enums/sort-order.enum';
 import {
   validateSelectRelations,
   validateQueryOptions,
@@ -20,8 +21,11 @@ import { executeQuery } from '../repository/base-query.repository';
 import { CustomHttpException } from '../../errors/exceptions/custom-http.exception';
 import { HttpStatus } from '@nestjs/common';
 import { ErrorCode } from '../../errors/enums/error-code.enum';
+import { getErrorMessage } from '../../helpers/exception.helper';
 
 export type { BuildQueryOptions } from '../interfaces/query-options.interface';
+
+const DEFAULT_MAX_LIMIT = 100;
 
 @Injectable()
 export class BaseQueryService {
@@ -32,11 +36,14 @@ export class BaseQueryService {
   ): QueryOptions {
     const relations: string[] = options.relations ?? [];
     const defaultSortBy = options.defaultSortBy ?? 'createdAt';
+    const defaultSortOrder = options.defaultSortOrder ?? SortOrder.DESC;
     const searchFields: string[] = options.searchFields ?? [];
+    const sortableFields: string[] = options.sortableFields ?? [];
     const dateField = options.dateField ?? 'createdAt';
     const filterConfigs: FilterConfig[] = options.filters ?? [];
     const select: string[] = options.select ?? [];
     const withDeleted = options.withDeleted ?? false;
+    const maxLimit = options.maxLimit ?? DEFAULT_MAX_LIMIT;
 
     validateSelectRelations(select, relations);
 
@@ -82,6 +89,7 @@ export class BaseQueryService {
 
     validateQueryOptions(repository, {
       sortBy: finalSortBy,
+      sortableFields,
       searchFields:
         finalSearchFields.length > 0 ? finalSearchFields : undefined,
       dateField,
@@ -90,12 +98,13 @@ export class BaseQueryService {
 
     return {
       page: dto.page,
-      limit: dto.limit,
+      limit:
+        dto.limit && dto.limit > 0 ? Math.min(dto.limit, maxLimit) : dto.limit,
       search: dto.search,
       searchFields:
         finalSearchFields.length > 0 ? finalSearchFields : undefined,
       sortBy: finalSortBy,
-      sortOrder: dto.sortOrder,
+      sortOrder: dto.sortOrder || defaultSortOrder,
       filters,
       relations,
       select,
@@ -114,8 +123,7 @@ export class BaseQueryService {
         throw error;
       }
 
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error);
 
       if (
         errorMessage.includes('relation') ||

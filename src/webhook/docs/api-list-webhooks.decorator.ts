@@ -16,7 +16,7 @@ export function ApiListWebhooks() {
       summary: 'Listar webhooks registrados',
       description:
         'Retorna a lista paginada de webhooks registrados no provedor. ' +
-        'Permite filtrar por status (Enabled/Disabled).',
+        'Requer autenticação de backoffice e header `X-Client-Id`.',
     }),
     ApiParam({
       name: 'provider',
@@ -81,11 +81,29 @@ export function ApiListWebhooks() {
         'application/json': {
           schema: { $ref: getSchemaPath(ErrorResponseDto) },
           examples: {
-            INSUFFICIENT_PERMISSION: {
-              summary: 'Requer autenticação de backoffice',
+            ACCESS_DENIED: {
+              summary: 'Permissão insuficiente',
               value: {
-                errorCode: 'INSUFFICIENT_PERMISSION',
-                message: 'Esta operação requer autenticação de backoffice',
+                errorCode: 'ACCESS_DENIED',
+                message: 'Access denied',
+                correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 500,
+      description: 'Erro interno ao consultar webhooks',
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          examples: {
+            UNEXPECTED_ERROR: {
+              value: {
+                errorCode: 'UNEXPECTED_ERROR',
+                message: 'Internal server error',
                 correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
               },
             },

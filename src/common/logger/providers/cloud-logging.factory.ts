@@ -6,6 +6,21 @@ import { AppLoggerService } from '../logger.service';
 
 export type CloudLoggingProviderType = 'oci' | 'aws' | 'gcp' | 'none';
 
+const providerTypes = ['oci', 'aws', 'gcp', 'none'];
+
+export function isCloudLoggingProviderType(
+  value: string,
+): value is CloudLoggingProviderType {
+  return providerTypes.includes(value);
+}
+
+export function parseCloudLoggingProviderType(
+  value: string | undefined,
+): CloudLoggingProviderType | null {
+  const normalized = (value || 'oci').toLowerCase();
+  return isCloudLoggingProviderType(normalized) ? normalized : null;
+}
+
 /** Factory para criar instâncias de CloudLoggingProvider */
 export class CloudLoggingFactory {
   /**
@@ -18,9 +33,18 @@ export class CloudLoggingFactory {
     configService: ConfigService,
     logger?: AppLoggerService,
   ): CloudLoggingProvider | null {
-    const providerType = configService
-      .get<string>('CLOUD_LOGGING_PROVIDER', 'oci')
-      .toLowerCase() as CloudLoggingProviderType;
+    const configuredProvider = configService.get<string>(
+      'CLOUD_LOGGING_PROVIDER',
+      'oci',
+    );
+    const providerType = parseCloudLoggingProviderType(configuredProvider);
+
+    if (!providerType) {
+      process.stdout.write(
+        `[CloudLoggingFactory] Unknown provider '${configuredProvider}'\n`,
+      );
+      return null;
+    }
 
     switch (providerType) {
       case 'oci':
@@ -39,12 +63,6 @@ export class CloudLoggingFactory {
         return null;
 
       case 'none':
-        return null;
-
-      default:
-        process.stdout.write(
-          `[CloudLoggingFactory] Unknown provider '${providerType}'\n`,
-        );
         return null;
     }
   }

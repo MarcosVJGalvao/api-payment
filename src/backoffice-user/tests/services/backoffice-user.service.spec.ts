@@ -7,9 +7,9 @@ import {
 } from '../mocks/backoffice-user.mock';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
-import * as bcrypt from 'bcrypt';
+import { hashData } from '@/common/helpers/password.helper';
 
-jest.mock('bcrypt');
+jest.mock('@/common/helpers/password.helper');
 
 describe('BackofficeUserService', () => {
   let service: BackofficeUserService;
@@ -22,7 +22,7 @@ describe('BackofficeUserService', () => {
     repositoryMock = factory.backofficeUserRepositoryMock;
     loggerMock = factory.loggerMock;
 
-    (bcrypt.hash as jest.Mock).mockResolvedValue('hashed_value');
+    (hashData as jest.Mock).mockResolvedValue('hashed_value');
   });
 
   afterEach(() => {
@@ -46,7 +46,7 @@ describe('BackofficeUserService', () => {
       });
       expect(repositoryMock.create).toHaveBeenCalled();
       expect(repositoryMock.save).toHaveBeenCalled();
-      expect(bcrypt.hash).toHaveBeenCalledTimes(2); // Password and secret answer
+      expect(hashData).toHaveBeenCalledTimes(2); // Password and secret answer
       expect(result).toEqual(createdUser);
     });
 
@@ -115,7 +115,7 @@ describe('BackofficeUserService', () => {
 
       await service.updatePassword(userId, newPassword);
 
-      expect(bcrypt.hash).toHaveBeenCalledWith(newPassword, 10);
+      expect(hashData).toHaveBeenCalledWith(newPassword);
       expect(repositoryMock.update).toHaveBeenCalledWith(userId, {
         password: 'hashed_value',
       });

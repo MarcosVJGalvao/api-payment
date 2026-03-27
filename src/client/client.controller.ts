@@ -11,7 +11,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { ClientService } from './client.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
@@ -24,9 +24,10 @@ import { ApiDeleteClient } from './docs/api-delete-client.decorator';
 import { Audit } from '@/common/audit/decorators/audit.decorator';
 import { AuditAction } from '@/common/audit/enums/audit-action.enum';
 import { InternalAuthGuard } from '@/internal-user/guards/internal-auth.guard';
+import { ApiControllerHideFromPortalScalar } from '@/swagger/docs/api-controller-hide-from-portal-scalar.decorator';
 
 @Controller('clients')
-@ApiTags('Clientes')
+@ApiControllerHideFromPortalScalar('Clientes')
 @UseGuards(InternalAuthGuard)
 @ApiBearerAuth('internal-auth')
 export class ClientController {

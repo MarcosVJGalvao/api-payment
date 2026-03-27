@@ -128,7 +128,18 @@ export function validateSortField<T extends ObjectLiteral>(
   repository: Repository<T>,
   sortBy: string,
   relations: string[],
+  sortableFields?: string[],
 ): void {
+  if (sortableFields && sortableFields.length > 0) {
+    if (!sortableFields.includes(sortBy)) {
+      throw new CustomHttpException(
+        `Invalid sort field: '${sortBy}'. Allowed fields are: ${sortableFields.join(', ')}`,
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.INVALID_QUERY_RELATION,
+      );
+    }
+  }
+
   const entityMetadata = repository.metadata;
   const entityColumns = entityMetadata.columns.map((col) => col.propertyName);
   const entityRelations = entityMetadata.relations.map(
@@ -204,13 +215,19 @@ export function validateQueryOptions<T extends ObjectLiteral>(
   repository: Repository<T>,
   options: {
     sortBy?: string;
+    sortableFields?: string[];
     searchFields?: string[];
     dateField?: string;
     relations: string[];
   },
 ): void {
   if (options.sortBy) {
-    validateSortField(repository, options.sortBy, options.relations);
+    validateSortField(
+      repository,
+      options.sortBy,
+      options.relations,
+      options.sortableFields,
+    );
   }
 
   if (options.searchFields && options.searchFields.length > 0) {

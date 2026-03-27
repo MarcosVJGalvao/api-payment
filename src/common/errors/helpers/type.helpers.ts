@@ -2,7 +2,7 @@
  * Type guard helpers for safe type checking
  */
 
-export function isRecord(value: unknown): value is Record<string, any> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -12,7 +12,9 @@ export function isRecord(value: unknown): value is Record<string, any> {
 }
 
 export function isEmptyObject(obj: unknown): boolean {
-  if (!obj || typeof obj !== 'object' || obj === null) return false;
-  const keys = Object.keys(obj as Record<string, unknown>);
-  return keys.length === 0;
+  if (!isRecord(obj)) {
+    return false;
+  }
+
+  return Object.keys(obj).length === 0;
 }

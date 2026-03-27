@@ -6,6 +6,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { VaultConfig } from './vault.config';
 import { SECRETS_MAPPING } from './secrets.mapping';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 interface SecretBundleResponse {
   secretBundle?: {
@@ -65,14 +66,12 @@ export async function loadSecretsFromVault(): Promise<void> {
     let usingInstancePrincipal = false;
 
     try {
-      const builder = new (
-        common as any
-      ).InstancePrincipalsAuthenticationDetailsProviderBuilder();
+      const builder =
+        new common.InstancePrincipalsAuthenticationDetailsProviderBuilder();
       authenticationDetailsProvider = await builder.build();
       usingInstancePrincipal = true;
     } catch (error) {
-      const instancePrincipalError =
-        error instanceof Error ? error.message : String(error);
+      const instancePrincipalError = getErrorMessage(error);
 
       let configFile = vaultConfig.configFile || '~/.oci/config';
       const profile = vaultConfig.profile || 'DEFAULT';
@@ -98,15 +97,9 @@ export async function loadSecretsFromVault(): Promise<void> {
         const kmsVaultClient = new keymanagement.KmsVaultClient({
           authenticationDetailsProvider,
         });
-        (kmsVaultClient as { regionId?: string }).regionId = vaultConfig.region;
+        kmsVaultClient.regionId = vaultConfig.region;
 
-        const vaultDetails = await (
-          kmsVaultClient as unknown as {
-            getVault(request: {
-              vaultId: string;
-            }): Promise<{ vault?: { compartmentId?: string } }>;
-          }
-        ).getVault({
+        const vaultDetails = await kmsVaultClient.getVault({
           vaultId: vaultConfig.vaultOcid,
         });
 
@@ -121,9 +114,9 @@ export async function loadSecretsFromVault(): Promise<void> {
     const secretsClient = new secretsmanagement.SecretsClient({
       authenticationDetailsProvider,
     });
-    (secretsClient as { regionId?: string }).regionId = vaultConfig.region;
+    secretsClient.regionId = vaultConfig.region;
 
-    const secretNames = SECRETS_MAPPING as readonly string[];
+    const secretNames = SECRETS_MAPPING;
     const secrets: Record<string, string> = {};
 
     const batchSize = 10;
@@ -142,19 +135,7 @@ export async function loadSecretsFromVault(): Promise<void> {
             throw new Error(`Secret '${secretName}' returned empty response`);
           }
 
-          const secretBundle =
-            response.secretBundle ||
-            (response as unknown as {
-              secretBundleContent?: { content?: string };
-            });
-          const secretContent =
-            'secretBundleContent' in response
-              ? (
-                  response as unknown as {
-                    secretBundleContent?: { content?: string };
-                  }
-                ).secretBundleContent
-              : secretBundle?.secretBundleContent;
+          const secretContent = response.secretBundle?.secretBundleContent;
 
           if (!secretContent?.content) {
             throw new Error(`Secret '${secretName}' has no content`);
@@ -166,8 +147,7 @@ export async function loadSecretsFromVault(): Promise<void> {
           ).toString('utf-8');
           return { name: secretName, value: decodedValue };
         } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
+          const errorMessage = getErrorMessage(error);
           throw new Error(
             `Failed to get secret '${secretName}': ${errorMessage}`,
           );
@@ -188,7 +168,7 @@ export async function loadSecretsFromVault(): Promise<void> {
       process.env[name] = value;
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = getErrorMessage(error);
 
     // Remover informações sensíveis do erro
     const sanitizedError = errorMessage

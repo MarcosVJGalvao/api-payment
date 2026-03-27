@@ -16,7 +16,8 @@ export function ApiListWebhooksFromProvider() {
     ApiOperation({
       summary: 'Listar webhooks do provedor',
       description:
-        'Lista webhooks diretamente do provedor financeiro. Exclusivo para usuários internos.',
+        'Lista webhooks diretamente no provedor financeiro (consulta online ao provedor). ' +
+        'Exclusivo para usuários internos.',
     }),
     ApiParam({
       name: 'provider',
@@ -29,12 +30,14 @@ export function ApiListWebhooksFromProvider() {
       required: false,
       type: Number,
       example: 1,
+      description: 'Página atual (inicia em 1)',
     }),
     ApiQuery({
       name: 'limit',
       required: false,
       type: Number,
       example: 10,
+      description: 'Quantidade de itens por página',
     }),
     ApiResponse({
       status: 200,

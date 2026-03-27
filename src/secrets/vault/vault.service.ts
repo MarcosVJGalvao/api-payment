@@ -9,15 +9,6 @@ import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exce
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { handleGenericException } from '@/common/helpers/exception.helper';
 
-interface SecretBundleResponse {
-  secretBundle?: {
-    secretBundleContent?: {
-      content?: string;
-      contentType?: string;
-    };
-  };
-}
-
 @Injectable()
 export class VaultService {
   private secretsClient: secretsmanagement.SecretsClient | null = null;
@@ -44,9 +35,8 @@ export class VaultService {
         let authenticationDetailsProvider: common.AuthenticationDetailsProvider;
 
         try {
-          const builder = new (
-            common as any
-          ).InstancePrincipalsAuthenticationDetailsProviderBuilder();
+          const builder =
+            new common.InstancePrincipalsAuthenticationDetailsProviderBuilder();
           authenticationDetailsProvider = await builder.build();
         } catch {
           let configFile = this.config.configFile || '~/.oci/config';
@@ -67,8 +57,7 @@ export class VaultService {
         this.secretsClient = new secretsmanagement.SecretsClient({
           authenticationDetailsProvider,
         });
-        (this.secretsClient as { regionId?: string }).regionId =
-          this.config.region;
+        this.secretsClient.regionId = this.config.region;
       } catch (error) {
         this.logger?.error(
           'Failed to initialize Vault client',
@@ -107,29 +96,12 @@ export class VaultService {
         );
       }
 
-      const response = await (
-        this.secretsClient as unknown as {
-          getSecretBundleByName(request: {
-            secretName: string;
-            vaultId: string;
-          }): Promise<SecretBundleResponse>;
-        }
-      ).getSecretBundleByName({
+      const response = await this.secretsClient.getSecretBundleByName({
         secretName: secretName,
         vaultId: this.config.vaultOcid,
       });
 
-      const secretBundle =
-        response.secretBundle ||
-        (response as unknown as { secretBundleContent?: { content?: string } });
-      const secretContent =
-        'secretBundleContent' in response
-          ? (
-              response as unknown as {
-                secretBundleContent?: { content?: string };
-              }
-            ).secretBundleContent
-          : secretBundle?.secretBundleContent;
+      const secretContent = response.secretBundle?.secretBundleContent;
 
       if (!secretContent?.content) {
         throw new CustomHttpException(

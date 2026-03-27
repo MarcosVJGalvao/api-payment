@@ -12,6 +12,7 @@ import { AuditLogRepository } from '../repositories/audit-log.repository';
 import { BaseQueryService } from '@/common/base-query/service/base-query.service';
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
+import { SortOrder } from '@/common/base-query/enums/sort-order.enum';
 import { Request } from 'express';
 
 @Injectable()
@@ -210,7 +211,7 @@ export class AuditService {
     // Garantir que o sortOrder padrão seja DESC para logs de auditoria
     const queryDtoWithDefaults = {
       ...queryDto,
-      sortOrder: queryDto.sortOrder || 'DESC',
+      sortOrder: queryDto.sortOrder || SortOrder.DESC,
     };
 
     const queryOptions = this.baseQueryService.buildQueryOptions(

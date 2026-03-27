@@ -78,7 +78,7 @@ describe('HiperbancoAuthService', () => {
       expect(sessionServiceMock.createSession).toHaveBeenCalledWith(
         expect.objectContaining({
           providerSlug: FinancialProvider.HIPERBANCO,
-          hiperbancoToken: 'hiperbanco-token',
+          accessToken: 'hiperbanco-token',
           loginType: ProviderLoginType.BACKOFFICE,
         }),
       );
@@ -178,8 +178,7 @@ describe('HiperbancoAuthService', () => {
       expect(sessionServiceMock.createSession).toHaveBeenCalledWith(
         expect.objectContaining({
           providerSlug: FinancialProvider.HIPERBANCO,
-          hiperbancoToken: 'bank-token',
-          userId: 'user-id',
+          accessToken: 'bank-token',
           accountId: 'account-uuid-id', // ID interno do banco
           loginType: ProviderLoginType.BANK,
         }),

@@ -2,32 +2,15 @@ import { Process, Processor, OnQueueFailed } from '@nestjs/bull';
 import type { Job } from 'bull';
 import { Logger } from '@nestjs/common';
 import { BoletoWebhookService } from '../services/boleto-webhook.service';
+import { toPayload } from '../helpers/payload.helper';
 import { WebhookEventLogService } from '../services/webhook-event-log.service';
-import { WebhookPayload } from '../interfaces/webhook-base.interface';
-import { BoletoWebhookData } from '../interfaces/boleto-webhook.interface';
 import { TransactionNotFoundRetryableException } from '@/common/errors/exceptions/transaction-not-found-retryable.exception';
 import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
 import { WebhookEvent } from '../enums/webhook-event.enum';
 import { parseDate } from '@/common/helpers/date.helpers';
-
-/**
- * Tipos de eventos de webhook de boleto.
- */
-export type BoletoWebhookEventType =
-  | 'REGISTERED'
-  | 'CASH_IN_RECEIVED'
-  | 'CASH_IN_CLEARED'
-  | 'CANCELLED';
-
-/**
- * Estrutura do Job na fila de webhook de boleto.
- */
-export interface BoletoWebhookJob {
-  eventType: BoletoWebhookEventType;
-  events: WebhookPayload<BoletoWebhookData>[];
-  clientId: string;
-  validPublicKey: boolean;
-}
+import { BoletoWebhookEventType } from '../enums/boleto-webhook-event-type.enum';
+import type { BoletoWebhookJob } from '../interfaces/boleto-webhook-job.interface';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 /**
  * Processor responsável por consumir jobs da fila 'webhook-boleto'.
@@ -44,7 +27,8 @@ export class BoletoWebhookProcessor {
 
   @Process()
   async handleJob(job: Job<BoletoWebhookJob>): Promise<void> {
-    const { eventType, events, clientId, validPublicKey } = job.data;
+    const { eventType, events, clientId, providerSlug, validPublicKey } =
+      job.data;
 
     this.logger.log(
       `Processing ${eventType} webhook job (ID: ${job.id}, Attempt: ${job.attemptsMade + 1})`,
@@ -52,31 +36,35 @@ export class BoletoWebhookProcessor {
 
     try {
       switch (eventType) {
-        case 'REGISTERED':
+        case BoletoWebhookEventType.REGISTERED:
           await this.boletoWebhookService.handleRegistered(
             events,
             clientId,
+            providerSlug,
             validPublicKey,
           );
           break;
-        case 'CASH_IN_RECEIVED':
+        case BoletoWebhookEventType.CASH_IN_RECEIVED:
           await this.boletoWebhookService.handleCashInReceived(
             events,
             clientId,
+            providerSlug,
             validPublicKey,
           );
           break;
-        case 'CASH_IN_CLEARED':
+        case BoletoWebhookEventType.CASH_IN_CLEARED:
           await this.boletoWebhookService.handleCashInCleared(
             events,
             clientId,
+            providerSlug,
             validPublicKey,
           );
           break;
-        case 'CANCELLED':
+        case BoletoWebhookEventType.CANCELLED:
           await this.boletoWebhookService.handleCancelled(
             events,
             clientId,
+            providerSlug,
             validPublicKey,
           );
           break;
@@ -103,7 +91,7 @@ export class BoletoWebhookProcessor {
       }
 
       this.logger.error(
-        `Error processing ${eventType} webhook: ${error instanceof Error ? error.message : String(error)}`,
+        `Error processing ${eventType} webhook: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
       );
       throw error;
@@ -139,7 +127,7 @@ export class BoletoWebhookProcessor {
             eventName: eventNameMap[eventType],
             wasProcessed: false,
             skipReason: `Failed after ${maxAttempts} attempts: ${error.message}`,
-            payload: event as unknown as Record<string, unknown>,
+            payload: toPayload(event),
             providerTimestamp: parseDate(event.timestamp),
             clientId,
           });

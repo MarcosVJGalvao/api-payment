@@ -8,6 +8,21 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Response } from 'express';
 import { ExportResponse } from '../interfaces/export-response.interface';
+import { isRecord } from '@/common/errors/helpers/type.helpers';
+
+function isExportResponse(value: unknown): value is ExportResponse {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const headers = value['headers'];
+  return (
+    isRecord(headers) &&
+    typeof value['contentType'] === 'string' &&
+    typeof value['filename'] === 'string' &&
+    'data' in value
+  );
+}
 
 @Injectable()
 export class ExportResponseInterceptor implements NestInterceptor {
@@ -16,15 +31,8 @@ export class ExportResponseInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       map((data: unknown) => {
-        if (
-          data &&
-          typeof data === 'object' &&
-          'headers' in data &&
-          'contentType' in data &&
-          'filename' in data &&
-          'data' in data
-        ) {
-          const exportResponse = data as ExportResponse;
+        if (isExportResponse(data)) {
+          const exportResponse = data;
           response.setHeader(
             'Content-Type',
             exportResponse.headers['Content-Type'],

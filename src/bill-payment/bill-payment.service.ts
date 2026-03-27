@@ -7,7 +7,7 @@ import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exce
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { BaseQueryService } from '@/common/base-query/service/base-query.service';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { BillPayment } from './entities/bill-payment.entity';
 import { BillPaymentStatus } from './enums/bill-payment-status.enum';
 import { ConfirmBillPaymentDto } from './dto/confirm-bill-payment.dto';
@@ -20,6 +20,10 @@ import {
 } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { FilterOperator } from '@/common/base-query/enums/filter-operator.enum';
 import { parseDate } from '@/common/helpers/date.helpers';
+import { TransactionService } from '@/transaction/transaction.service';
+import { TransactionType } from '@/transaction/enums/transaction-type.enum';
+import { mapBillPaymentStatusToTransactionStatus } from '@/common/helpers/status-mapper.helper';
+import { getErrorMessage } from '@/common/helpers/exception.helper';
 
 @Injectable()
 export class BillPaymentService {
@@ -31,6 +35,7 @@ export class BillPaymentService {
     private readonly providerHelper: BillPaymentProviderHelper,
     private readonly syncHelper: BillPaymentSyncHelper,
     private readonly baseQueryService: BaseQueryService,
+    private readonly transactionService: TransactionService,
     private readonly logger: AppLoggerService,
   ) {}
 
@@ -59,7 +64,7 @@ export class BillPaymentService {
       return response;
     } catch (error) {
       this.logger.error(
-        `Failed to validate bill payment: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to validate bill payment: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
         this.context,
       );
@@ -82,7 +87,12 @@ export class BillPaymentService {
     session: ProviderSession,
     clientId: string,
     accountId: string,
-  ): Promise<BillPaymentConfirmResponse & { paymentId: string }> {
+  ): Promise<
+    BillPaymentConfirmResponse & {
+      paymentId: string;
+      internalTransactionId: string;
+    }
+  > {
     this.logger.log(
       `Confirming bill payment with validation id: ${dto.id}`,
       this.context,
@@ -116,6 +126,22 @@ export class BillPaymentService {
 
       const savedPayment = await this.repository.save(payment);
 
+      const internalTransaction =
+        await this.transactionService.createFromWebhook({
+          authenticationCode: response.authenticationCode,
+          type: TransactionType.BILL_PAYMENT,
+          status: mapBillPaymentStatusToTransactionStatus(savedPayment.status),
+          amount: savedPayment.amount,
+          currency: savedPayment.currency,
+          description: savedPayment.description,
+          clientId,
+          accountId,
+          billPaymentId: savedPayment.id,
+          providerTimestamp: response.settleDate
+            ? parseDate(response.settleDate)
+            : undefined,
+        });
+
       this.logger.log(
         `Bill payment confirmed and persisted, id: ${savedPayment.id}, authCode: ${response.authenticationCode}`,
         this.context,
@@ -124,10 +150,11 @@ export class BillPaymentService {
       return {
         ...response,
         paymentId: savedPayment.id,
+        internalTransactionId: internalTransaction.id,
       };
     } catch (error) {
       this.logger.error(
-        `Failed to confirm bill payment: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to confirm bill payment: ${getErrorMessage(error)}`,
         error instanceof Error ? error.stack : undefined,
         this.context,
       );

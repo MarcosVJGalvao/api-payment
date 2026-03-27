@@ -3,51 +3,13 @@ import { HiperbancoHttpService } from '@/financial-providers/hiperbanco/hiperban
 import { HiperbancoEndpoint } from '@/financial-providers/hiperbanco/enums/hiperbanco-endpoint.enum';
 import { ITedTransferRequest } from '@/ted/interfaces/ted-transfer-request.interface';
 import { handleHiperbancoError } from '@/financial-providers/hiperbanco/helpers/hiperbanco-error.helper';
-import { ProviderSession } from '@/financial-providers/hiperbanco/interfaces/provider-session.interface';
+import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { instanceToPlain } from 'class-transformer';
-
-export interface HiperbancoTedResponse {
-  authenticationCode: string;
-  transactionId: string;
-}
-
-export interface HiperbancoTedStatusResponse {
-  companyKey: string;
-  authenticationCode: string;
-  amount: number;
-  description: string;
-  correlationId: string;
-  sender: {
-    document: string;
-    name: string;
-    account: {
-      branch: string;
-      number: string;
-      bank: {
-        ispb: string;
-        name: string;
-        compe: string;
-      };
-    };
-  };
-  recipient: {
-    document: string;
-    name: string;
-    account: {
-      branch: string;
-      number: string;
-      bank: {
-        ispb: string;
-        name: string;
-        compe: string;
-      };
-    };
-  };
-  channel: string;
-  status: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import { getProviderAccessToken } from '@/financial-providers/hiperbanco/helpers/session-token.helper';
+import type {
+  HiperbancoTedResponse,
+  HiperbancoTedStatusResponse,
+} from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 
 @Injectable()
 export class HiperbancoTedHelper {
@@ -71,7 +33,7 @@ export class HiperbancoTedHelper {
           instanceToPlain(transferRequest),
           {
             headers: {
-              Authorization: `Bearer ${session.hiperbancoToken}`,
+              Authorization: `Bearer ${getProviderAccessToken(session)}`,
             },
           },
         );
@@ -80,7 +42,6 @@ export class HiperbancoTedHelper {
       handleHiperbancoError(error, () => {
         this.logger.error('Error creating TED transfer');
       });
-      throw error;
     }
   }
 
@@ -102,7 +63,7 @@ export class HiperbancoTedHelper {
       const response =
         await this.hiperbancoHttpService.get<HiperbancoTedStatusResponse>(url, {
           headers: {
-            Authorization: `Bearer ${session.hiperbancoToken}`,
+            Authorization: `Bearer ${getProviderAccessToken(session)}`,
           },
         });
       return response;
@@ -110,7 +71,6 @@ export class HiperbancoTedHelper {
       handleHiperbancoError(error, () => {
         this.logger.error('Error fetching TED status');
       });
-      throw error;
     }
   }
 }
