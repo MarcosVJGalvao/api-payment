@@ -1,0 +1,73 @@
+services:
+  api-payments:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    expose:
+      - "${PORT:-3000}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - backend_net
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      - api-payments
+    env_file:
+      - .env
+    volumes:
+      - ./docker/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+    command: >
+      /bin/sh -c "envsubst '$$NGROK_DOMAIN $$PORT' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
+      && nginx -g 'daemon off;'"
+    ports:
+      - "${HOST_HTTP_PORT:-8080}:80"
+    networks:
+      - backend_net
+      - edge_net
+    restart: unless-stopped
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    depends_on:
+      - nginx
+    env_file:
+      - .env
+    volumes:
+      - ./docker/ngrok-entrypoint.sh:/ngrok-entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/ngrok-entrypoint.sh"]
+    networks:
+      - edge_net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - "no"
+      - --maxmemory
+      - "${REDIS_MAX_MEMORY:-128mb}"
+      - --maxmemory-policy
+      - "${REDIS_MAX_MEMORY_POLICY:-allkeys-lru}"
+      - --requirepass
+      - "${REDIS_PASSWORD:-redispass}"
+    environment:
+      REDISCLI_AUTH: "${REDIS_PASSWORD:-redispass}"
+    networks:
+      - backend_net
+    restart: unless-stopped
+
+networks:
+  backend_net:
+    name: api_payments_backend_net
+    driver: bridge
+  edge_net:
+    name: api_payments_edge_net
+    driver: bridge

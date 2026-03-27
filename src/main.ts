@@ -55,7 +55,12 @@ async function bootstrap() {
 
     const logger = app.get(AppLoggerService);
     const configService = app.get(ConfigService);
+    const trustProxy = configService.get<string>('TRUST_PROXY');
 
+    app
+      .getHttpAdapter()
+      .getInstance()
+      .set('trust proxy', trustProxy ? Number(trustProxy) : 1);
     app.enableCors();
 
     app.useGlobalPipes(

@@ -1,98 +1,110 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# API Payments
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Docker
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+This repository includes a multi-container Docker runtime that starts:
 
-## Description
+- the NestJS API in its own container, managed by `pm2-runtime`
+- `nginx` as a dedicated reverse proxy container
+- `ngrok` as a dedicated tunnel container
+- `redis` as a dedicated cache/queue container
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Network topology:
 
-## Project setup
+- `backend_net`: `api-payments`, `redis`, `nginx`
+- `edge_net`: `nginx`, `ngrok`
+
+The official external URL for the API should be the reserved ngrok domain configured in `APP_PUBLIC_BASE_URL`.
+
+### Required environment variables
+
+Copy `.env.example` to `.env` and fill at least:
 
 ```bash
-$ npm install
+PORT=3000
+HOST_HTTP_PORT=8080
+NODE_ENV=production
+TRUST_PROXY=1
+JWT_SECRET=your-jwt-secret
+NGROK_DOMAIN=your-reserved-domain.ngrok-free.app
+NGROK_AUTHTOKEN=your-ngrok-token
 ```
 
-## Compile and run the project
+The Docker entrypoint also accepts `TOKEN_NGROK` as a legacy alias for `NGROK_AUTHTOKEN`.
+If `APP_PUBLIC_BASE_URL` is not set, the API container derives it automatically as `https://${NGROK_DOMAIN}`.
+The `nginx` proxy reads the same `PORT` value from `.env`, so the container stack stays aligned with the API runtime.
+Docker Compose also reads `HOST_HTTP_PORT` from `.env` for the local host binding.
+
+### Redis behavior inside Docker
+
+This Compose file includes a Redis container on the same Docker network.
+
+For the default bundled setup, use:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+REDIS_HOST=redis
+REDIS_PORT=6379
 ```
 
-## Run tests
+The API will then reach Redis by the Docker service name on the same server.
+
+If `REDIS_HOST=localhost`, the API container rewrites it to `host.docker.internal` so you can still point to a Redis instance running on the Docker host.
+
+If `REDIS_HOST` is empty, the API defaults to the bundled `redis` service.
+
+The bundled Redis service is limited through environment variables:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+REDIS_MAX_MEMORY=128mb
+REDIS_MAX_MEMORY_POLICY=allkeys-lru
 ```
 
-## Deployment
+It also uses `REDIS_PASSWORD` for authentication.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Run with Docker Compose
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+docker compose build
+docker compose up
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+The container exposes the application locally at `http://localhost:${HOST_HTTP_PORT}`, while ngrok publishes the reserved public domain.
 
-## Resources
+### How updates work
 
-Check out a few resources that may come in handy when working with NestJS:
+When you change the API code, rebuild and recreate only the API service:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+docker compose up -d --build api-payments
+```
 
-## Support
+If your change affects nginx or the full stack, rebuild the affected services or everything:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+docker compose up -d --build
+```
 
-## Stay in touch
+`pm2-runtime` runs inside the API container as the process manager, but container updates still happen by rebuilding and recreating the container image.
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+### Security notes
 
-## License
+- `nginx` blocks hidden files such as `/.env` and `/.git`
+- dangerous executable-like extensions such as `.php`, `.asp`, `.py`, `.sh`, and similar are denied
+- `/` returns `404`
+- `/docs` uses a dedicated Content Security Policy to keep Scalar working
+- the Nest app enables `trust proxy` with depth `1` so forwarded protocol and client IP are interpreted correctly behind `nginx`
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## Local Node workflow
+
+```bash
+npm install
+npm run build
+npm run start:prod
+```
+
+## Tests
+
+```bash
+npm run test
+npm run test:e2e
+```
