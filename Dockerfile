@@ -29,6 +29,8 @@ RUN npm ci --omit=dev \
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/src/swagger/portal/assets ./src/swagger/portal/assets
 COPY --from=builder /app/src/swagger/portal/templates ./src/swagger/portal/templates
+RUN node -e "require.resolve('@scalar/api-reference')"
+RUN test -f node_modules/@scalar/api-reference/dist/browser/standalone.js
 COPY docker/api-entrypoint.sh /api-entrypoint.sh
 
 RUN chmod +x /api-entrypoint.sh
