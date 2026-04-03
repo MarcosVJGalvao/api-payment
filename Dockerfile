@@ -16,7 +16,9 @@ ENV NODE_ENV=production
 ENV PORT=3000
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata ca-certificates procps \
+    && ln -fs /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime \
+    && dpkg-reconfigure -f noninteractive tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./

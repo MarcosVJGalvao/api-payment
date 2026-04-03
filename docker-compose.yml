@@ -1,10 +1,16 @@
 services:
   api-payments:
+    image: ghcr.io/marcosvjgalvao/api-payments:latest
     build:
       context: .
       dockerfile: Dockerfile
     env_file:
       - .env
+    environment:
+      - TZ=America/Sao_Paulo
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     depends_on:
       - redis
     expose:
@@ -16,16 +22,14 @@ services:
     restart: unless-stopped
 
   nginx:
-    image: nginx:1.27-alpine
+    image: ghcr.io/marcosvjgalvao/nginx:latest
+    build:
+      context: .
+      dockerfile: docker/nginx.Dockerfile
     depends_on:
       - api-payments
     env_file:
       - .env
-    volumes:
-      - ./docker/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
-    command: >
-      /bin/sh -c "envsubst '$$NGROK_DOMAIN $$PORT' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
-      && nginx -g 'daemon off;'"
     ports:
       - "${HOST_HTTP_PORT:-8080}:80"
     networks:
@@ -34,14 +38,14 @@ services:
     restart: unless-stopped
 
   ngrok:
-    image: ngrok/ngrok:latest
+    image: ghcr.io/marcosvjgalvao/ngrok:latest
+    build:
+      context: .
+      dockerfile: docker/ngrok.Dockerfile
     depends_on:
       - nginx
     env_file:
       - .env
-    volumes:
-      - ./docker/ngrok-entrypoint.sh:/ngrok-entrypoint.sh:ro
-    entrypoint: ["/bin/sh", "/ngrok-entrypoint.sh"]
     networks:
       - edge_net
     restart: unless-stopped
