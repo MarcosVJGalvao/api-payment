@@ -19,6 +19,7 @@ import { PixKeyType } from '@/pix/enums/pix-key-type.enum';
 import { PixAccountType } from '@/pix/enums/pix-account-type.enum';
 import { TransferPayload } from '@/pix/interfaces/transfer-payload.interface';
 import { getProviderAccessToken } from '@/financial-providers/hiperbanco/helpers/session-token.helper';
+import { DecodeQrCodeDto } from '@/pix/dto/decode-qr-code.dto';
 
 @Injectable()
 export class HiperbancoPixHelper {
@@ -217,10 +218,10 @@ export class HiperbancoPixHelper {
   }
 
   async decodeQrCode(
-    code: string,
+    dto: DecodeQrCodeDto,
     session: ProviderSession,
   ): Promise<PixQrCodeDecodeResponse> {
-    const payload = { code };
+    const payload = { code: dto.code, cityCode: dto.cityCode };
 
     return this.hiperbancoHttp.post<PixQrCodeDecodeResponse>(
       HiperbancoEndpoint.PIX_DECODE_QRCODE,

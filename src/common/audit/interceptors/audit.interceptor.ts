@@ -27,6 +27,7 @@ import {
 } from '@/common/errors/helpers/error.helpers';
 import { extractMessage } from '@/common/errors/helpers/message.helpers';
 import { isRecord } from '@/common/errors/helpers/type.helpers';
+import { AuditQueueAddOptions } from '@/queue/policies/queue-policy.accessors';
 
 import { Webhook } from '@/webhook/entities/webhook.entity';
 
@@ -255,7 +256,7 @@ export class AuditInterceptor implements NestInterceptor {
               );
             } else {
               this.auditQueue
-                .add('log', auditLogData, { removeOnComplete: true })
+                .add('log', auditLogData, AuditQueueAddOptions)
                 .catch((logError) => {
                   this.logger.error(
                     `Failed to add audit log to queue in error handler: action=${auditLogData.action}, entityType=${auditLogData.entityType}, error=${logError.message}`,
@@ -791,7 +792,7 @@ export class AuditInterceptor implements NestInterceptor {
     }
 
     this.auditQueue
-      .add('log', auditLogData, { removeOnComplete: true })
+      .add('log', auditLogData, AuditQueueAddOptions)
       .catch((error) => {
         this.logger.error(
           `Failed to add audit log to queue in processAuditLogSync: action=${auditLogData.action}, entityType=${auditLogData.entityType}, error=${error.message}`,

@@ -6,6 +6,7 @@ import { ProviderLoginType } from '@/financial-providers/enums/provider-login-ty
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { AppLoggerService } from '@/common/logger/logger.service';
+import { RedisPolicies } from '@/queue/redis/redis.config';
 
 /**
  * Helper para gerenciar sessões compartilhadas do provedor com retry automático.
@@ -33,7 +34,7 @@ export class ProviderSessionHelper {
       accessToken: token,
       loginType: ProviderLoginType.BACKOFFICE,
       createdAt: Date.now(),
-      expiresAt: Date.now() + 29 * 60 * 1000,
+      expiresAt: Date.now() + RedisPolicies.sharedBackofficeTokenTtlSeconds * 1000,
     };
   }
 

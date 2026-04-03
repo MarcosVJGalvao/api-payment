@@ -15,15 +15,14 @@ import { AuditLogRepository } from './repositories/audit-log.repository';
 import { PermissionsModule } from '@/permissions/permissions.module';
 import { BullModule } from '@nestjs/bull';
 import { AuditProcessor } from './processors/audit.processor';
+import { getQueueConfig } from '@/queue/policies/queue-policy.accessors';
 
 @Global()
 @Module({
   imports: [
     TypeOrmModule.forFeature([AuditLog]),
     PermissionsModule,
-    BullModule.registerQueue({
-      name: 'audit',
-    }),
+    BullModule.registerQueue(getQueueConfig('audit')),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {

@@ -41,6 +41,7 @@ import { PaymentSender } from '@/common/entities/payment-sender.entity';
 import { PaymentRecipient } from '@/common/entities/payment-recipient.entity';
 import { parseDate } from '@/common/helpers/date.helpers';
 import { PixSyncHelper } from './helpers/pix-sync.helper';
+import { DecodeQrCodeDto } from './dto/decode-qr-code.dto';
 
 @Injectable()
 export class PixService {
@@ -523,7 +524,7 @@ export class PixService {
 
   async decodeQrCode(
     provider: FinancialProvider,
-    code: string,
+    dto: DecodeQrCodeDto,
     session: ProviderSession,
   ): Promise<PixQrCodeDecodeResponse> {
     this.logger.log(`Decoding QR Code via provider`, this.context);
@@ -531,7 +532,7 @@ export class PixService {
     try {
       const result = await this.providerHelper.decodeQrCode(
         provider,
-        code,
+        dto,
         session,
       );
       this.logger.log(

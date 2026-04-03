@@ -25,7 +25,7 @@ import { InternalUserModule } from './internal-user/internal-user.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
-import { bullConfigFactory } from './config/bull.config';
+import { bullConfigFactory } from './queue/bull/bull-root.config';
 import { TransactionModule } from './transaction/transaction.module';
 import { WebhookProcessorModule } from './webhook-processor/webhook-processor.module';
 import { TedModule } from './ted/ted.module';

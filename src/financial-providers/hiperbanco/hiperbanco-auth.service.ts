@@ -27,6 +27,7 @@ import {
   mapAccountsToResponse,
   createSessionAndToken,
 } from './helpers/bank-login.helper';
+import { RedisKeyPrefixes, RedisPolicies } from '@/queue/redis/redis.config';
 
 @Injectable()
 export class HiperbancoAuthService {
@@ -45,7 +46,7 @@ export class HiperbancoAuthService {
     private readonly redisService: RedisService,
   ) {}
 
-  private readonly CACHE_KEY = 'hiperbanco:shared_backoffice_token';
+  private readonly CACHE_KEY = RedisKeyPrefixes.sharedBackofficeToken;
 
   async getSharedBackofficeSession(): Promise<string> {
     const cachedToken = await this.redisService.get(this.CACHE_KEY);
@@ -84,7 +85,7 @@ export class HiperbancoAuthService {
       await this.redisService.set(
         this.CACHE_KEY,
         response.access_token,
-        29 * 60,
+        RedisPolicies.sharedBackofficeTokenTtlSeconds,
       );
 
       this.logger.log('Shared Backoffice login successful', this.context);

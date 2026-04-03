@@ -1,6 +1,5 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ConfigService } from '@nestjs/config';
 import { PermissionService } from '../../services/permission.service';
 import { Permission } from '../../entities/permission.entity';
 import { Role } from '../../entities/role.entity';
@@ -22,10 +21,6 @@ export const createPermissionServiceTestFactory = async () => {
     get: jest.fn(),
     set: jest.fn(),
     del: jest.fn(),
-  };
-
-  const configServiceMock = {
-    get: jest.fn(),
   };
 
   const baseQueryServiceMock = {
@@ -57,10 +52,6 @@ export const createPermissionServiceTestFactory = async () => {
         useValue: cacheServiceMock,
       },
       {
-        provide: ConfigService,
-        useValue: configServiceMock,
-      },
-      {
         provide: BaseQueryService,
         useValue: baseQueryServiceMock,
       },
@@ -72,7 +63,6 @@ export const createPermissionServiceTestFactory = async () => {
     permissionRepositoryMock: module.get(getRepositoryToken(Permission)),
     roleRepositoryMock: module.get(getRepositoryToken(Role)),
     cacheServiceMock, // Renamed from redisServiceMock
-    configServiceMock,
     baseQueryServiceMock,
   };
 };

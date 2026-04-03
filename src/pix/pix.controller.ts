@@ -215,11 +215,7 @@ export class PixController {
     @Req() req: RequestWithSession,
     @Body() dto: DecodeQrCodeDto,
   ) {
-    return this.pixService.decodeQrCode(
-      provider,
-      dto.code,
-      req.providerSession,
-    );
+    return this.pixService.decodeQrCode(provider, dto, req.providerSession);
   }
 
   @Post('qrcode/decode-base64')

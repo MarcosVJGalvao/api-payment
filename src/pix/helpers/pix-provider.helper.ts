@@ -16,6 +16,7 @@ import { GenerateTotpDto } from '../dto/generate-totp.dto';
 import { GenerateStaticQrCodeDto } from '../dto/generate-static-qr-code.dto';
 import { GenerateDynamicQrCodeDto } from '../dto/generate-dynamic-qr-code.dto';
 import { TransferPayload } from '../interfaces/transfer-payload.interface';
+import { DecodeQrCodeDto } from '../dto/decode-qr-code.dto';
 
 @Injectable()
 export class PixProviderHelper {
@@ -105,9 +106,9 @@ export class PixProviderHelper {
 
   async decodeQrCode(
     provider: FinancialProvider,
-    code: string,
+    dto: DecodeQrCodeDto,
     session: ProviderSession,
   ): Promise<PixQrCodeDecodeResponse> {
-    return this.registry.get(provider).decodeQrCode(code, session);
+    return this.registry.get(provider).decodeQrCode(dto, session);
   }
 }

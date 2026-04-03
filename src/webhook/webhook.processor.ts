@@ -14,6 +14,7 @@ import { RegisterWebhookResponse } from '@/financial-providers/hiperbanco/interf
 import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
 import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { getErrorMessageAndStack } from '@/common/helpers/exception.helper';
+import { RedisPolicies } from '@/queue/redis/redis.config';
 
 export interface RegisterWebhookJob {
   provider: FinancialProvider;
@@ -65,7 +66,7 @@ export class WebhookProcessor {
         clientId: 'SHARED_BACKOFFICE', // This session is system-wide
         accessToken: token,
         createdAt: Date.now(),
-        expiresAt: Date.now() + 3600 * 1000,
+        expiresAt: Date.now() + RedisPolicies.sharedBackofficeTokenTtlSeconds * 1000,
         loginType: ProviderLoginType.BACKOFFICE,
       };
 

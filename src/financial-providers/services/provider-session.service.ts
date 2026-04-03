@@ -6,9 +6,7 @@ import {
   isProviderSession,
 } from '../contracts/provider-session';
 import { v4 as uuidv4 } from 'uuid';
-
-const SESSION_PREFIX = 'provider_session:';
-const SESSION_TTL_SECONDS = 29 * 60; // 29 minutos
+import { RedisKeyPrefixes, RedisPolicies } from '@/queue/redis/redis.config';
 
 @Injectable()
 export class ProviderSessionService {
@@ -29,11 +27,15 @@ export class ProviderSessionService {
       ...data,
       sessionId,
       createdAt: now,
-      expiresAt: now + SESSION_TTL_SECONDS * 1000,
+      expiresAt: now + RedisPolicies.providerSessionTtlSeconds * 1000,
     };
 
-    const key = `${SESSION_PREFIX}${sessionId}`;
-    await this.redis.set(key, JSON.stringify(session), SESSION_TTL_SECONDS);
+    const key = `${RedisKeyPrefixes.providerSession}${sessionId}`;
+    await this.redis.set(
+      key,
+      JSON.stringify(session),
+      RedisPolicies.providerSessionTtlSeconds,
+    );
 
     this.logger.log(
       `Session created: ${sessionId} for ${data.providerSlug}`,
@@ -43,7 +45,7 @@ export class ProviderSessionService {
   }
 
   async getSession(sessionId: string): Promise<ProviderSession | null> {
-    const key = `${SESSION_PREFIX}${sessionId}`;
+    const key = `${RedisKeyPrefixes.providerSession}${sessionId}`;
     const data = await this.redis.get(key);
 
     if (!data) {
@@ -63,20 +65,20 @@ export class ProviderSessionService {
   }
 
   async deleteSession(sessionId: string): Promise<void> {
-    const key = `${SESSION_PREFIX}${sessionId}`;
+    const key = `${RedisKeyPrefixes.providerSession}${sessionId}`;
     await this.redis.del(key);
     this.logger.log(`Session deleted: ${sessionId}`, this.context);
   }
 
   async refreshSession(sessionId: string): Promise<boolean> {
-    const key = `${SESSION_PREFIX}${sessionId}`;
+    const key = `${RedisKeyPrefixes.providerSession}${sessionId}`;
     const exists = await this.redis.exists(key);
 
     if (!exists) {
       return false;
     }
 
-    await this.redis.expire(key, SESSION_TTL_SECONDS);
+    await this.redis.expire(key, RedisPolicies.providerSessionTtlSeconds);
     return true;
   }
 }

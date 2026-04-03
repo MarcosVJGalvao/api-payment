@@ -37,6 +37,7 @@ import { HiperbancoPixWebhookNormalizer } from '@/financial-providers/providers/
 import { HiperbancoBoletoWebhookNormalizer } from '@/financial-providers/providers/hiperbanco/webhook/hiperbanco-boleto-webhook.normalizer';
 import { HiperbancoBillPaymentWebhookNormalizer } from '@/financial-providers/providers/hiperbanco/webhook/hiperbanco-bill-payment-webhook.normalizer';
 import { HiperbancoTedWebhookNormalizer } from '@/financial-providers/providers/hiperbanco/webhook/hiperbanco-ted-webhook.normalizer';
+import { getQueueConfig } from '@/queue/policies/queue-policy.accessors';
 import {
   PixWebhookNormalizerRegistry,
   PIX_WEBHOOK_NORMALIZERS,
@@ -53,23 +54,6 @@ import {
   TedWebhookNormalizerRegistry,
   TED_WEBHOOK_NORMALIZERS,
 } from './registries/ted-webhook-normalizer.registry';
-
-/**
- * Configuração padrão de retry para filas de webhook.
- * - 5 tentativas máximas
- * - Backoff exponencial começando em 5 segundos
- */
-const WEBHOOK_QUEUE_DEFAULT_OPTIONS = {
-  defaultJobOptions: {
-    attempts: 5,
-    backoff: {
-      type: 'exponential',
-      delay: 5000, // 5 segundos inicial
-    },
-    removeOnComplete: { age: 24 * 3600 },
-    removeOnFail: { age: 7 * 24 * 3600 },
-  },
-};
 
 @Module({
   imports: [
@@ -92,12 +76,11 @@ const WEBHOOK_QUEUE_DEFAULT_OPTIONS = {
     TransactionModule,
     AccountModule,
     ScheduleModule.forRoot(),
-    // Filas de Webhook com Retry Strategy
     BullModule.registerQueue(
-      { name: 'webhook-bill-payment', ...WEBHOOK_QUEUE_DEFAULT_OPTIONS },
-      { name: 'webhook-boleto', ...WEBHOOK_QUEUE_DEFAULT_OPTIONS },
-      { name: 'webhook-pix', ...WEBHOOK_QUEUE_DEFAULT_OPTIONS },
-      { name: 'webhook-ted', ...WEBHOOK_QUEUE_DEFAULT_OPTIONS },
+      getQueueConfig('webhookBillPayment'),
+      getQueueConfig('webhookBoleto'),
+      getQueueConfig('webhookPix'),
+      getQueueConfig('webhookTed'),
     ),
   ],
   controllers: [

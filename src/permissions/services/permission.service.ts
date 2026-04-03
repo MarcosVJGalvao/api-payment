@@ -1,7 +1,6 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
 import { Permission } from '../entities/permission.entity';
 import { Role } from '../entities/role.entity';
 import { ClientRole } from '../entities/client-role.entity';
@@ -18,10 +17,11 @@ import { BaseQueryService } from '@/common/base-query/service/base-query.service
 import { PaginationResult } from '@/common/base-query/interfaces/pagination-result.interface';
 import { FilterOperator } from '@/common/base-query/enums/filter-operator.enum';
 import { isRecord } from '@/common/errors/helpers/type.helpers';
+import { RedisKeyPrefixes, RedisPolicies } from '@/queue/redis/redis.config';
 
 @Injectable()
 export class PermissionService {
-  private readonly cacheTtl: number;
+  private readonly cacheTtl = RedisPolicies.permissionsCacheTtlSeconds;
 
   constructor(
     @InjectRepository(Permission)
@@ -33,11 +33,8 @@ export class PermissionService {
     @InjectRepository(ClientPermission)
     private clientPermissionRepository: Repository<ClientPermission>,
     private cacheService: CacheService,
-    private configService: ConfigService,
     private baseQueryService: BaseQueryService,
-  ) {
-    this.cacheTtl = this.configService.get<number>('REDIS_TTL', 3600);
-  }
+  ) {}
 
   private isRole(value: unknown): value is Role {
     return (
@@ -324,7 +321,7 @@ export class PermissionService {
    * @returns Array de roles com suas permissões
    */
   async getClientRoles(clientId: string): Promise<Role[]> {
-    const cacheKey = `client_roles:${clientId}`;
+    const cacheKey = `${RedisKeyPrefixes.clientRoles}${clientId}`;
     const cached = await this.cacheService.get(cacheKey, (value) =>
       this.isRoleArray(value),
     );
@@ -428,9 +425,11 @@ export class PermissionService {
    * @param permissionName - Nome da permissão (ex: 'financial:boleto')
    */
   private async invalidateClientCache(clientId: string): Promise<void> {
-    await this.cacheService.del(`client_permissions:${clientId}`);
-    await this.cacheService.del(`client_direct_permissions:${clientId}`);
-    await this.cacheService.del(`client_roles:${clientId}`);
+    await this.cacheService.del(`${RedisKeyPrefixes.clientPermissions}${clientId}`);
+    await this.cacheService.del(
+      `${RedisKeyPrefixes.clientDirectPermissions}${clientId}`,
+    );
+    await this.cacheService.del(`${RedisKeyPrefixes.clientRoles}${clientId}`);
   }
 
   async assignPermissionToClient(
@@ -565,7 +564,7 @@ export class PermissionService {
   }
 
   async getClientDirectPermissions(clientId: string): Promise<string[]> {
-    const cacheKey = `client_direct_permissions:${clientId}`;
+    const cacheKey = `${RedisKeyPrefixes.clientDirectPermissions}${clientId}`;
     const cached = await this.cacheService.get(cacheKey, (value) =>
       this.isStringArray(value),
     );
@@ -587,7 +586,7 @@ export class PermissionService {
   private async getClientEffectivePermissions(
     clientId: string,
   ): Promise<string[]> {
-    const cacheKey = `client_permissions:${clientId}`;
+    const cacheKey = `${RedisKeyPrefixes.clientPermissions}${clientId}`;
     const cached = await this.cacheService.get(cacheKey, (value) =>
       this.isStringArray(value),
     );

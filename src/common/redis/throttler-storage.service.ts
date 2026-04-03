@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ThrottlerStorage } from '@nestjs/throttler';
 import { ThrottlerStorageRecord } from '@nestjs/throttler/dist/throttler-storage-record.interface';
 import { RedisService } from './redis.service';
+import { RedisKeyPrefixes } from '@/queue/redis/redis.config';
 
 @Injectable()
 export class RedisThrottlerStorage implements ThrottlerStorage {
@@ -14,7 +15,7 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
     blockDuration: number,
     throttlerName: string,
   ): Promise<ThrottlerStorageRecord> {
-    const redisKey = `throttler:${throttlerName}:${key}`;
+    const redisKey = `${RedisKeyPrefixes.throttler}${throttlerName}:${key}`;
     const ttlSeconds = Math.ceil(ttl / 1000);
     const blockTtlSeconds = Math.ceil(blockDuration / 1000);
 

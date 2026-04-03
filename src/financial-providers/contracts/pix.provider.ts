@@ -14,6 +14,7 @@ import type { GenerateTotpDto } from '@/pix/dto/generate-totp.dto';
 import type { GenerateStaticQrCodeDto } from '@/pix/dto/generate-static-qr-code.dto';
 import type { GenerateDynamicQrCodeDto } from '@/pix/dto/generate-dynamic-qr-code.dto';
 import type { TransferPayload } from '@/pix/interfaces/transfer-payload.interface';
+import { DecodeQrCodeDto } from '@/pix/dto/decode-qr-code.dto';
 
 export interface PixProvider {
   readonly providerSlug: FinancialProvider;
@@ -65,7 +66,7 @@ export interface PixProvider {
   ): Promise<PixQrCodeGenerateResponse>;
 
   decodeQrCode(
-    code: string,
+    dto: DecodeQrCodeDto,
     session: ProviderSession,
   ): Promise<PixQrCodeDecodeResponse>;
 }

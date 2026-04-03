@@ -22,7 +22,6 @@ describe('PermissionService', () => {
   let service: PermissionService;
   let permissionRepositoryMock: any;
   let cacheServiceMock: any;
-  let configServiceMock: any;
   let baseQueryServiceMock: any;
 
   beforeEach(async () => {
@@ -30,17 +29,7 @@ describe('PermissionService', () => {
     service = factory.permissionService;
     permissionRepositoryMock = factory.permissionRepositoryMock;
     cacheServiceMock = factory.cacheServiceMock;
-    configServiceMock = factory.configServiceMock;
     baseQueryServiceMock = factory.baseQueryServiceMock;
-
-    configServiceMock.get.mockImplementation(
-      (key: string, defaultValue?: any) => {
-        if (key === 'REDIS_TTL') {
-          return 3600;
-        }
-        return defaultValue;
-      },
-    );
 
     (permissionHelper.checkPermissionHierarchy as jest.Mock) = jest
       .fn()

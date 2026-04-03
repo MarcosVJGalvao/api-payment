@@ -24,6 +24,7 @@ import {
   WEBHOOK_PROVIDERS,
 } from '@/financial-providers/registry/webhook-provider.registry';
 import { HiperbancoWebhookProvider } from '@/financial-providers/providers/hiperbanco/hiperbanco-webhook.provider';
+import { getQueueConfig } from '@/queue/policies/queue-policy.accessors';
 
 @Module({
   imports: [
@@ -32,9 +33,7 @@ import { HiperbancoWebhookProvider } from '@/financial-providers/providers/hiper
     LoggerModule,
     ClientModule,
     PermissionsModule,
-    BullModule.registerQueue({
-      name: 'webhook',
-    }),
+    BullModule.registerQueue(getQueueConfig('webhookRegistration')),
     BullBoardModule.forFeature({
       name: 'webhook',
       adapter: BullAdapter,

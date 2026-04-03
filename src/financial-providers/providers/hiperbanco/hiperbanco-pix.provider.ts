@@ -16,6 +16,7 @@ import type { RegisterPixKeyDto } from '@/pix/dto/register-pix-key.dto';
 import type { GenerateTotpDto } from '@/pix/dto/generate-totp.dto';
 import type { GenerateStaticQrCodeDto } from '@/pix/dto/generate-static-qr-code.dto';
 import type { GenerateDynamicQrCodeDto } from '@/pix/dto/generate-dynamic-qr-code.dto';
+import type { DecodeQrCodeDto } from '@/pix/dto/decode-qr-code.dto';
 import type { TransferPayload } from '@/pix/interfaces/transfer-payload.interface';
 
 @Injectable()
@@ -94,9 +95,9 @@ export class HiperbancoPixProvider implements PixProvider {
   }
 
   decodeQrCode(
-    code: string,
+    dto: DecodeQrCodeDto,
     session: ProviderSession,
   ): Promise<PixQrCodeDecodeResponse> {
-    return this.helper.decodeQrCode(code, session);
+    return this.helper.decodeQrCode(dto, session);
   }
 }

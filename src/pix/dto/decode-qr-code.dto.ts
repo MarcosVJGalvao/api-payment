@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumberString, IsString, Length } from 'class-validator';
 
 /**
  * DTO para decodificação de QR Code via API do provedor
@@ -13,4 +13,13 @@ export class DecodeQrCodeDto {
   @IsString()
   @IsNotEmpty({ message: 'code é obrigatório' })
   code: string;
+
+  @ApiProperty({
+    description: 'Codigo da cidade conforme IBGE',
+    example: '3550308',
+  })
+  @Length(7, 7, { message: 'cityCode deve conter exatamente 7 caracteres' })
+  @IsNumberString()
+  @IsNotEmpty({ message: 'cityCode é obrigatório' })
+  cityCode: string;
 }
