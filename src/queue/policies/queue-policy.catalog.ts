@@ -4,6 +4,7 @@ import {
   DEFAULT_QUEUE_DELAY_MS,
   DEFAULT_RETRY_DELAY_MS,
   WEBHOOK_REGISTRATION_RETRY_DELAY_MS,
+  WEBHOOK_REGISTRATION_SUCCESS_RETRY_DELAY_MS,
 } from '../constants/queue.constants';
 import { RedisPolicies } from '../redis/redis.config';
 import {
@@ -37,6 +38,21 @@ export const QueuePolicies = {
       },
       removeOnComplete: REMOVE_IMMEDIATELY,
       removeOnFail: REMOVE_IMMEDIATELY,
+      delay: DEFAULT_QUEUE_DELAY_MS,
+    },
+  },
+  webhookRegistrationSuccess: {
+    name: 'webhook-registration-success',
+    defaultJobOptions: {
+      attempts: DEFAULT_QUEUE_ATTEMPTS,
+      backoff: {
+        type: 'exponential',
+        delay: WEBHOOK_REGISTRATION_SUCCESS_RETRY_DELAY_MS,
+      },
+      removeOnComplete: REMOVE_IMMEDIATELY,
+      removeOnFail: {
+        age: RedisPolicies.webhookFailureRetentionSeconds,
+      },
       delay: DEFAULT_QUEUE_DELAY_MS,
     },
   },

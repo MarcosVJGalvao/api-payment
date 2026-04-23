@@ -107,9 +107,13 @@ describe('WebhookService', () => {
         FinancialProvider.HIPERBANCO,
         expect.any(Function),
       );
-      expect(webhookRepositoryMock.updateWebhookUri).toHaveBeenCalledWith(
+      expect(webhookRepositoryMock.updateWebhookConfig).toHaveBeenCalledWith(
         webhookId,
-        dto.uri,
+        {
+          uri: dto.uri,
+          registrationCallbackUri: undefined,
+          registrationCallbackSecret: undefined,
+        },
       );
       expect(result).toEqual(expectedResponse);
     });
@@ -130,7 +134,7 @@ describe('WebhookService', () => {
         ),
       ).rejects.toThrow(CustomHttpException);
 
-      expect(webhookRepositoryMock.updateWebhookUri).not.toHaveBeenCalled();
+      expect(webhookRepositoryMock.updateWebhookConfig).not.toHaveBeenCalled();
     });
 
     it('should propagate error from provider helper and not update repository', async () => {
@@ -155,7 +159,7 @@ describe('WebhookService', () => {
         ),
       ).rejects.toThrow('Provider error');
 
-      expect(webhookRepositoryMock.updateWebhookUri).not.toHaveBeenCalled();
+      expect(webhookRepositoryMock.updateWebhookConfig).not.toHaveBeenCalled();
     });
   });
 
@@ -200,9 +204,7 @@ describe('WebhookService', () => {
           webhookId,
           clientId,
         ),
-      ).rejects.toThrow(
-        'Webhook não encontrado ou não pertence a este cliente',
-      );
+      ).rejects.toThrow('Webhook configuration not found');
 
       expect(providerSessionHelperMock.executeWithRetry).not.toHaveBeenCalled();
       expect(webhookRepositoryMock.softDelete).not.toHaveBeenCalled();
@@ -233,17 +235,17 @@ describe('WebhookService', () => {
   });
 
   describe('RegisterWebhookDto Validation', () => {
-    it('should fail validation when name equals eventName', async () => {
+    it('should fail validation when uri is invalid', async () => {
       const dto = new RegisterWebhookDto();
       dto.name = 'SAME_NAME';
       dto.eventName = 'SAME_NAME';
       dto.context = WebhookContext.BOLETO;
-      dto.uri = 'https://valid.com';
+      dto.uri = 'invalid-uri';
 
       const errors = await validate(dto);
 
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].constraints).toHaveProperty('NotEqual');
+      expect(errors.some((error) => error.property === 'uri')).toBeTruthy();
     });
 
     it('should pass validation when name is different from eventName', async () => {

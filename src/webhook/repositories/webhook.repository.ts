@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Webhook } from '../entities/webhook.entity';
 import { RegisterWebhookDto } from '../dto/register-webhook.dto';
-import { RegisterWebhookResponse } from '../../financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { FinancialProvider } from '../../common/enums/financial-provider.enum';
+import { ProviderWebhookRegistrationResult } from '../interfaces/provider-webhook-registration-result.interface';
 
 /**
  * Repositório customizado para operações de persistência de Webhooks.
@@ -31,7 +31,7 @@ export class WebhookRepository {
   async saveWebhook(
     provider: FinancialProvider,
     dto: RegisterWebhookDto,
-    response: RegisterWebhookResponse,
+    response: ProviderWebhookRegistrationResult,
     clientId: string,
   ): Promise<Webhook> {
     const webhook = this.repository.create({
@@ -40,8 +40,10 @@ export class WebhookRepository {
       eventName: dto.eventName,
       uri: dto.uri,
       providerSlug: provider,
-      externalId: response.id,
-      publicKey: response.publicKey,
+      externalId: response.providerWebhookId,
+      publicKey: response.providerPublicKey ?? null,
+      registrationCallbackUri: dto.registrationCallbackUri ?? null,
+      registrationCallbackSecret: dto.registrationCallbackSecret ?? null,
       isActive: true,
       clientId,
     });
@@ -86,5 +88,24 @@ export class WebhookRepository {
 
   async updateWebhookUri(externalId: string, uri: string): Promise<void> {
     await this.repository.update({ externalId }, { uri });
+  }
+
+  async updateWebhookConfig(
+    externalId: string,
+    data: {
+      uri?: string;
+      registrationCallbackUri?: string | null;
+      registrationCallbackSecret?: string | null;
+    },
+  ): Promise<void> {
+    await this.repository.update({ externalId }, data);
+  }
+
+  async findByIdWithCallbackSecret(id: string): Promise<Webhook | null> {
+    return this.repository
+      .createQueryBuilder('webhook')
+      .addSelect('webhook.registrationCallbackSecret')
+      .where('webhook.id = :id', { id })
+      .getOne();
   }
 }

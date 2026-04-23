@@ -1,20 +1,18 @@
 import { Process, Processor } from '@nestjs/bull';
 import type { Job } from 'bull';
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bull';
+import type { Queue } from 'bull';
 import { AppLoggerService } from '@/common/logger/logger.service';
-import { HiperbancoAuthService } from '@/financial-providers/hiperbanco/hiperbanco-auth.service';
 import { RegisterWebhookDto } from './dto/register-webhook.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
 import { ClientService } from '@/client/client.service';
-import { HiperbancoWebhookHelper } from './helpers/hiperbanco/hiperbanco-webhook.helper';
 import { WebhookRepository } from './repositories/webhook.repository';
-import { ProviderLoginType } from '@/financial-providers/enums/provider-login-type.enum';
-import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
-import { RegisterWebhookResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
-import { CustomHttpException } from '@/common/errors/exceptions/custom-http.exception';
-import { ErrorCode } from '@/common/errors/enums/error-code.enum';
 import { getErrorMessageAndStack } from '@/common/helpers/exception.helper';
-import { RedisPolicies } from '@/queue/redis/redis.config';
+import { WebhookProviderHelper } from './helpers/webhook-provider.helper';
+import { ProviderSessionHelper } from './helpers/provider-session.helper';
+import { WebhookRegistrationSuccessJob } from './interfaces/webhook-registration-success-job.interface';
+import { ProviderWebhookRegistrationNormalizerHelper } from './helpers/provider-webhook-registration-normalizer.helper';
 
 export interface RegisterWebhookJob {
   provider: FinancialProvider;
@@ -28,10 +26,13 @@ export class WebhookProcessor {
   private readonly context = WebhookProcessor.name;
 
   constructor(
+    @InjectQueue('webhook-registration-success')
+    private readonly webhookRegistrationSuccessQueue: Queue<WebhookRegistrationSuccessJob>,
     private readonly logger: AppLoggerService,
-    private readonly hiperbancoAuthService: HiperbancoAuthService,
     private readonly clientService: ClientService,
-    private readonly hiperbancoHelper: HiperbancoWebhookHelper,
+    private readonly providerHelper: WebhookProviderHelper,
+    private readonly providerSessionHelper: ProviderSessionHelper,
+    private readonly providerRegistrationNormalizer: ProviderWebhookRegistrationNormalizerHelper,
     private readonly webhookRepository: WebhookRepository,
   ) {}
 
@@ -53,46 +54,66 @@ export class WebhookProcessor {
       const formattedName = (prefix + dto.name).toUpperCase();
       const finalDto = { ...dto, name: formattedName };
 
-      // 3. Get Shared Token
-      let token = '';
-      if (provider === FinancialProvider.HIPERBANCO) {
-        token = await this.hiperbancoAuthService.getSharedBackofficeSession();
-      }
-
-      // 4. Create Synthetic Session for Helper
-      const session: ProviderSession = {
-        sessionId: 'SHARED_BACKOFFICE_SESSION', // Dummy ID
-        providerSlug: provider,
-        clientId: 'SHARED_BACKOFFICE', // This session is system-wide
-        accessToken: token,
-        createdAt: Date.now(),
-        expiresAt: Date.now() + RedisPolicies.sharedBackofficeTokenTtlSeconds * 1000,
-        loginType: ProviderLoginType.BACKOFFICE,
-      };
-
-      // 5. Register in Provider
-      let response: RegisterWebhookResponse;
-      if (provider === FinancialProvider.HIPERBANCO) {
-        response = await this.hiperbancoHelper.registerWebhook(
-          finalDto,
-          session,
+      // 3. Register in Provider with shared session and normalized response
+      const providerResponse =
+        await this.providerSessionHelper.executeWithRetry(provider, (session) =>
+          this.providerHelper.register(provider, finalDto, session),
         );
-      } else {
-        throw new CustomHttpException(
-          'Provider not supported in queue',
-          HttpStatus.BAD_REQUEST,
-          ErrorCode.INVALID_FINANCIAL_PROVIDER,
-        );
-      }
+      const normalizedResponse = this.providerRegistrationNormalizer.normalize(
+        provider,
+        providerResponse,
+      );
 
-      // 6. Save in DB (using original clientId)
-      // Note: Repository expects provider DTO but saves associated with clientId
-      await this.webhookRepository.saveWebhook(
+      // 4. Save in DB (using original clientId)
+      const savedWebhook = await this.webhookRepository.saveWebhook(
         provider,
         finalDto,
-        response,
+        normalizedResponse,
         clientId,
       );
+
+      // 5. Notify integration API about successful registration (best effort with retries queue)
+      const callbackUri = savedWebhook.registrationCallbackUri;
+      if (!callbackUri) {
+        this.logger.warn(
+          `Registration success callback URI not configured for webhook ${savedWebhook.id}; notification skipped.`,
+          this.context,
+        );
+      } else {
+        if (!savedWebhook.externalId) {
+          this.logger.warn(
+            `Provider webhook id missing for webhook ${savedWebhook.id}; notification skipped.`,
+            this.context,
+          );
+          return;
+        }
+
+        const webhookWithSecret =
+          await this.webhookRepository.findByIdWithCallbackSecret(
+            savedWebhook.id,
+          );
+
+        await this.webhookRegistrationSuccessQueue.add({
+          webhookId: savedWebhook.id,
+          callbackUri,
+          callbackSecret: webhookWithSecret?.registrationCallbackSecret ?? null,
+          payload: {
+            event: 'WEBHOOK_REGISTRATION_SUCCEEDED',
+            status: 'SUCCESS',
+            provider,
+            clientId,
+            webhookId: savedWebhook.id,
+            providerWebhookId: savedWebhook.externalId,
+            name: savedWebhook.name,
+            context: savedWebhook.context,
+            eventName: savedWebhook.eventName,
+            uri: savedWebhook.uri,
+            publicKey: savedWebhook.publicKey ?? null,
+            occurredAt: new Date().toISOString(),
+            providerRawResponse: normalizedResponse.providerRawResponse,
+          },
+        });
+      }
 
       this.logger.log(
         `[SUCESSO] Webhook cadastrado para Client ${clientId} (Alias: ${alias}). Name: ${formattedName}`,

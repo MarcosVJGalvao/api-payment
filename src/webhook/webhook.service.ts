@@ -29,6 +29,16 @@ export class WebhookService {
     private readonly providerSessionHelper: ProviderSessionHelper,
   ) {}
 
+  private sanitizeWebhook(
+    webhook: Webhook,
+  ): Omit<Webhook, 'registrationCallbackSecret'> {
+    const {
+      registrationCallbackSecret: _registrationCallbackSecret,
+      ...safeWebhook
+    } = webhook;
+    return safeWebhook;
+  }
+
   async registerWebhook(
     provider: FinancialProvider,
     dto: RegisterWebhookDto,
@@ -55,7 +65,11 @@ export class WebhookService {
     provider: FinancialProvider,
     clientId: string,
   ): Promise<Webhook[]> {
-    return this.webhookRepository.findByClientIdAndProvider(clientId, provider);
+    const webhooks = await this.webhookRepository.findByClientIdAndProvider(
+      clientId,
+      provider,
+    );
+    return webhooks.map((webhook) => this.sanitizeWebhook(webhook) as Webhook);
   }
 
   async listWebhooksFromProvider(
@@ -79,7 +93,7 @@ export class WebhookService {
     );
     if (!webhook) {
       throw new CustomHttpException(
-        'Webhook não encontrado ou não pertence a este cliente',
+        'Webhook configuration not found',
         HttpStatus.NOT_FOUND,
         ErrorCode.WEBHOOK_CONFIG_NOT_FOUND,
       );
@@ -90,7 +104,11 @@ export class WebhookService {
       (session) =>
         this.providerHelper.update(provider, webhookId, dto, session),
     );
-    await this.webhookRepository.updateWebhookUri(webhookId, dto.uri);
+    await this.webhookRepository.updateWebhookConfig(webhookId, {
+      uri: dto.uri,
+      registrationCallbackUri: dto.registrationCallbackUri,
+      registrationCallbackSecret: dto.registrationCallbackSecret,
+    });
     return response;
   }
 
@@ -105,7 +123,7 @@ export class WebhookService {
     );
     if (!webhook) {
       throw new CustomHttpException(
-        'Webhook não encontrado ou não pertence a este cliente',
+        'Webhook configuration not found',
         HttpStatus.NOT_FOUND,
         ErrorCode.WEBHOOK_CONFIG_NOT_FOUND,
       );

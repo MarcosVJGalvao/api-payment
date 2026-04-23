@@ -17,21 +17,21 @@ import { Client } from '@/client/entities/client.entity';
 @Index(['clientId'])
 export class Webhook {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({
     type: 'varchar',
     length: 50,
     comment: 'Nome do webhook definido pelo usuário',
   })
-  name: string;
+  name!: string;
 
   @Column({
     type: 'enum',
     enum: WebhookContext,
     comment: 'Contexto do evento (ex: Boleto, Pix)',
   })
-  context: WebhookContext;
+  context!: WebhookContext;
 
   @Column({
     type: 'varchar',
@@ -39,14 +39,14 @@ export class Webhook {
     name: 'event_name',
     comment: 'Nome do evento assinado',
   })
-  eventName: string;
+  eventName!: string;
 
   @Column({
     type: 'varchar',
     length: 500,
     comment: 'Endpoint de callback para receber eventos',
   })
-  uri: string;
+  uri!: string;
 
   @Column({
     type: 'varchar',
@@ -54,7 +54,7 @@ export class Webhook {
     name: 'provider_slug',
     comment: 'Identificador do provedor financeiro',
   })
-  providerSlug: FinancialProvider;
+  providerSlug!: FinancialProvider;
 
   @Column({
     type: 'varchar',
@@ -63,7 +63,7 @@ export class Webhook {
     nullable: true,
     comment: 'ID retornado pelo provedor ao registrar o webhook',
   })
-  externalId: string;
+  externalId!: string | null;
 
   @Column({
     type: 'text',
@@ -71,7 +71,26 @@ export class Webhook {
     nullable: true,
     comment: 'Chave pública para validação de assinatura',
   })
-  publicKey: string;
+  publicKey!: string | null;
+
+  @Column({
+    type: 'varchar',
+    length: 500,
+    name: 'registration_callback_uri',
+    nullable: true,
+    comment: 'Endpoint de callback para sucesso de cadastro de webhook',
+  })
+  registrationCallbackUri!: string | null;
+
+  @Column({
+    type: 'varchar',
+    length: 255,
+    name: 'registration_callback_secret',
+    nullable: true,
+    select: false,
+    comment: 'Segredo HMAC para assinatura do webhook de sucesso de cadastro',
+  })
+  registrationCallbackSecret!: string | null;
 
   @Column({
     type: 'boolean',
@@ -79,30 +98,30 @@ export class Webhook {
     default: true,
     comment: 'Status do webhook',
   })
-  isActive: boolean;
+  isActive!: boolean;
 
   @Column({
     type: 'uuid',
     name: 'client_id',
     comment: 'ID do cliente',
   })
-  clientId: string;
+  clientId!: string;
 
   @ManyToOne(() => Client)
   @JoinColumn({ name: 'client_id' })
-  client: Client;
+  client!: Client;
 
   @CreateDateColumn({
     name: 'created_at',
     type: 'datetime',
   })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({
     name: 'updated_at',
     type: 'datetime',
   })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @DeleteDateColumn({
     name: 'deleted_at',

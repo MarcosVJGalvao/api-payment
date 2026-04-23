@@ -35,7 +35,12 @@ export function ApiUpdateWebhook() {
       type: UpdateWebhookDto,
       examples: {
         'Atualizar URI': {
-          value: { uri: 'https://novourlwebhook.com/callback' },
+          value: {
+            uri: 'https://novourlwebhook.com/callback',
+            registrationCallbackUri:
+              'https://integrador.com/webhooks/registration-success',
+            registrationCallbackSecret: 'secret_rotated_123',
+          },
         },
       },
     }),
@@ -120,8 +125,7 @@ export function ApiUpdateWebhook() {
             WEBHOOK_CONFIG_NOT_FOUND: {
               value: {
                 errorCode: 'WEBHOOK_CONFIG_NOT_FOUND',
-                message:
-                  'Webhook não encontrado ou não pertence a este cliente',
+                message: 'Webhook configuration not found',
                 correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
               },
             },

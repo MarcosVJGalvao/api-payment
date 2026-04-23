@@ -23,6 +23,7 @@ export async function createWebhookServiceTestFactory() {
     findByExternalIdAndClient: jest.fn(),
     softDelete: jest.fn(),
     updateWebhookUri: jest.fn().mockResolvedValue(undefined),
+    updateWebhookConfig: jest.fn().mockResolvedValue(undefined),
   };
 
   const providerHelperMock = {

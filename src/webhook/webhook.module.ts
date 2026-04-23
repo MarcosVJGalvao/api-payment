@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { HttpModule } from '@nestjs/axios';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
 import { BullBoardModule } from '@bull-board/nestjs';
@@ -11,8 +12,10 @@ import { WebhookController } from './webhook.controller';
 import { WebhookInternalController } from './webhook-internal.controller';
 import { WebhookProviderHelper } from './helpers/webhook-provider.helper';
 import { ProviderSessionHelper } from './helpers/provider-session.helper';
+import { ProviderWebhookRegistrationNormalizerHelper } from './helpers/provider-webhook-registration-normalizer.helper';
 import { WebhookRepository } from './repositories/webhook.repository';
 import { WebhookProcessor } from './webhook.processor';
+import { WebhookRegistrationSuccessProcessor } from './webhook-registration-success.processor';
 import { LoggerModule } from '../common/logger/logger.module';
 import { ClientModule } from '../client/client.module';
 import { PermissionsModule } from '../permissions/permissions.module';
@@ -31,9 +34,13 @@ import { getQueueConfig } from '@/queue/policies/queue-policy.accessors';
     TypeOrmModule.forFeature([Webhook]),
     FinancialProvidersModule,
     LoggerModule,
+    HttpModule,
     ClientModule,
     PermissionsModule,
-    BullModule.registerQueue(getQueueConfig('webhookRegistration')),
+    BullModule.registerQueue(
+      getQueueConfig('webhookRegistration'),
+      getQueueConfig('webhookRegistrationSuccess'),
+    ),
     BullBoardModule.forFeature({
       name: 'webhook',
       adapter: BullAdapter,
@@ -48,6 +55,7 @@ import { getQueueConfig } from '@/queue/policies/queue-policy.accessors';
     WebhookRepository,
     WebhookProviderHelper,
     ProviderSessionHelper,
+    ProviderWebhookRegistrationNormalizerHelper,
     HiperbancoWebhookHelper,
     HiperbancoWebhookProvider,
     {
@@ -57,6 +65,7 @@ import { getQueueConfig } from '@/queue/policies/queue-policy.accessors';
     },
     WebhookProviderRegistry,
     WebhookProcessor,
+    WebhookRegistrationSuccessProcessor,
   ],
   exports: [WebhookService],
 })

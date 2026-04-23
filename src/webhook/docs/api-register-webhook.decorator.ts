@@ -35,6 +35,9 @@ export function ApiRegisterWebhook() {
             context: 'Pix',
             uri: 'https://meuwebhook.com/pix',
             eventName: 'PIX_CASH_IN_WAS_CLEARED',
+            registrationCallbackUri:
+              'https://integrador.com/webhooks/registration-success',
+            registrationCallbackSecret: 'secret_very_strong_key_123',
           },
         },
         'Webhook Boleto': {

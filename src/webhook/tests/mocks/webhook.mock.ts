@@ -24,6 +24,8 @@ export const mockWebhook = (): Webhook => ({
   providerSlug: FinancialProvider.HIPERBANCO,
   externalId: '89444df2-a1d1-4fe8-ade8-3d03de0fd61m',
   publicKey: '872dc2ed-8bee-40b5-8465-5d2953ba76dp',
+  registrationCallbackUri: null,
+  registrationCallbackSecret: null,
   isActive: true,
   clientId: 'mock-client-id',
   client: {
