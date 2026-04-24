@@ -12,6 +12,19 @@ import { isRecord } from '@/common/errors/helpers/type.helpers';
 import { TedWebhookEventType } from '../enums/ted-webhook-event-type.enum';
 import type { TedWebhookJob } from '../interfaces/ted-webhook-job.type';
 import { getErrorMessage } from '@/common/helpers/exception.helper';
+import { OutboundWebhookDispatchTrigger } from '@/modules/webhooks/triggers/outbound-webhook-dispatch.trigger';
+
+const TED_EVENT_TYPE_TO_WEBHOOK_EVENT: Record<TedWebhookEventType, WebhookEvent> = {
+  [TedWebhookEventType.CASH_OUT_APPROVED]: WebhookEvent.TED_CASH_OUT_WAS_APPROVED,
+  [TedWebhookEventType.CASH_OUT_DONE]: WebhookEvent.TED_CASH_OUT_WAS_DONE,
+  [TedWebhookEventType.CASH_OUT_CANCELED]: WebhookEvent.TED_CASH_OUT_WAS_CANCELED,
+  [TedWebhookEventType.CASH_OUT_REPROVED]: WebhookEvent.TED_CASH_OUT_WAS_REPROVED,
+  [TedWebhookEventType.CASH_OUT_UNDONE]: WebhookEvent.TED_CASH_OUT_WAS_UNDONE,
+  [TedWebhookEventType.CASH_IN_RECEIVED]: WebhookEvent.TED_CASH_IN_WAS_RECEIVED,
+  [TedWebhookEventType.CASH_IN_CLEARED]: WebhookEvent.TED_CASH_IN_WAS_CLEARED,
+  [TedWebhookEventType.REFUND_RECEIVED]: WebhookEvent.TED_REFUND_WAS_RECEIVED,
+  [TedWebhookEventType.REFUND_CLEARED]: WebhookEvent.TED_REFUND_WAS_CLEARED,
+};
 
 function getAuthenticationCode(data: unknown): string | undefined {
   if (!isRecord(data)) {
@@ -31,6 +44,7 @@ export class TedWebhookProcessor {
   constructor(
     private readonly tedWebhookService: TedWebhookService,
     private readonly webhookEventLogService: WebhookEventLogService,
+    private readonly outboundDispatchTrigger: OutboundWebhookDispatchTrigger,
   ) {}
 
   @Process()
@@ -119,6 +133,13 @@ export class TedWebhookProcessor {
           );
           break;
       }
+
+      await this.outboundDispatchTrigger.schedule({
+        clientId: data.clientId,
+        providerEventName: TED_EVENT_TYPE_TO_WEBHOOK_EVENT[data.eventType as TedWebhookEventType],
+        events: data.events,
+        providerSlug: data.providerSlug,
+      });
 
       this.logger.log(
         `Successfully processed ${data.eventType} webhook job (ID: ${job.id})`,

@@ -11,6 +11,14 @@ import { parseDate } from '@/common/helpers/date.helpers';
 import { BoletoWebhookEventType } from '../enums/boleto-webhook-event-type.enum';
 import type { BoletoWebhookJob } from '../interfaces/boleto-webhook-job.interface';
 import { getErrorMessage } from '@/common/helpers/exception.helper';
+import { OutboundWebhookDispatchTrigger } from '@/modules/webhooks/triggers/outbound-webhook-dispatch.trigger';
+
+const BOLETO_EVENT_TYPE_TO_WEBHOOK_EVENT: Record<BoletoWebhookEventType, WebhookEvent> = {
+  [BoletoWebhookEventType.REGISTERED]: WebhookEvent.BOLETO_WAS_REGISTERED,
+  [BoletoWebhookEventType.CASH_IN_RECEIVED]: WebhookEvent.BOLETO_CASH_IN_WAS_RECEIVED,
+  [BoletoWebhookEventType.CASH_IN_CLEARED]: WebhookEvent.BOLETO_CASH_IN_WAS_CLEARED,
+  [BoletoWebhookEventType.CANCELLED]: WebhookEvent.BOLETO_WAS_CANCELLED,
+};
 
 /**
  * Processor responsável por consumir jobs da fila 'webhook-boleto'.
@@ -23,6 +31,7 @@ export class BoletoWebhookProcessor {
   constructor(
     private readonly boletoWebhookService: BoletoWebhookService,
     private readonly webhookEventLogService: WebhookEventLogService,
+    private readonly outboundDispatchTrigger: OutboundWebhookDispatchTrigger,
   ) {}
 
   @Process()
@@ -71,6 +80,13 @@ export class BoletoWebhookProcessor {
         default:
           this.logger.warn(`Unknown event type: ${String(eventType)}`);
       }
+
+      await this.outboundDispatchTrigger.schedule({
+        clientId,
+        providerEventName: BOLETO_EVENT_TYPE_TO_WEBHOOK_EVENT[eventType as BoletoWebhookEventType],
+        events,
+        providerSlug,
+      });
 
       this.logger.log(
         `Successfully processed ${eventType} webhook job (ID: ${job.id})`,

@@ -72,4 +72,13 @@ export const QueuePolicies = {
     name: 'webhook-ted',
     ...webhookEventQueueOptions,
   },
+  webhookOutboundDelivery: {
+    name: 'webhook-outbound-delivery',
+    defaultJobOptions: {
+      ...webhookEventQueueOptions.defaultJobOptions,
+      removeOnFail: {
+        age: RedisPolicies.webhookFailureRetentionSeconds,
+      },
+    },
+  },
 };

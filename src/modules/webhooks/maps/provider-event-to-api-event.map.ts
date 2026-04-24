@@ -1,0 +1,61 @@
+import { WebhookEvent } from '@/webhook-processor/enums/webhook-event.enum';
+import { ApiPaymentWebhookEventType } from '../enums/api-payment-webhook-event-type.enum';
+
+export const PROVIDER_EVENT_TO_API_EVENT: Record<
+  WebhookEvent,
+  ApiPaymentWebhookEventType
+> = {
+  [WebhookEvent.PIX_CASH_IN_WAS_RECEIVED]:
+    ApiPaymentWebhookEventType.PIX_CASH_IN_RECEIVED,
+  [WebhookEvent.PIX_CASH_IN_WAS_CLEARED]:
+    ApiPaymentWebhookEventType.PIX_CASH_IN_CLEARED,
+  [WebhookEvent.PIX_CASHOUT_WAS_COMPLETED]:
+    ApiPaymentWebhookEventType.PIX_CASH_OUT_COMPLETED,
+  [WebhookEvent.PIX_CASHOUT_WAS_CANCELED]:
+    ApiPaymentWebhookEventType.PIX_CASH_OUT_CANCELED,
+  [WebhookEvent.PIX_CASHOUT_WAS_UNDONE]:
+    ApiPaymentWebhookEventType.PIX_CASH_OUT_UNDONE,
+  [WebhookEvent.PIX_REFUND_WAS_RECEIVED]:
+    ApiPaymentWebhookEventType.PIX_REFUND_RECEIVED,
+  [WebhookEvent.PIX_REFUND_WAS_CLEARED]:
+    ApiPaymentWebhookEventType.PIX_REFUND_CLEARED,
+  [WebhookEvent.PIX_QRCODE_WAS_CREATED]:
+    ApiPaymentWebhookEventType.PIX_QRCODE_CREATED,
+  [WebhookEvent.BOLETO_WAS_REGISTERED]:
+    ApiPaymentWebhookEventType.BOLETO_REGISTERED,
+  [WebhookEvent.BOLETO_CASH_IN_WAS_RECEIVED]:
+    ApiPaymentWebhookEventType.BOLETO_CASH_IN_RECEIVED,
+  [WebhookEvent.BOLETO_CASH_IN_WAS_CLEARED]:
+    ApiPaymentWebhookEventType.BOLETO_CASH_IN_CLEARED,
+  [WebhookEvent.BOLETO_WAS_CANCELLED]: ApiPaymentWebhookEventType.BOLETO_CANCELED,
+  [WebhookEvent.BILL_PAYMENT_WAS_RECEIVED]:
+    ApiPaymentWebhookEventType.BILL_PAYMENT_RECEIVED,
+  [WebhookEvent.BILL_PAYMENT_WAS_CREATED]:
+    ApiPaymentWebhookEventType.BILL_PAYMENT_CREATED,
+  [WebhookEvent.BILL_PAYMENT_WAS_CONFIRMED]:
+    ApiPaymentWebhookEventType.BILL_PAYMENT_COMPLETED,
+  [WebhookEvent.BILL_PAYMENT_HAS_FAILED]:
+    ApiPaymentWebhookEventType.BILL_PAYMENT_FAILED,
+  [WebhookEvent.BILL_PAYMENT_WAS_CANCELLED]:
+    ApiPaymentWebhookEventType.BILL_PAYMENT_CANCELED,
+  [WebhookEvent.BILL_PAYMENT_WAS_REFUSED]:
+    ApiPaymentWebhookEventType.BILL_PAYMENT_REFUSED,
+  [WebhookEvent.TED_CASH_OUT_WAS_APPROVED]:
+    ApiPaymentWebhookEventType.TED_CASH_OUT_APPROVED,
+  [WebhookEvent.TED_CASH_OUT_WAS_DONE]:
+    ApiPaymentWebhookEventType.TED_CASH_OUT_COMPLETED,
+  [WebhookEvent.TED_CASH_OUT_WAS_CANCELED]:
+    ApiPaymentWebhookEventType.TED_CASH_OUT_CANCELED,
+  [WebhookEvent.TED_CASH_OUT_WAS_REPROVED]:
+    ApiPaymentWebhookEventType.TED_CASH_OUT_REPROVED,
+  [WebhookEvent.TED_CASH_OUT_WAS_UNDONE]:
+    ApiPaymentWebhookEventType.TED_CASH_OUT_UNDONE,
+  [WebhookEvent.TED_CASH_IN_WAS_RECEIVED]:
+    ApiPaymentWebhookEventType.TED_CASH_IN_RECEIVED,
+  [WebhookEvent.TED_CASH_IN_WAS_CLEARED]:
+    ApiPaymentWebhookEventType.TED_CASH_IN_CLEARED,
+  [WebhookEvent.TED_REFUND_WAS_RECEIVED]:
+    ApiPaymentWebhookEventType.TED_REFUND_RECEIVED,
+  [WebhookEvent.TED_REFUND_WAS_CLEARED]:
+    ApiPaymentWebhookEventType.TED_REFUND_CLEARED,
+};

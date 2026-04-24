@@ -38,6 +38,7 @@ import { HiperbancoBoletoWebhookNormalizer } from '@/financial-providers/provide
 import { HiperbancoBillPaymentWebhookNormalizer } from '@/financial-providers/providers/hiperbanco/webhook/hiperbanco-bill-payment-webhook.normalizer';
 import { HiperbancoTedWebhookNormalizer } from '@/financial-providers/providers/hiperbanco/webhook/hiperbanco-ted-webhook.normalizer';
 import { getQueueConfig } from '@/queue/policies/queue-policy.accessors';
+import { WebhooksModule } from '@/modules/webhooks/webhooks.module';
 import {
   PixWebhookNormalizerRegistry,
   PIX_WEBHOOK_NORMALIZERS,
@@ -75,6 +76,7 @@ import {
     ]),
     TransactionModule,
     AccountModule,
+    WebhooksModule,
     ScheduleModule.forRoot(),
     BullModule.registerQueue(
       getQueueConfig('webhookBillPayment'),

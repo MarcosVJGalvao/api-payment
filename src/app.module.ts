@@ -29,6 +29,7 @@ import { bullConfigFactory } from './queue/bull/bull-root.config';
 import { TransactionModule } from './transaction/transaction.module';
 import { WebhookProcessorModule } from './webhook-processor/webhook-processor.module';
 import { TedModule } from './ted/ted.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { TedModule } from './ted/ted.module';
     TransactionModule,
     WebhookProcessorModule,
     TedModule,
+    WebhooksModule,
   ],
   controllers: [AppController],
   providers: [AppService],

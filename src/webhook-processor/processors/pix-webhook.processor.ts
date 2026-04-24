@@ -12,6 +12,18 @@ import { isRecord } from '@/common/errors/helpers/type.helpers';
 import { PixWebhookEventType } from '../enums/pix-webhook-event-type.enum';
 import type { PixWebhookJob } from '../interfaces/pix-webhook-job.type';
 import { getErrorMessage } from '@/common/helpers/exception.helper';
+import { OutboundWebhookDispatchTrigger } from '@/modules/webhooks/triggers/outbound-webhook-dispatch.trigger';
+
+const PIX_EVENT_TYPE_TO_WEBHOOK_EVENT: Record<PixWebhookEventType, WebhookEvent> = {
+  [PixWebhookEventType.CASH_IN_RECEIVED]: WebhookEvent.PIX_CASH_IN_WAS_RECEIVED,
+  [PixWebhookEventType.CASH_IN_CLEARED]: WebhookEvent.PIX_CASH_IN_WAS_CLEARED,
+  [PixWebhookEventType.CASH_OUT_COMPLETED]: WebhookEvent.PIX_CASHOUT_WAS_COMPLETED,
+  [PixWebhookEventType.CASH_OUT_CANCELED]: WebhookEvent.PIX_CASHOUT_WAS_CANCELED,
+  [PixWebhookEventType.CASH_OUT_UNDONE]: WebhookEvent.PIX_CASHOUT_WAS_UNDONE,
+  [PixWebhookEventType.REFUND_RECEIVED]: WebhookEvent.PIX_REFUND_WAS_RECEIVED,
+  [PixWebhookEventType.REFUND_CLEARED]: WebhookEvent.PIX_REFUND_WAS_CLEARED,
+  [PixWebhookEventType.QRCODE_CREATED]: WebhookEvent.PIX_QRCODE_WAS_CREATED,
+};
 
 function getAuthenticationCode(data: unknown): string | undefined {
   if (!isRecord(data)) {
@@ -38,6 +50,7 @@ export class PixWebhookProcessor {
   constructor(
     private readonly pixWebhookService: PixWebhookService,
     private readonly webhookEventLogService: WebhookEventLogService,
+    private readonly outboundDispatchTrigger: OutboundWebhookDispatchTrigger,
   ) {}
 
   @Process()
@@ -115,6 +128,13 @@ export class PixWebhookProcessor {
           );
           break;
       }
+
+      await this.outboundDispatchTrigger.schedule({
+        clientId: data.clientId,
+        providerEventName: PIX_EVENT_TYPE_TO_WEBHOOK_EVENT[data.eventType as PixWebhookEventType],
+        events: data.events,
+        providerSlug: data.providerSlug,
+      });
 
       this.logger.log(
         `Successfully processed ${data.eventType} webhook job (ID: ${job.id})`,

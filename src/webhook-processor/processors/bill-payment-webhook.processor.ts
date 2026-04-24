@@ -11,6 +11,16 @@ import { parseDate } from '@/common/helpers/date.helpers';
 import { BillPaymentWebhookEventType } from '../enums/bill-payment-webhook-event-type.enum';
 import type { BillPaymentWebhookJob } from '../interfaces/bill-payment-webhook-job.interface';
 import { getErrorMessage } from '@/common/helpers/exception.helper';
+import { OutboundWebhookDispatchTrigger } from '@/modules/webhooks/triggers/outbound-webhook-dispatch.trigger';
+
+const BILL_PAYMENT_EVENT_TYPE_TO_WEBHOOK_EVENT: Record<BillPaymentWebhookEventType, WebhookEvent> = {
+  [BillPaymentWebhookEventType.RECEIVED]: WebhookEvent.BILL_PAYMENT_WAS_RECEIVED,
+  [BillPaymentWebhookEventType.CREATED]: WebhookEvent.BILL_PAYMENT_WAS_CREATED,
+  [BillPaymentWebhookEventType.CONFIRMED]: WebhookEvent.BILL_PAYMENT_WAS_CONFIRMED,
+  [BillPaymentWebhookEventType.FAILED]: WebhookEvent.BILL_PAYMENT_HAS_FAILED,
+  [BillPaymentWebhookEventType.CANCELLED]: WebhookEvent.BILL_PAYMENT_WAS_CANCELLED,
+  [BillPaymentWebhookEventType.REFUSED]: WebhookEvent.BILL_PAYMENT_WAS_REFUSED,
+};
 
 /**
  * Processor responsável por consumir jobs da fila 'webhook-bill-payment'.
@@ -23,6 +33,7 @@ export class BillPaymentWebhookProcessor {
   constructor(
     private readonly billPaymentWebhookService: BillPaymentWebhookService,
     private readonly webhookEventLogService: WebhookEventLogService,
+    private readonly outboundDispatchTrigger: OutboundWebhookDispatchTrigger,
   ) {}
 
   @Process()
@@ -87,6 +98,13 @@ export class BillPaymentWebhookProcessor {
         default:
           this.logger.warn(`Unknown event type: ${String(eventType)}`);
       }
+
+      await this.outboundDispatchTrigger.schedule({
+        clientId,
+        providerEventName: BILL_PAYMENT_EVENT_TYPE_TO_WEBHOOK_EVENT[eventType as BillPaymentWebhookEventType],
+        events,
+        providerSlug,
+      });
 
       this.logger.log(
         `Successfully processed ${eventType} webhook job (ID: ${job.id})`,
