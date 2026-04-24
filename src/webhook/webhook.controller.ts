@@ -6,7 +6,6 @@ import {
   Patch,
   Delete,
   UseGuards,
-  Req,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -41,12 +40,8 @@ export class WebhookController {
   @ApiListWebhooks()
   async listWebhooks(
     @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
-    @Req() req: any,
   ) {
-    return this.webhookService.listWebhooks(
-      provider,
-      String(req.user.clientId),
-    );
+    return this.webhookService.listWebhooks(provider);
   }
 
   @Patch(':provider/:id')
@@ -61,15 +56,9 @@ export class WebhookController {
   async updateWebhook(
     @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
     @Param('id') webhookId: string,
-    @Req() req: any,
     @Body() dto: UpdateWebhookDto,
   ) {
-    return this.webhookService.updateWebhook(
-      provider,
-      webhookId,
-      dto,
-      String(req.user.clientId),
-    );
+    return this.webhookService.updateWebhook(provider, webhookId, dto);
   }
 
   @Delete(':provider/:id')
@@ -84,12 +73,7 @@ export class WebhookController {
   async deleteWebhook(
     @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
     @Param('id') webhookId: string,
-    @Req() req: any,
   ) {
-    return this.webhookService.deleteWebhook(
-      provider,
-      webhookId,
-      String(req.user.clientId),
-    );
+    return this.webhookService.deleteWebhook(provider, webhookId);
   }
 }

@@ -14,6 +14,16 @@ import type { WebhookPayload } from '@/webhook-processor/interfaces/webhook-base
 import { isRecord } from '@/common/errors/helpers/type.helpers';
 import { ApiPaymentWebhookEventType } from '../enums/api-payment-webhook-event-type.enum';
 import { TransactionRepository } from '@/transaction/repositories/transaction.repository';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Boleto } from '@/boleto/entities/boleto.entity';
+import { BillPayment } from '@/bill-payment/entities/bill-payment.entity';
+import { PixCashIn } from '@/pix/entities/pix-cash-in.entity';
+import { PixTransfer } from '@/pix/entities/pix-transfer.entity';
+import { PixRefund } from '@/pix/entities/pix-refund.entity';
+import { TedCashIn } from '@/ted/entities/ted-cash-in.entity';
+import { TedTransfer } from '@/ted/entities/ted-transfer.entity';
+import { TedRefund } from '@/ted/entities/ted-refund.entity';
 
 @Injectable()
 export class OutboundWebhookDispatchService {
@@ -24,6 +34,22 @@ export class OutboundWebhookDispatchService {
     private readonly messageRepository: WebhookMessageRepository,
     private readonly configService: ConfigService,
     private readonly transactionRepository: TransactionRepository,
+    @InjectRepository(Boleto)
+    private readonly boletoRepository: Repository<Boleto>,
+    @InjectRepository(BillPayment)
+    private readonly billPaymentRepository: Repository<BillPayment>,
+    @InjectRepository(PixCashIn)
+    private readonly pixCashInRepository: Repository<PixCashIn>,
+    @InjectRepository(PixTransfer)
+    private readonly pixTransferRepository: Repository<PixTransfer>,
+    @InjectRepository(PixRefund)
+    private readonly pixRefundRepository: Repository<PixRefund>,
+    @InjectRepository(TedCashIn)
+    private readonly tedCashInRepository: Repository<TedCashIn>,
+    @InjectRepository(TedTransfer)
+    private readonly tedTransferRepository: Repository<TedTransfer>,
+    @InjectRepository(TedRefund)
+    private readonly tedRefundRepository: Repository<TedRefund>,
     @InjectQueue('webhook-outbound-delivery')
     private readonly deliveryQueue: Queue<OutboundDeliveryJob>,
   ) {}
@@ -149,9 +175,59 @@ export class OutboundWebhookDispatchService {
           const transaction =
             await this.transactionRepository.findByAuthenticationCode(authCode);
           if (transaction?.clientId) return transaction.clientId;
+
+          const operationClientId =
+            await this.resolveClientIdFromOperationByAuthenticationCode(authCode);
+          if (operationClientId) return operationClientId;
         }
       }
     }
+    return undefined;
+  }
+
+  private async resolveClientIdFromOperationByAuthenticationCode(
+    authCode: string,
+  ): Promise<string | undefined> {
+    const boleto = await this.boletoRepository.findOne({
+      where: { authenticationCode: authCode },
+    });
+    if (boleto?.clientId) return boleto.clientId;
+
+    const billPayment = await this.billPaymentRepository.findOne({
+      where: { authenticationCode: authCode },
+    });
+    if (billPayment?.clientId) return billPayment.clientId;
+
+    const pixCashIn = await this.pixCashInRepository.findOne({
+      where: { authenticationCode: authCode },
+    });
+    if (pixCashIn?.clientId) return pixCashIn.clientId;
+
+    const pixTransfer = await this.pixTransferRepository.findOne({
+      where: { authenticationCode: authCode },
+    });
+    if (pixTransfer?.clientId) return pixTransfer.clientId;
+
+    const pixRefund = await this.pixRefundRepository.findOne({
+      where: { authenticationCode: authCode },
+    });
+    if (pixRefund?.clientId) return pixRefund.clientId;
+
+    const tedCashIn = await this.tedCashInRepository.findOne({
+      where: { authenticationCode: authCode },
+    });
+    if (tedCashIn?.clientId) return tedCashIn.clientId;
+
+    const tedTransfer = await this.tedTransferRepository.findOne({
+      where: { authenticationCode: authCode },
+    });
+    if (tedTransfer?.clientId) return tedTransfer.clientId;
+
+    const tedRefund = await this.tedRefundRepository.findOne({
+      where: { authenticationCode: authCode },
+    });
+    if (tedRefund?.clientId) return tedRefund.clientId;
+
     return undefined;
   }
 }

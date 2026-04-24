@@ -16,7 +16,6 @@ import { ProviderWebhookRegistrationNormalizerHelper } from './helpers/provider-
 export interface RegisterWebhookJob {
   provider: FinancialProvider;
   dto: RegisterWebhookDto;
-  clientId?: string;
 }
 
 @Injectable()
@@ -36,9 +35,9 @@ export class WebhookProcessor {
 
   @Process()
   async handleRegistration(job: Job<RegisterWebhookJob>) {
-    const { provider, dto, clientId } = job.data;
+    const { provider, dto } = job.data;
     this.logger.log(
-      `Processing webhook registration for client ${clientId}`,
+      `Processing webhook registration for provider ${provider}`,
       this.context,
     );
 
@@ -57,12 +56,11 @@ export class WebhookProcessor {
         providerResponse,
       );
 
-      // 4. Save in DB (using original clientId)
+      // 4. Save in DB
       const savedWebhook = await this.webhookRepository.saveWebhook(
         provider,
         finalDto,
         normalizedResponse,
-        clientId,
       );
 
       // 5. Notify integration API about successful registration (best effort with retries queue)

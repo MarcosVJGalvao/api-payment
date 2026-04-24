@@ -22,10 +22,29 @@ import { BackofficeUserModule } from '@/backoffice-user/backoffice-user.module';
 import { InternalUserModule } from '@/internal-user/internal-user.module';
 import { TransactionModule } from '@/transaction/transaction.module';
 import { getQueueConfig } from '@/queue/policies/queue-policy.accessors';
+import { Boleto } from '@/boleto/entities/boleto.entity';
+import { BillPayment } from '@/bill-payment/entities/bill-payment.entity';
+import { PixCashIn } from '@/pix/entities/pix-cash-in.entity';
+import { PixTransfer } from '@/pix/entities/pix-transfer.entity';
+import { PixRefund } from '@/pix/entities/pix-refund.entity';
+import { TedCashIn } from '@/ted/entities/ted-cash-in.entity';
+import { TedTransfer } from '@/ted/entities/ted-transfer.entity';
+import { TedRefund } from '@/ted/entities/ted-refund.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([WebhookConfiguration, WebhookMessage]),
+    TypeOrmModule.forFeature([
+      WebhookConfiguration,
+      WebhookMessage,
+      Boleto,
+      BillPayment,
+      PixCashIn,
+      PixTransfer,
+      PixRefund,
+      TedCashIn,
+      TedTransfer,
+      TedRefund,
+    ]),
     BullModule.registerQueue(getQueueConfig('webhookOutboundDelivery')),
     HttpModule,
     ConfigModule,

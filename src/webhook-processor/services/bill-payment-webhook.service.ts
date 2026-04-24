@@ -31,7 +31,7 @@ export class BillPaymentWebhookService {
 
   async handleReceived(
     events: WebhookPayload<BillPaymentWebhookData>[],
-    clientId: string,
+    _clientId: string,
     providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
@@ -97,6 +97,7 @@ export class BillPaymentWebhookService {
       }
 
       await this.billPaymentRepository.save(billPayment);
+      const effectiveClientId = billPayment.clientId;
 
       await this.transactionService.createFromWebhook({
         authenticationCode: data.authenticationCode,
@@ -107,7 +108,7 @@ export class BillPaymentWebhookService {
         status: mapWebhookEventToTransactionStatus('BILL_PAYMENT_WAS_RECEIVED'),
         amount: data.amount?.value || billPayment.amount,
         currency: data.amount?.currency || 'BRL',
-        clientId,
+        clientId: effectiveClientId,
         billPaymentId: billPayment.id,
         accountId: billPayment.accountId,
         providerTimestamp: parseDate(event.timestamp),
@@ -121,7 +122,7 @@ export class BillPaymentWebhookService {
         wasProcessed: true,
         payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
-        clientId,
+        clientId: effectiveClientId,
       });
 
       this.logger.log(
@@ -132,7 +133,7 @@ export class BillPaymentWebhookService {
 
   async handleCreated(
     events: WebhookPayload<BillPaymentWebhookData>[],
-    clientId: string,
+    _clientId: string,
     providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
@@ -185,6 +186,7 @@ export class BillPaymentWebhookService {
       }
 
       await this.billPaymentRepository.save(billPayment);
+      const effectiveClientId = billPayment.clientId;
 
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
@@ -194,7 +196,7 @@ export class BillPaymentWebhookService {
         wasProcessed: true,
         payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
-        clientId,
+        clientId: effectiveClientId,
       });
 
       this.logger.log(
@@ -205,7 +207,7 @@ export class BillPaymentWebhookService {
 
   async handleConfirmed(
     events: WebhookPayload<BillPaymentWebhookData>[],
-    clientId: string,
+    _clientId: string,
     providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
@@ -262,6 +264,7 @@ export class BillPaymentWebhookService {
         data.authenticationCode,
         mapWebhookEventToTransactionStatus('BILL_PAYMENT_WAS_CONFIRMED'),
       );
+      const effectiveClientId = billPayment.clientId;
 
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
@@ -271,7 +274,7 @@ export class BillPaymentWebhookService {
         wasProcessed: true,
         payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
-        clientId,
+        clientId: effectiveClientId,
       });
 
       this.logger.log(
@@ -282,7 +285,7 @@ export class BillPaymentWebhookService {
 
   async handleFailed(
     events: WebhookPayload<BillPaymentWebhookData>[],
-    clientId: string,
+    _clientId: string,
     providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
@@ -337,6 +340,7 @@ export class BillPaymentWebhookService {
         data.authenticationCode,
         mapWebhookEventToTransactionStatus('BILL_PAYMENT_HAS_FAILED'),
       );
+      const effectiveClientId = billPayment.clientId;
 
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
@@ -346,7 +350,7 @@ export class BillPaymentWebhookService {
         wasProcessed: true,
         payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
-        clientId,
+        clientId: effectiveClientId,
       });
 
       this.logger.log(
@@ -357,7 +361,7 @@ export class BillPaymentWebhookService {
 
   async handleCancelled(
     events: WebhookPayload<BillPaymentWebhookData>[],
-    clientId: string,
+    _clientId: string,
     providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
@@ -413,6 +417,7 @@ export class BillPaymentWebhookService {
         data.authenticationCode,
         mapWebhookEventToTransactionStatus('BILL_PAYMENT_WAS_CANCELLED'),
       );
+      const effectiveClientId = billPayment.clientId;
 
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
@@ -422,7 +427,7 @@ export class BillPaymentWebhookService {
         wasProcessed: true,
         payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
-        clientId,
+        clientId: effectiveClientId,
       });
 
       this.logger.log(
@@ -433,7 +438,7 @@ export class BillPaymentWebhookService {
 
   async handleRefused(
     events: WebhookPayload<BillPaymentWebhookData>[],
-    clientId: string,
+    _clientId: string,
     providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
@@ -486,6 +491,7 @@ export class BillPaymentWebhookService {
         data.authenticationCode,
         mapWebhookEventToTransactionStatus('BILL_PAYMENT_WAS_REFUSED'),
       );
+      const effectiveClientId = billPayment.clientId;
 
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
@@ -495,7 +501,7 @@ export class BillPaymentWebhookService {
         wasProcessed: true,
         payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
-        clientId,
+        clientId: effectiveClientId,
       });
 
       this.logger.log(

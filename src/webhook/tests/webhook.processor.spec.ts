@@ -36,7 +36,6 @@ describe('WebhookProcessor', () => {
       externalId: 'provider-webhook-id',
       publicKey: 'public-key',
       registrationCallbackUri: 'https://integration.callback/success',
-      clientId: 'client-id',
     }),
     findByIdWithCallbackSecret: jest.fn().mockResolvedValue({
       registrationCallbackSecret: 'callback-secret',
@@ -76,7 +75,6 @@ describe('WebhookProcessor', () => {
           registrationCallbackUri: 'https://integration.callback/success',
           registrationCallbackSecret: 'callback-secret',
         },
-        clientId: 'client-id',
       },
     } as any);
 
@@ -99,7 +97,6 @@ describe('WebhookProcessor', () => {
       externalId: 'provider-webhook-id',
       publicKey: 'public-key',
       registrationCallbackUri: null,
-      clientId: 'client-id',
     });
 
     await processor.handleRegistration({
@@ -111,7 +108,6 @@ describe('WebhookProcessor', () => {
           uri: 'https://event.callback/webhook',
           eventName: 'PIX_CASH_IN_WAS_CLEARED',
         },
-        clientId: 'client-id',
       },
     } as any);
 

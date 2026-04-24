@@ -6,15 +6,11 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
   Index,
-  ManyToOne,
-  JoinColumn,
 } from 'typeorm';
 import { WebhookContext } from '../enums/webhook-context.enum';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import { Client } from '@/client/entities/client.entity';
 
 @Entity('webhook')
-@Index(['clientId'])
 export class Webhook {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -99,19 +95,6 @@ export class Webhook {
     comment: 'Status do webhook',
   })
   isActive!: boolean;
-
-  @Column({
-    type: 'varchar',
-    length: 36,
-    name: 'client_id',
-    nullable: true,
-    comment: 'ID do cliente (NULL para webhooks de sistema)',
-  })
-  clientId!: string | null;
-
-  @ManyToOne(() => Client, { nullable: true })
-  @JoinColumn({ name: 'client_id' })
-  client!: Client | null;
 
   @CreateDateColumn({
     name: 'created_at',

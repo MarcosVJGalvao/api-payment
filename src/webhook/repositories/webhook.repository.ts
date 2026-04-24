@@ -25,14 +25,12 @@ export class WebhookRepository {
    * @param provider Provedor financeiro.
    * @param dto Dados do webhook.
    * @param response Resposta do provedor.
-   * @param clientId ID do cliente.
    * @returns Webhook persistido.
    */
   async saveWebhook(
     provider: FinancialProvider,
     dto: RegisterWebhookDto,
     response: ProviderWebhookRegistrationResult,
-    clientId?: string,
   ): Promise<Webhook> {
     const webhook = this.repository.create({
       name: dto.name,
@@ -45,7 +43,6 @@ export class WebhookRepository {
       registrationCallbackUri: dto.registrationCallbackUri ?? null,
       registrationCallbackSecret: dto.registrationCallbackSecret ?? null,
       isActive: true,
-      clientId: clientId ?? null,
     });
     return this.repository.save(webhook);
   }
@@ -62,24 +59,13 @@ export class WebhookRepository {
     return this.repository.find({ where: { providerSlug: provider } });
   }
 
-  async findByClientId(clientId: string): Promise<Webhook[]> {
-    return this.repository.find({ where: { clientId } });
-  }
-
-  async findByClientIdAndProvider(
-    clientId: string,
-    provider: FinancialProvider,
-  ): Promise<Webhook[]> {
-    return this.repository.find({
-      where: { clientId, providerSlug: provider },
-    });
-  }
-
-  async findByExternalIdAndClient(
+  async findByExternalIdAndProvider(
     externalId: string,
-    clientId: string,
+    provider: FinancialProvider,
   ): Promise<Webhook | null> {
-    return this.repository.findOne({ where: { externalId, clientId } });
+    return this.repository.findOne({
+      where: { externalId, providerSlug: provider },
+    });
   }
 
   async softDelete(id: string): Promise<void> {

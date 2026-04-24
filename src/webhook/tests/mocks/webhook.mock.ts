@@ -5,8 +5,6 @@ import { Webhook } from '../../entities/webhook.entity';
 import { RegisterWebhookResponse } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import type { ProviderSession } from '@/financial-providers/contracts/provider-session';
 import { ProviderLoginType } from '@/financial-providers/enums/provider-login-type.enum';
-import { Client } from '@/client/entities/client.entity';
-import { ClientStatus } from '@/client/enums/client-status.enum';
 
 export const mockRegisterWebhookDto = (): RegisterWebhookDto => ({
   name: 'SANDBOX_BOLETO_CASH_IN',
@@ -27,16 +25,6 @@ export const mockWebhook = (): Webhook => ({
   registrationCallbackUri: null,
   registrationCallbackSecret: null,
   isActive: true,
-  clientId: 'mock-client-id',
-  client: {
-    id: 'mock-client-id',
-    name: 'Mock Client',
-    document: '12345678900',
-    status: ClientStatus.ACTIVE,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    deletedAt: undefined,
-  } as Client,
   createdAt: new Date(),
   updatedAt: new Date(),
   deletedAt: undefined,

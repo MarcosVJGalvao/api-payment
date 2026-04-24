@@ -14,7 +14,6 @@ import { toPayload } from '../helpers/payload.helper';
 import { WebhookEvent } from '../enums/webhook-event.enum';
 import { WebhookOutOfSequenceRetryableException } from '@/common/errors/exceptions/webhook-out-of-sequence-retryable.exception';
 import { parseDate } from '@/common/helpers/date.helpers';
-import { AccountService } from '@/account/account.service';
 import { parseFinancialProvider } from '../helpers/provider-slug.helper';
 
 @Injectable()
@@ -26,12 +25,11 @@ export class BoletoWebhookService {
     private readonly boletoRepository: Repository<Boleto>,
     private readonly transactionService: TransactionService,
     private readonly webhookEventLogService: WebhookEventLogService,
-    private readonly accountService: AccountService,
   ) {}
 
   async handleRegistered(
     events: WebhookPayload<BoletoWebhookData>[],
-    clientId: string,
+    _clientId: string,
     providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
@@ -61,6 +59,7 @@ export class BoletoWebhookService {
       boleto.status = BoletoStatus.REGISTERED;
 
       await this.boletoRepository.save(boleto);
+      const effectiveClientId = boleto.clientId;
 
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
@@ -70,7 +69,7 @@ export class BoletoWebhookService {
         wasProcessed: true,
         payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
-        clientId,
+        clientId: effectiveClientId,
       });
 
       this.logger.log(
@@ -81,7 +80,7 @@ export class BoletoWebhookService {
 
   async handleCashInReceived(
     events: WebhookPayload<BoletoWebhookData>[],
-    clientId: string,
+    _clientId: string,
     providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
@@ -130,6 +129,7 @@ export class BoletoWebhookService {
 
       boleto.status = BoletoStatus.PROCESSING;
       await this.boletoRepository.save(boleto);
+      const effectiveClientId = boleto.clientId;
 
       await this.transactionService.createFromWebhook({
         authenticationCode: data.authenticationCode,
@@ -142,7 +142,7 @@ export class BoletoWebhookService {
         ),
         amount: data.amount?.value || boleto.amount,
         currency: data.amount?.currency || 'BRL',
-        clientId,
+        clientId: effectiveClientId,
         boletoId: boleto.id,
         accountId: boleto.accountId,
         providerTimestamp: parseDate(event.timestamp),
@@ -156,7 +156,7 @@ export class BoletoWebhookService {
         wasProcessed: true,
         payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
-        clientId,
+        clientId: effectiveClientId,
       });
 
       this.logger.log(
@@ -167,7 +167,7 @@ export class BoletoWebhookService {
 
   async handleCashInCleared(
     events: WebhookPayload<BoletoWebhookData>[],
-    clientId: string,
+    _clientId: string,
     providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
@@ -221,6 +221,7 @@ export class BoletoWebhookService {
         data.authenticationCode,
         mapWebhookEventToTransactionStatus('BOLETO_CASH_IN_WAS_CLEARED'),
       );
+      const effectiveClientId = boleto.clientId;
 
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
@@ -230,7 +231,7 @@ export class BoletoWebhookService {
         wasProcessed: true,
         payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
-        clientId,
+        clientId: effectiveClientId,
       });
 
       this.logger.log(
@@ -241,7 +242,7 @@ export class BoletoWebhookService {
 
   async handleCancelled(
     events: WebhookPayload<BoletoWebhookData>[],
-    clientId: string,
+    _clientId: string,
     providerSlug: string,
     validPublicKey: boolean,
   ): Promise<void> {
@@ -294,6 +295,7 @@ export class BoletoWebhookService {
         data.authenticationCode,
         mapWebhookEventToTransactionStatus('BOLETO_WAS_CANCELLED'),
       );
+      const effectiveClientId = boleto.clientId;
 
       await this.webhookEventLogService.logEvent({
         authenticationCode: data.authenticationCode,
@@ -303,7 +305,7 @@ export class BoletoWebhookService {
         wasProcessed: true,
         payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
-        clientId,
+        clientId: effectiveClientId,
       });
 
       this.logger.log(

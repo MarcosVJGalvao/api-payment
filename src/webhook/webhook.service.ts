@@ -47,16 +47,14 @@ export class WebhookService {
   async registerWebhook(
     provider: FinancialProvider,
     dto: RegisterWebhookDto,
-    clientId?: string,
   ): Promise<{ message: string; status: string }> {
     await this.webhookQueue.add({
       provider,
       dto,
-      clientId,
     });
 
     this.logger.log(
-      `Webhook registration queued for client ${clientId}`,
+      `Webhook registration queued for provider ${provider}`,
       this.context,
     );
 
@@ -66,14 +64,8 @@ export class WebhookService {
     };
   }
 
-  async listWebhooks(
-    provider: FinancialProvider,
-    clientId: string,
-  ): Promise<Webhook[]> {
-    const webhooks = await this.webhookRepository.findByClientIdAndProvider(
-      clientId,
-      provider,
-    );
+  async listWebhooks(provider: FinancialProvider): Promise<Webhook[]> {
+    const webhooks = await this.webhookRepository.findByProvider(provider);
     return webhooks.map((webhook) => this.sanitizeWebhook(webhook) as Webhook);
   }
 
@@ -90,11 +82,10 @@ export class WebhookService {
     provider: FinancialProvider,
     webhookId: string,
     dto: UpdateWebhookDto,
-    clientId: string,
   ): Promise<UpdateWebhookResponse> {
-    const webhook = await this.webhookRepository.findByExternalIdAndClient(
+    const webhook = await this.webhookRepository.findByExternalIdAndProvider(
       webhookId,
-      clientId,
+      provider,
     );
     if (!webhook) {
       throw new CustomHttpException(
@@ -242,11 +233,10 @@ export class WebhookService {
   async deleteWebhook(
     provider: FinancialProvider,
     webhookId: string,
-    clientId: string,
   ): Promise<void> {
-    const webhook = await this.webhookRepository.findByExternalIdAndClient(
+    const webhook = await this.webhookRepository.findByExternalIdAndProvider(
       webhookId,
-      clientId,
+      provider,
     );
 
     await this.providerSessionHelper.executeWithRetry(provider, (session) =>
@@ -254,12 +244,12 @@ export class WebhookService {
     );
 
     if (webhook) {
-      await this.webhookRepository.softDelete(webhook.id);
+      await this.webhookRepository.softDeleteByExternalId(webhookId);
       return;
     }
 
     this.logger.warn(
-      `Webhook ${webhookId} deleted from provider without local DB record for client ${clientId}`,
+      `Webhook ${webhookId} deleted from provider without local DB record for provider ${provider}`,
       this.context,
     );
   }
