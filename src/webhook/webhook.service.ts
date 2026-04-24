@@ -37,7 +37,11 @@ export class WebhookService {
       registrationCallbackSecret: _registrationCallbackSecret,
       ...safeWebhook
     } = webhook;
-    return safeWebhook;
+
+    return {
+      ...safeWebhook,
+      id: webhook.externalId ?? webhook.id,
+    };
   }
 
   async registerWebhook(
@@ -118,11 +122,11 @@ export class WebhookService {
     failed: number;
     errors: { externalId: string; eventName: string; error: string }[];
   }> {
-    const providerWebhooks = await this.fetchAllProviderWebhooks(provider);
     const dbWebhooks = await this.webhookRepository.findByProvider(provider);
+    const providerWebhooks = await this.fetchAllProviderWebhooks(provider);
 
     this.logger.log(
-      `deleteAllWebhooksFromProvider: ${providerWebhooks.length} at provider, ${dbWebhooks.length} in DB`,
+      `deleteAllWebhooksFromProvider: ${dbWebhooks.length} in DB, ${providerWebhooks.length} at provider`,
       this.context,
     );
 
@@ -131,49 +135,77 @@ export class WebhookService {
     const errors: { externalId: string; eventName: string; error: string }[] =
       [];
 
-    const deletedProviderIds = new Set<string>();
+    const deletedExternalIds = new Set<string>();
 
-    for (const pw of providerWebhooks) {
-      try {
-        await this.providerSessionHelper.executeWithRetry(
-          provider,
-          (session) => this.providerHelper.delete(provider, pw.id, session),
-        );
-        await this.webhookRepository.deleteByExternalId(pw.id);
-        deletedProviderIds.add(pw.id);
-        deleted++;
-        this.logger.log(
-          `Deleted webhook ${pw.id} (${pw.eventName}) from provider and DB`,
-          this.context,
-        );
-      } catch (error) {
-        failed++;
-        const message = error instanceof Error ? error.message : String(error);
-        errors.push({ externalId: pw.id, eventName: pw.eventName, error: message });
-        this.logger.error(
-          `Failed to delete provider webhook ${pw.id} (${pw.eventName}): ${message}`,
-          this.context,
-        );
-      }
-    }
-
+    // Step 1: delete DB records using their externalId at the provider
     for (const dw of dbWebhooks) {
-      if (dw.externalId && deletedProviderIds.has(dw.externalId)) continue;
+      const ref = dw.externalId ?? `db:${dw.id}`;
       try {
+        if (!dw.externalId) {
+          throw new Error(
+            `Webhook ${dw.id} has no externalId; provider deletion skipped`,
+          );
+        }
+
+        const externalId = dw.externalId;
+        await this.providerSessionHelper.executeWithRetry(provider, (session) =>
+          this.providerHelper.delete(provider, externalId, session),
+        );
+        deletedExternalIds.add(externalId);
         await this.webhookRepository.hardDeleteById(dw.id);
         deleted++;
         this.logger.log(
-          `Deleted orphaned DB webhook ${dw.externalId ?? dw.id} (${dw.eventName})`,
+          `Deleted webhook ${ref} (${dw.eventName}) from provider and DB`,
           this.context,
         );
       } catch (error) {
         failed++;
         const message = error instanceof Error ? error.message : String(error);
         errors.push({
-          externalId: dw.externalId ?? dw.id,
+          externalId: ref,
           eventName: dw.eventName,
           error: message,
         });
+        this.logger.error(
+          `Failed to delete webhook ${ref} (${dw.eventName}): ${message}`,
+          this.context,
+        );
+      }
+    }
+
+    // Step 2: delete provider-only webhooks (not tracked in DB)
+    const dbExternalIds = new Set(
+      dbWebhooks.map((dw) => dw.externalId).filter(Boolean),
+    );
+    for (const pw of providerWebhooks) {
+      const providerExternalId = pw.externalId ?? pw.id;
+      if (
+        dbExternalIds.has(providerExternalId) ||
+        deletedExternalIds.has(providerExternalId)
+      ) {
+        continue;
+      }
+      try {
+        await this.providerSessionHelper.executeWithRetry(provider, (session) =>
+          this.providerHelper.delete(provider, providerExternalId, session),
+        );
+        deleted++;
+        this.logger.log(
+          `Deleted provider-only webhook ${providerExternalId} (${pw.eventName})`,
+          this.context,
+        );
+      } catch (error) {
+        failed++;
+        const message = error instanceof Error ? error.message : String(error);
+        errors.push({
+          externalId: providerExternalId,
+          eventName: pw.eventName,
+          error: message,
+        });
+        this.logger.error(
+          `Failed to delete provider-only webhook ${providerExternalId} (${pw.eventName}): ${message}`,
+          this.context,
+        );
       }
     }
 
@@ -193,8 +225,12 @@ export class WebhookService {
         (session) =>
           this.providerHelper.list(provider, { page, pageSize }, session),
       );
-      allItems.push(...response.data);
-      if (allItems.length >= response.meta.total || response.data.length === 0) {
+      const items: WebhookItem[] = Array.isArray(response.data)
+        ? response.data
+        : [];
+      allItems.push(...items);
+      const total = response.meta?.total ?? 0;
+      if (items.length < pageSize || allItems.length >= total) {
         break;
       }
       page++;
@@ -212,17 +248,19 @@ export class WebhookService {
       webhookId,
       clientId,
     );
-    if (!webhook) {
-      throw new CustomHttpException(
-        'Webhook configuration not found',
-        HttpStatus.NOT_FOUND,
-        ErrorCode.WEBHOOK_CONFIG_NOT_FOUND,
-      );
-    }
 
     await this.providerSessionHelper.executeWithRetry(provider, (session) =>
       this.providerHelper.delete(provider, webhookId, session),
     );
-    await this.webhookRepository.softDelete(webhook.id);
+
+    if (webhook) {
+      await this.webhookRepository.softDelete(webhook.id);
+      return;
+    }
+
+    this.logger.warn(
+      `Webhook ${webhookId} deleted from provider without local DB record for client ${clientId}`,
+      this.context,
+    );
   }
 }

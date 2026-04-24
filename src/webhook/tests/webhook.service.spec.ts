@@ -54,9 +54,20 @@ describe('WebhookService', () => {
   });
 
   describe('listWebhooks', () => {
-    it('should return webhooks from repository', async () => {
+    it('should return webhooks from repository using externalId as public id', async () => {
       const clientId = 'test-client-id';
-      const expectedWebhooks = [{ id: 'webhook-1' }, { id: 'webhook-2' }];
+      const expectedWebhooks = [
+        {
+          id: 'internal-1',
+          externalId: 'provider-1',
+          registrationCallbackSecret: 'secret-1',
+        },
+        {
+          id: 'internal-2',
+          externalId: null,
+          registrationCallbackSecret: 'secret-2',
+        },
+      ];
 
       webhookRepositoryMock.findByClientIdAndProvider.mockResolvedValue(
         expectedWebhooks,
@@ -70,7 +81,19 @@ describe('WebhookService', () => {
       expect(
         webhookRepositoryMock.findByClientIdAndProvider,
       ).toHaveBeenCalledWith(clientId, FinancialProvider.HIPERBANCO);
-      expect(result).toEqual(expectedWebhooks);
+      expect(result).toEqual([
+        {
+          id: 'provider-1',
+          externalId: 'provider-1',
+        },
+        {
+          id: 'internal-2',
+          externalId: null,
+        },
+      ]);
+      expect(
+        result.every((webhook) => !('registrationCallbackSecret' in webhook)),
+      ).toBe(true);
     });
   });
 
@@ -192,11 +215,14 @@ describe('WebhookService', () => {
       expect(webhookRepositoryMock.softDelete).toHaveBeenCalledWith(webhook.id);
     });
 
-    it('should throw NOT_FOUND if webhook does not exist locally', async () => {
+    it('should still delete from provider when webhook does not exist locally', async () => {
       const webhookId = 'webhook-id';
       const clientId = 'test-client-id';
 
       webhookRepositoryMock.findByExternalIdAndClient.mockResolvedValue(null);
+      providerSessionHelperMock.executeWithRetry.mockImplementation(
+        (provider, fn) => fn('mock-session'),
+      );
 
       await expect(
         service.deleteWebhook(
@@ -204,9 +230,17 @@ describe('WebhookService', () => {
           webhookId,
           clientId,
         ),
-      ).rejects.toThrow('Webhook configuration not found');
+      ).resolves.toBeUndefined();
 
-      expect(providerSessionHelperMock.executeWithRetry).not.toHaveBeenCalled();
+      expect(providerSessionHelperMock.executeWithRetry).toHaveBeenCalledWith(
+        FinancialProvider.HIPERBANCO,
+        expect.any(Function),
+      );
+      expect(providerHelperMock.delete).toHaveBeenCalledWith(
+        FinancialProvider.HIPERBANCO,
+        webhookId,
+        'mock-session',
+      );
       expect(webhookRepositoryMock.softDelete).not.toHaveBeenCalled();
     });
 
@@ -231,6 +265,77 @@ describe('WebhookService', () => {
       ).rejects.toThrow('Provider error');
 
       expect(webhookRepositoryMock.softDelete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteAllWebhooksFromProvider', () => {
+    it('should delete provider webhooks using externalId instead of internal id', async () => {
+      webhookRepositoryMock.findByProvider.mockResolvedValue([
+        {
+          id: 'internal-id',
+          externalId: 'provider-webhook-id',
+          eventName: 'PIX_CASH_IN_WAS_RECEIVED',
+        },
+      ]);
+      providerHelperMock.list.mockResolvedValue({
+        data: [],
+        meta: { total: 0 },
+      });
+
+      const result = await service.deleteAllWebhooksFromProvider(
+        FinancialProvider.HIPERBANCO,
+      );
+
+      expect(providerHelperMock.delete).toHaveBeenCalledWith(
+        FinancialProvider.HIPERBANCO,
+        'provider-webhook-id',
+        'mock-session',
+      );
+      expect(providerHelperMock.delete).not.toHaveBeenCalledWith(
+        FinancialProvider.HIPERBANCO,
+        'internal-id',
+        'mock-session',
+      );
+      expect(webhookRepositoryMock.hardDeleteById).toHaveBeenCalledWith(
+        'internal-id',
+      );
+      expect(result).toEqual({
+        deleted: 1,
+        failed: 0,
+        errors: [],
+      });
+    });
+
+    it('should not attempt provider deletion with internal id when externalId is missing', async () => {
+      webhookRepositoryMock.findByProvider.mockResolvedValue([
+        {
+          id: 'internal-id',
+          externalId: null,
+          eventName: 'PIX_CASH_IN_WAS_RECEIVED',
+        },
+      ]);
+      providerHelperMock.list.mockResolvedValue({
+        data: [],
+        meta: { total: 0 },
+      });
+
+      const result = await service.deleteAllWebhooksFromProvider(
+        FinancialProvider.HIPERBANCO,
+      );
+
+      expect(providerHelperMock.delete).not.toHaveBeenCalled();
+      expect(webhookRepositoryMock.hardDeleteById).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        deleted: 0,
+        failed: 1,
+        errors: [
+          {
+            externalId: 'db:internal-id',
+            eventName: 'PIX_CASH_IN_WAS_RECEIVED',
+            error: 'Webhook internal-id has no externalId; provider deletion skipped',
+          },
+        ],
+      });
     });
   });
 

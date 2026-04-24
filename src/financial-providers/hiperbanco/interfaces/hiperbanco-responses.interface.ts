@@ -54,6 +54,7 @@ export type UpdateWebhookResponse = RegisterWebhookResponse;
 
 export interface WebhookItem {
   id: string;
+  externalId?: string;
   name: string;
   eventName: string;
   context: string;

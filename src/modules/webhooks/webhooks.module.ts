@@ -19,6 +19,7 @@ import { WebhookMessageController } from './controllers/webhook-message.controll
 import { WebhookBootstrapInternalController } from './controllers/webhook-bootstrap-internal.controller';
 import { WebhookModule } from '@/webhook/webhook.module';
 import { BackofficeUserModule } from '@/backoffice-user/backoffice-user.module';
+import { InternalUserModule } from '@/internal-user/internal-user.module';
 import { TransactionModule } from '@/transaction/transaction.module';
 import { getQueueConfig } from '@/queue/policies/queue-policy.accessors';
 
@@ -30,6 +31,7 @@ import { getQueueConfig } from '@/queue/policies/queue-policy.accessors';
     ConfigModule,
     WebhookModule,
     BackofficeUserModule,
+    InternalUserModule,
     TransactionModule,
   ],
   controllers: [
