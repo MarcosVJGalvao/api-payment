@@ -98,6 +98,10 @@ export class WebhookRepository {
     return this.repository.find();
   }
 
+  async hardDeleteById(id: string): Promise<void> {
+    await this.repository.delete(id);
+  }
+
   async updateWebhookUri(externalId: string, uri: string): Promise<void> {
     await this.repository.update({ externalId }, { uri });
   }
