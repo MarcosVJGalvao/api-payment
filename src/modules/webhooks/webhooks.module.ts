@@ -16,6 +16,7 @@ import { OutboundWebhookDeliveryProcessor } from './processors/outbound-webhook-
 import { OutboundWebhookDispatchTrigger } from './triggers/outbound-webhook-dispatch.trigger';
 import { WebhookConfigurationController } from './controllers/webhook-configuration.controller';
 import { WebhookMessageController } from './controllers/webhook-message.controller';
+import { WebhookBootstrapInternalController } from './controllers/webhook-bootstrap-internal.controller';
 import { WebhookModule } from '@/webhook/webhook.module';
 import { BackofficeUserModule } from '@/backoffice-user/backoffice-user.module';
 import { TransactionModule } from '@/transaction/transaction.module';
@@ -31,7 +32,11 @@ import { getQueueConfig } from '@/queue/policies/queue-policy.accessors';
     BackofficeUserModule,
     TransactionModule,
   ],
-  controllers: [WebhookConfigurationController, WebhookMessageController],
+  controllers: [
+    WebhookConfigurationController,
+    WebhookMessageController,
+    WebhookBootstrapInternalController,
+  ],
   providers: [
     WebhookConfigurationRepository,
     WebhookMessageRepository,
@@ -48,6 +53,7 @@ import { getQueueConfig } from '@/queue/policies/queue-policy.accessors';
     OutboundWebhookDispatchService,
     WebhookConfigurationService,
     WebhookMessageService,
+    ProviderWebhookBootstrapService,
   ],
 })
 export class WebhooksModule {}

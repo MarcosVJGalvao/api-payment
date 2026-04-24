@@ -67,6 +67,11 @@ import { getQueueConfig } from '@/queue/policies/queue-policy.accessors';
     WebhookProcessor,
     WebhookRegistrationSuccessProcessor,
   ],
-  exports: [WebhookService, ProviderSessionHelper, HiperbancoWebhookHelper],
+  exports: [
+    WebhookService,
+    ProviderSessionHelper,
+    HiperbancoWebhookHelper,
+    WebhookRepository,
+  ],
 })
 export class WebhookModule {}

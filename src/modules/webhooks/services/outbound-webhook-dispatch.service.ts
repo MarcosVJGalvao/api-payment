@@ -37,7 +37,8 @@ export class OutboundWebhookDispatchService {
       return;
     }
 
-    const clientId = input.clientId || await this.resolveClientIdFromEvents(input.events);
+    const clientId =
+      input.clientId || (await this.resolveClientIdFromEvents(input.events));
     if (!clientId) {
       this.logger.warn(
         `Could not resolve clientId for event: ${input.providerEventName}`,
@@ -59,7 +60,12 @@ export class OutboundWebhookDispatchService {
       'PRODUCTION',
     );
 
-    const payload = this.buildPayload(input, clientId, apiEventType, environment);
+    const payload = this.buildPayload(
+      input,
+      clientId,
+      apiEventType,
+      environment,
+    );
 
     for (const config of configurations) {
       try {
@@ -124,7 +130,10 @@ export class OutboundWebhookDispatchService {
   private extractEntityId(event: WebhookPayload<unknown>): string {
     if (event.entityId) return event.entityId;
     if (isRecord(event.data)) {
-      const id = event.data['id'] ?? event.data['entityId'] ?? event.data['authenticationCode'];
+      const id =
+        event.data['id'] ??
+        event.data['entityId'] ??
+        event.data['authenticationCode'];
       if (typeof id === 'string') return id;
     }
     return randomUUID();
@@ -137,7 +146,8 @@ export class OutboundWebhookDispatchService {
       if (isRecord(event.data)) {
         const authCode = event.data['authenticationCode'];
         if (typeof authCode === 'string') {
-          const transaction = await this.transactionRepository.findByAuthenticationCode(authCode);
+          const transaction =
+            await this.transactionRepository.findByAuthenticationCode(authCode);
           if (transaction?.clientId) return transaction.clientId;
         }
       }

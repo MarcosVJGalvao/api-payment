@@ -27,7 +27,8 @@ export const PROVIDER_EVENT_TO_API_EVENT: Record<
     ApiPaymentWebhookEventType.BOLETO_CASH_IN_RECEIVED,
   [WebhookEvent.BOLETO_CASH_IN_WAS_CLEARED]:
     ApiPaymentWebhookEventType.BOLETO_CASH_IN_CLEARED,
-  [WebhookEvent.BOLETO_WAS_CANCELLED]: ApiPaymentWebhookEventType.BOLETO_CANCELED,
+  [WebhookEvent.BOLETO_WAS_CANCELLED]:
+    ApiPaymentWebhookEventType.BOLETO_CANCELED,
   [WebhookEvent.BILL_PAYMENT_WAS_RECEIVED]:
     ApiPaymentWebhookEventType.BILL_PAYMENT_RECEIVED,
   [WebhookEvent.BILL_PAYMENT_WAS_CREATED]:

@@ -5,6 +5,7 @@ import { RegisterWebhookDto } from './dto/register-webhook.dto';
 import { UpdateWebhookDto } from './dto/update-webhook.dto';
 import { ListWebhooksQueryDto } from './dto/list-webhooks-query.dto';
 import {
+  type WebhookItem,
   ListWebhooksResponse,
   UpdateWebhookResponse,
 } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
@@ -117,10 +118,11 @@ export class WebhookService {
     failed: number;
     errors: { externalId: string; eventName: string; error: string }[];
   }> {
-    const allWebhooks = await this.webhookRepository.findByProvider(provider);
+    const providerWebhooks = await this.fetchAllProviderWebhooks(provider);
+    const dbWebhooks = await this.webhookRepository.findByProvider(provider);
 
     this.logger.log(
-      `deleteAllWebhooksFromProvider: found ${allWebhooks.length} webhooks in ${provider}`,
+      `deleteAllWebhooksFromProvider: ${providerWebhooks.length} at provider, ${dbWebhooks.length} in DB`,
       this.context,
     );
 
@@ -129,39 +131,76 @@ export class WebhookService {
     const errors: { externalId: string; eventName: string; error: string }[] =
       [];
 
-    for (const webhook of allWebhooks) {
-      const ref = webhook.externalId ?? webhook.id;
+    const deletedProviderIds = new Set<string>();
+
+    for (const pw of providerWebhooks) {
       try {
-        if (webhook.externalId) {
-          const externalId = webhook.externalId;
-          await this.providerSessionHelper.executeWithRetry(
-            provider,
-            (session) =>
-              this.providerHelper.delete(provider, externalId, session),
-          );
-        }
-        await this.webhookRepository.hardDeleteById(webhook.id);
+        await this.providerSessionHelper.executeWithRetry(
+          provider,
+          (session) => this.providerHelper.delete(provider, pw.id, session),
+        );
+        await this.webhookRepository.deleteByExternalId(pw.id);
+        deletedProviderIds.add(pw.id);
         deleted++;
         this.logger.log(
-          `Deleted webhook ${ref} (${webhook.eventName}) from ${provider}`,
+          `Deleted webhook ${pw.id} (${pw.eventName}) from provider and DB`,
+          this.context,
+        );
+      } catch (error) {
+        failed++;
+        const message = error instanceof Error ? error.message : String(error);
+        errors.push({ externalId: pw.id, eventName: pw.eventName, error: message });
+        this.logger.error(
+          `Failed to delete provider webhook ${pw.id} (${pw.eventName}): ${message}`,
+          this.context,
+        );
+      }
+    }
+
+    for (const dw of dbWebhooks) {
+      if (dw.externalId && deletedProviderIds.has(dw.externalId)) continue;
+      try {
+        await this.webhookRepository.hardDeleteById(dw.id);
+        deleted++;
+        this.logger.log(
+          `Deleted orphaned DB webhook ${dw.externalId ?? dw.id} (${dw.eventName})`,
           this.context,
         );
       } catch (error) {
         failed++;
         const message = error instanceof Error ? error.message : String(error);
         errors.push({
-          externalId: ref,
-          eventName: webhook.eventName,
+          externalId: dw.externalId ?? dw.id,
+          eventName: dw.eventName,
           error: message,
         });
-        this.logger.error(
-          `Failed to delete webhook ${ref} (${webhook.eventName}): ${message}`,
-          this.context,
-        );
       }
     }
 
     return { deleted, failed, errors };
+  }
+
+  private async fetchAllProviderWebhooks(
+    provider: FinancialProvider,
+  ): Promise<WebhookItem[]> {
+    const allItems: WebhookItem[] = [];
+    const pageSize = 100;
+    let page = 1;
+
+    for (;;) {
+      const response = await this.providerSessionHelper.executeWithRetry(
+        provider,
+        (session) =>
+          this.providerHelper.list(provider, { page, pageSize }, session),
+      );
+      allItems.push(...response.data);
+      if (allItems.length >= response.meta.total || response.data.length === 0) {
+        break;
+      }
+      page++;
+    }
+
+    return allItems;
   }
 
   async deleteWebhook(
