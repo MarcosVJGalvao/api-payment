@@ -18,6 +18,7 @@ import { WebhookConfigurationController } from './controllers/webhook-configurat
 import { WebhookMessageController } from './controllers/webhook-message.controller';
 import { WebhookModule } from '@/webhook/webhook.module';
 import { BackofficeUserModule } from '@/backoffice-user/backoffice-user.module';
+import { TransactionModule } from '@/transaction/transaction.module';
 import { getQueueConfig } from '@/queue/policies/queue-policy.accessors';
 
 @Module({
@@ -28,6 +29,7 @@ import { getQueueConfig } from '@/queue/policies/queue-policy.accessors';
     ConfigModule,
     WebhookModule,
     BackofficeUserModule,
+    TransactionModule,
   ],
   controllers: [WebhookConfigurationController, WebhookMessageController],
   providers: [

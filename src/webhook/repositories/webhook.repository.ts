@@ -32,7 +32,7 @@ export class WebhookRepository {
     provider: FinancialProvider,
     dto: RegisterWebhookDto,
     response: ProviderWebhookRegistrationResult,
-    clientId: string,
+    clientId?: string,
   ): Promise<Webhook> {
     const webhook = this.repository.create({
       name: dto.name,
@@ -45,7 +45,7 @@ export class WebhookRepository {
       registrationCallbackUri: dto.registrationCallbackUri ?? null,
       registrationCallbackSecret: dto.registrationCallbackSecret ?? null,
       isActive: true,
-      clientId,
+      clientId: clientId ?? null,
     });
     return this.repository.save(webhook);
   }
@@ -84,6 +84,18 @@ export class WebhookRepository {
 
   async softDelete(id: string): Promise<void> {
     await this.repository.softDelete(id);
+  }
+
+  async softDeleteByExternalId(externalId: string): Promise<void> {
+    await this.repository.softDelete({ externalId });
+  }
+
+  async deleteByExternalId(externalId: string): Promise<void> {
+    await this.repository.delete({ externalId });
+  }
+
+  async findAll(): Promise<Webhook[]> {
+    return this.repository.find();
   }
 
   async updateWebhookUri(externalId: string, uri: string): Promise<void> {

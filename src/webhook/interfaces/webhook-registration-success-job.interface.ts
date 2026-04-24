@@ -4,7 +4,7 @@ export interface WebhookRegistrationSuccessPayload {
   event: 'WEBHOOK_REGISTRATION_SUCCEEDED';
   status: 'SUCCESS';
   provider: FinancialProvider;
-  clientId: string;
+  clientId?: string;
   webhookId: string;
   providerWebhookId: string;
   name: string;

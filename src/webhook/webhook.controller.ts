@@ -3,7 +3,6 @@ import {
   Controller,
   Get,
   Param,
-  Post,
   Patch,
   Delete,
   UseGuards,
@@ -13,9 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
 import { WebhookService } from './webhook.service';
-import { RegisterWebhookDto } from './dto/register-webhook.dto';
 import { UpdateWebhookDto } from './dto/update-webhook.dto';
-import { ApiRegisterWebhook } from './docs/api-register-webhook.decorator';
 import { ApiListWebhooks } from './docs/api-list-webhooks.decorator';
 import { ApiUpdateWebhook } from './docs/api-update-webhook.decorator';
 import { ApiDeleteWebhook } from './docs/api-delete-webhook.decorator';
@@ -39,27 +36,6 @@ import { RequireClientPermission } from '@/common/decorators/require-client-perm
 @UseGuards(BackofficeAuthGuard)
 export class WebhookController {
   constructor(private readonly webhookService: WebhookService) {}
-
-  @Post(':provider/register')
-  @HttpCode(HttpStatus.ACCEPTED)
-  @ApiRegisterWebhook()
-  @Audit({
-    action: AuditAction.WEBHOOK_REGISTERED,
-    entityType: 'Webhook',
-    description: 'Webhook registrado',
-    captureNewValues: true,
-  })
-  async registerWebhook(
-    @Param('provider', FinancialProviderPipe) provider: FinancialProvider,
-    @Req() req: any,
-    @Body() dto: RegisterWebhookDto,
-  ) {
-    return this.webhookService.registerWebhook(
-      provider,
-      dto,
-      String(req.user.clientId),
-    );
-  }
 
   @Get(':provider')
   @ApiListWebhooks()

@@ -101,15 +101,17 @@ export class Webhook {
   isActive!: boolean;
 
   @Column({
-    type: 'uuid',
+    type: 'varchar',
+    length: 36,
     name: 'client_id',
-    comment: 'ID do cliente',
+    nullable: true,
+    comment: 'ID do cliente (NULL para webhooks de sistema)',
   })
-  clientId!: string;
+  clientId!: string | null;
 
-  @ManyToOne(() => Client)
+  @ManyToOne(() => Client, { nullable: true })
   @JoinColumn({ name: 'client_id' })
-  client!: Client;
+  client!: Client | null;
 
   @CreateDateColumn({
     name: 'created_at',

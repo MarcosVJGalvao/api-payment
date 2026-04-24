@@ -13,6 +13,7 @@ import type { OutboundWebhookPayload } from '../interfaces/outbound-webhook-payl
 import type { WebhookPayload } from '@/webhook-processor/interfaces/webhook-base.interface';
 import { isRecord } from '@/common/errors/helpers/type.helpers';
 import { ApiPaymentWebhookEventType } from '../enums/api-payment-webhook-event-type.enum';
+import { TransactionRepository } from '@/transaction/repositories/transaction.repository';
 
 @Injectable()
 export class OutboundWebhookDispatchService {
@@ -22,6 +23,7 @@ export class OutboundWebhookDispatchService {
     private readonly configRepository: WebhookConfigurationRepository,
     private readonly messageRepository: WebhookMessageRepository,
     private readonly configService: ConfigService,
+    private readonly transactionRepository: TransactionRepository,
     @InjectQueue('webhook-outbound-delivery')
     private readonly deliveryQueue: Queue<OutboundDeliveryJob>,
   ) {}
@@ -35,15 +37,16 @@ export class OutboundWebhookDispatchService {
       return;
     }
 
-    if (!input.clientId) {
+    const clientId = input.clientId || await this.resolveClientIdFromEvents(input.events);
+    if (!clientId) {
       this.logger.warn(
-        `dispatch called with empty clientId for event: ${input.providerEventName}`,
+        `Could not resolve clientId for event: ${input.providerEventName}`,
       );
       return;
     }
 
     const configurations = await this.configRepository.findActiveForEvent(
-      input.clientId,
+      clientId,
       apiEventType,
     );
 
@@ -56,7 +59,7 @@ export class OutboundWebhookDispatchService {
       'PRODUCTION',
     );
 
-    const payload = this.buildPayload(input, apiEventType, environment);
+    const payload = this.buildPayload(input, clientId, apiEventType, environment);
 
     for (const config of configurations) {
       try {
@@ -96,6 +99,7 @@ export class OutboundWebhookDispatchService {
 
   private buildPayload(
     input: DispatchTriggerInput,
+    clientId: string,
     apiEventType: ApiPaymentWebhookEventType,
     environment: string,
   ): OutboundWebhookPayload[] {
@@ -103,12 +107,12 @@ export class OutboundWebhookDispatchService {
       const entityId = this.extractEntityId(event);
       return {
         entityId,
-        companyKey: input.clientId,
+        companyKey: clientId,
         name: apiEventType,
         timestamp: new Date().toISOString(),
         correlationId: input.correlationId ?? randomUUID(),
         metadata: {
-          clientId: input.clientId,
+          clientId,
           provider: input.providerSlug.toUpperCase(),
           environment,
         },
@@ -124,5 +128,20 @@ export class OutboundWebhookDispatchService {
       if (typeof id === 'string') return id;
     }
     return randomUUID();
+  }
+
+  private async resolveClientIdFromEvents(
+    events: ReadonlyArray<WebhookPayload<unknown>>,
+  ): Promise<string | undefined> {
+    for (const event of events) {
+      if (isRecord(event.data)) {
+        const authCode = event.data['authenticationCode'];
+        if (typeof authCode === 'string') {
+          const transaction = await this.transactionRepository.findByAuthenticationCode(authCode);
+          if (transaction?.clientId) return transaction.clientId;
+        }
+      }
+    }
+    return undefined;
   }
 }

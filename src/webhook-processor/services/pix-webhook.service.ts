@@ -470,17 +470,24 @@ export class PixWebhookService {
 
       let relatedPixCashInId: string | undefined;
       let relatedPixTransferId: string | undefined;
+      let resolvedClientId: string | undefined;
 
       if (data.channel?.end2EndIdOriginal) {
         const cashIn = await this.pixCashInRepository.findOne({
           where: { endToEndId: data.channel.end2EndIdOriginal },
         });
-        if (cashIn) relatedPixCashInId = cashIn.id;
+        if (cashIn) {
+          relatedPixCashInId = cashIn.id;
+          resolvedClientId = cashIn.clientId;
+        }
 
         const transfer = await this.pixTransferRepository.findOne({
           where: { endToEndId: data.channel.end2EndIdOriginal },
         });
-        if (transfer) relatedPixTransferId = transfer.id;
+        if (transfer) {
+          relatedPixTransferId = transfer.id;
+          resolvedClientId = resolvedClientId ?? transfer.clientId;
+        }
       }
 
       if (!relatedPixCashInId && !relatedPixTransferId) {
@@ -495,8 +502,11 @@ export class PixWebhookService {
             );
             continue;
           }
+          resolvedClientId = resolvedClientId ?? account.clientId;
         }
       }
+
+      const effectiveClientId = resolvedClientId ?? clientId;
 
       const pixRefund = this.pixRefundRepository.create({
         authenticationCode: data.authenticationCode,
@@ -526,7 +536,7 @@ export class PixWebhookService {
         },
         relatedPixCashInId,
         relatedPixTransferId,
-        clientId,
+        clientId: effectiveClientId,
         providerCreatedAt: data.createdAt
           ? parseDate(data.createdAt)
           : undefined,
@@ -544,7 +554,7 @@ export class PixWebhookService {
         amount: data.amount?.value,
         currency: data.amount?.currency || 'BRL',
         description: data.description,
-        clientId,
+        clientId: effectiveClientId,
         pixRefundId: saved.id,
         providerTimestamp: parseDate(event.timestamp),
       });
@@ -557,7 +567,7 @@ export class PixWebhookService {
         wasProcessed: true,
         payload: toPayload(event),
         providerTimestamp: parseDate(event.timestamp),
-        clientId,
+        clientId: effectiveClientId,
       });
 
       this.logger.log(

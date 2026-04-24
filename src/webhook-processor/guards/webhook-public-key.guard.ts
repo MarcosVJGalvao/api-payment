@@ -57,7 +57,7 @@ export class WebhookPublicKeyGuard implements CanActivate {
     }
 
     request['validPublicKey'] = true;
-    request['webhookClientId'] = webhook.clientId;
+    request['webhookClientId'] = webhook.clientId ?? undefined;
 
     return true;
   }

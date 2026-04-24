@@ -6,7 +6,6 @@ import type { Queue } from 'bull';
 import { AppLoggerService } from '@/common/logger/logger.service';
 import { RegisterWebhookDto } from './dto/register-webhook.dto';
 import { FinancialProvider } from '@/common/enums/financial-provider.enum';
-import { ClientService } from '@/client/client.service';
 import { WebhookRepository } from './repositories/webhook.repository';
 import { getErrorMessageAndStack } from '@/common/helpers/exception.helper';
 import { WebhookProviderHelper } from './helpers/webhook-provider.helper';
@@ -17,7 +16,7 @@ import { ProviderWebhookRegistrationNormalizerHelper } from './helpers/provider-
 export interface RegisterWebhookJob {
   provider: FinancialProvider;
   dto: RegisterWebhookDto;
-  clientId: string;
+  clientId?: string;
 }
 
 @Injectable()
@@ -29,7 +28,6 @@ export class WebhookProcessor {
     @InjectQueue('webhook-registration-success')
     private readonly webhookRegistrationSuccessQueue: Queue<WebhookRegistrationSuccessJob>,
     private readonly logger: AppLoggerService,
-    private readonly clientService: ClientService,
     private readonly providerHelper: WebhookProviderHelper,
     private readonly providerSessionHelper: ProviderSessionHelper,
     private readonly providerRegistrationNormalizer: ProviderWebhookRegistrationNormalizerHelper,
@@ -45,13 +43,8 @@ export class WebhookProcessor {
     );
 
     try {
-      // 1. Get Client Alias
-      const client = await this.clientService.findById(clientId);
-      const alias = client.alias;
-
-      // 2. Format Webhook Name
-      const prefix = alias ? `${String(alias)}_` : '';
-      const formattedName = (prefix + dto.name).toUpperCase();
+      // 1. Webhooks são registrados pelo sistema — prefixo fixo
+      const formattedName = ('SYSTEM_' + dto.name).toUpperCase();
       const finalDto = { ...dto, name: formattedName };
 
       // 3. Register in Provider with shared session and normalized response
@@ -101,7 +94,6 @@ export class WebhookProcessor {
             event: 'WEBHOOK_REGISTRATION_SUCCEEDED',
             status: 'SUCCESS',
             provider,
-            clientId,
             webhookId: savedWebhook.id,
             providerWebhookId: savedWebhook.externalId,
             name: savedWebhook.name,
@@ -116,7 +108,7 @@ export class WebhookProcessor {
       }
 
       this.logger.log(
-        `[SUCESSO] Webhook cadastrado para Client ${clientId} (Alias: ${alias}). Name: ${formattedName}`,
+        `[SUCESSO] Webhook de sistema cadastrado. Name: ${formattedName}`,
         this.context,
       );
     } catch (error) {
@@ -124,7 +116,7 @@ export class WebhookProcessor {
         getErrorMessageAndStack(error);
 
       this.logger.error(
-        `Failed to process webhook registration for client ${clientId}: ${errorMessage}`,
+        `Failed to process webhook registration: ${errorMessage}`,
         errorStack,
         this.context,
       );

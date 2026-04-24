@@ -10,9 +10,6 @@ describe('WebhookProcessor', () => {
     warn: jest.fn(),
     error: jest.fn(),
   };
-  const clientServiceMock = {
-    findById: jest.fn().mockResolvedValue({ alias: 'acme' }),
-  };
   const providerHelperMock = {
     register: jest.fn().mockResolvedValue({
       id: 'provider-webhook-id',
@@ -57,7 +54,6 @@ describe('WebhookProcessor', () => {
   const processor = new WebhookProcessor(
     registrationSuccessQueueMock as any,
     loggerMock as any,
-    clientServiceMock as any,
     providerHelperMock as any,
     providerSessionHelperMock as any,
     providerRegistrationNormalizerMock as any,

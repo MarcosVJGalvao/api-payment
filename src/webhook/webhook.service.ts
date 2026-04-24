@@ -7,6 +7,7 @@ import { ListWebhooksQueryDto } from './dto/list-webhooks-query.dto';
 import {
   ListWebhooksResponse,
   UpdateWebhookResponse,
+  type WebhookItem,
 } from '@/financial-providers/hiperbanco/interfaces/hiperbanco-responses.interface';
 import { WebhookProviderHelper } from './helpers/webhook-provider.helper';
 import { WebhookRepository } from './repositories/webhook.repository';
@@ -42,7 +43,7 @@ export class WebhookService {
   async registerWebhook(
     provider: FinancialProvider,
     dto: RegisterWebhookDto,
-    clientId: string,
+    clientId?: string,
   ): Promise<{ message: string; status: string }> {
     await this.webhookQueue.add({
       provider,
@@ -110,6 +111,60 @@ export class WebhookService {
       registrationCallbackSecret: dto.registrationCallbackSecret,
     });
     return response;
+  }
+
+  async deleteAllWebhooksFromProvider(
+    provider: FinancialProvider,
+  ): Promise<{ deleted: number; failed: number; errors: { id: string; eventName: string; error: string }[] }> {
+    const allWebhooks: WebhookItem[] = [];
+    const pageSize = 100;
+    let page = 1;
+
+    while (true) {
+      const response = await this.providerSessionHelper.executeWithRetry(
+        provider,
+        (session) =>
+          this.providerHelper.list(provider, { page, pageSize } as any, session),
+      );
+
+      allWebhooks.push(...response.data);
+
+      if (response.data.length < pageSize) break;
+      page++;
+    }
+
+    this.logger.log(
+      `deleteAllWebhooksFromProvider: found ${allWebhooks.length} webhooks in ${provider}`,
+      this.context,
+    );
+
+    let deleted = 0;
+    let failed = 0;
+    const errors: { id: string; eventName: string; error: string }[] = [];
+
+    for (const webhook of allWebhooks) {
+      try {
+        await this.providerSessionHelper.executeWithRetry(provider, (session) =>
+          this.providerHelper.delete(provider, webhook.id, session),
+        );
+        await this.webhookRepository.deleteByExternalId(webhook.id);
+        deleted++;
+        this.logger.log(
+          `Deleted webhook ${webhook.id} (${webhook.eventName}) from ${provider}`,
+          this.context,
+        );
+      } catch (error) {
+        failed++;
+        const message = error instanceof Error ? error.message : String(error);
+        errors.push({ id: webhook.id, eventName: webhook.eventName, error: message });
+        this.logger.error(
+          `Failed to delete webhook ${webhook.id} (${webhook.eventName}): ${message}`,
+          this.context,
+        );
+      }
+    }
+
+    return { deleted, failed, errors };
   }
 
   async deleteWebhook(
